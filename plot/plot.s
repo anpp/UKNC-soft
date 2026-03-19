@@ -1,0 +1,656 @@
+	.text
+	.even
+	.globl	_cordic_calc
+_cordic_calc:
+	mov	r2,-(sp)
+	mov	r3,-(sp)
+	mov	r4,-(sp)
+	mov	r5,-(sp)
+	add	$-06,sp
+	mov	020(sp),r5
+	clr	r0
+	clr	r4
+	mov	$023335,r1
+	mov	$012,r2
+L_4:
+	mov	r0,r3
+	neg	r3
+	mov	r3,(sp)
+	mov	r4,r3
+	ash	(sp),r3	
+	mov	r3,02(sp)
+	mov	r1,r3
+	ash	(sp),r3	
+	mov	r3,04(sp)
+	tst	r5
+	blt	L_2
+	sub	02(sp),r1
+	add	r3,r4
+	mov	r0,r3
+	asl	r3
+	sub	_angles(r3),r5
+L_3:
+	inc	r0
+	sob	r2,L_4
+	mov	r1,@022(sp)
+	mov	r4,@024(sp)
+	add	$06,sp
+	mov	(sp)+,r5
+	mov	(sp)+,r4
+	mov	(sp)+,r3
+	mov	(sp)+,r2
+	rts	pc
+L_2:
+	add	02(sp),r1
+	sub	04(sp),r4
+	mov	r0,r3
+	asl	r3
+	add	_angles(r3),r5
+	br	L_3
+	.even
+	.globl	_fsin
+_fsin:
+	mov	r2,-(sp)
+	mov	r3,-(sp)
+	mov	r4,-(sp)
+	mov	r5,-(sp)
+	mov	sp,r5
+	add	$-024,sp
+	mov	040(sp),-022(r5)
+	mov	042(sp),-024(r5)
+	mov	$-010,r2
+	add	r5,r2
+	mov	$___mulsf3,r4
+	mov	LC_0+02,-(sp)
+	mov	LC_0,-(sp)
+	add	$-04,sp
+	mov	-022(r5),(sp)
+	mov	-024(r5),02(sp)
+	mov	r2,-(sp)
+	jsr	pc,(r4)
+	add	$06,sp
+	mov	-010(r5),(sp)
+	mov	-06(r5),02(sp)
+	jsr	pc,___fixsfsi
+	mov	r1,02(sp)
+	sxt	(sp)
+	mov	$-014,r0
+	add	r5,r0
+	mov	r0,-(sp)
+	mov	$___floatsisf,r1
+	jsr	pc,(r1)
+	add	$06,sp
+	mov	$LC_1,r3
+	mov	02(r3),-(sp)
+	mov	(r3),-(sp)
+	add	$-04,sp
+	mov	-014(r5),(sp)
+	mov	-012(r5),02(sp)
+	mov	$-020,r0
+	add	r5,r0
+	mov	r0,-(sp)
+	jsr	pc,(r4)
+	mov	-020(r5),06(sp)
+	mov	-016(r5),010(sp)
+	mov	-022(r5),02(sp)
+	mov	-024(r5),04(sp)
+	mov	r2,(sp)
+	mov	$___subsf3,r1
+	jsr	pc,(r1)
+	add	$012,sp
+	mov	-010(r5),r3
+	mov	-06(r5),-022(r5)
+	mov	$LC_2,r0
+	mov	02(r0),-(sp)
+	mov	(r0),-(sp)
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	-022(r5),02(sp)
+	jsr	pc,___gtsf2
+	add	$010,sp
+	tst	r0
+	bgt	L_22
+	jmp	L_20
+L_22:
+	mov	$LC_1,r0
+	mov	02(r0),-(sp)
+	mov	(r0),-(sp)
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	-022(r5),02(sp)
+	mov	r2,-(sp)
+	mov	$___subsf3,r1
+	jsr	pc,(r1)
+	add	$012,sp
+	mov	-010(r5),r3
+	mov	-06(r5),-022(r5)
+L_10:
+	mov	LC_4+02,-(sp)
+	mov	LC_4,-(sp)
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	-022(r5),02(sp)
+	jsr	pc,___gtsf2
+	add	$010,sp
+	tst	r0
+	bgt	L_23
+	jmp	L_21
+L_23:
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	-022(r5),02(sp)
+	mov	$LC_2,r3
+	mov	02(r3),-(sp)
+	mov	(r3),-(sp)
+	mov	r2,-(sp)
+	mov	$___subsf3,r0
+	jsr	pc,(r0)
+	add	$012,sp
+	mov	-010(r5),r3
+	mov	-06(r5),-022(r5)
+L_14:
+	mov	$-04,r0
+	add	r5,r0
+	mov	r0,-(sp)
+	mov	$-02,r1
+	add	r5,r1
+	mov	r1,-(sp)
+	clr	-(sp)
+	mov	$043600,-(sp)
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	-022(r5),02(sp)
+	mov	r2,-(sp)
+	jsr	pc,(r4)
+	add	$06,sp
+	mov	-010(r5),(sp)
+	mov	-06(r5),02(sp)
+	jsr	pc,___fixsfsi
+	add	$04,sp
+	mov	r1,-(sp)
+	jsr	pc,_cordic_calc
+	mov	-04(r5),-(sp)
+	sxt	-(sp)
+	mov	r2,-(sp)
+	mov	$___floatsisf,r0
+	jsr	pc,(r0)
+	add	$06,sp
+	clr	-(sp)
+	mov	$034600,-(sp)
+	add	$-04,sp
+	mov	-010(r5),(sp)
+	mov	-06(r5),02(sp)
+	mov	$-014,r1
+	add	r5,r1
+	mov	r1,-(sp)
+	jsr	pc,(r4)
+	add	$012,sp
+	mov	-014(r5),@044(sp)
+	mov	044(sp),r3
+	mov	-012(r5),02(r3)
+	add	$06,sp
+	mov	r3,r0
+	mov	r5,sp
+	mov	(sp)+,r5
+	mov	(sp)+,r4
+	mov	(sp)+,r3
+	mov	(sp)+,r2
+	rts	pc
+L_20:
+	mov	LC_3+02,-(sp)
+	mov	LC_3,-(sp)
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	-022(r5),02(sp)
+	jsr	pc,___ltsf2
+	add	$010,sp
+	tst	r0
+	blt	L_24
+	jmp	L_10
+L_24:
+	mov	$LC_1,r0
+	mov	02(r0),-(sp)
+	mov	(r0),-(sp)
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	-022(r5),02(sp)
+	mov	r2,-(sp)
+	jsr	pc,___addsf3
+	add	$012,sp
+	mov	-010(r5),r3
+	mov	-06(r5),-022(r5)
+	jmp	L_10
+L_21:
+	mov	LC_5+02,-(sp)
+	mov	LC_5,-(sp)
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	-022(r5),02(sp)
+	jsr	pc,___ltsf2
+	add	$010,sp
+	tst	r0
+	blt	L_25
+	jmp	L_14
+L_25:
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	-022(r5),02(sp)
+	mov	LC_3+02,-(sp)
+	mov	LC_3,-(sp)
+	mov	r2,-(sp)
+	mov	$___subsf3,r1
+	jsr	pc,(r1)
+	add	$012,sp
+	mov	-010(r5),r3
+	mov	-06(r5),-022(r5)
+	jmp	L_14
+	.data
+	.even
+LC_0:
+	.word	037442
+	.word	-03175
+	.even
+LC_1:
+	.word	040711
+	.word	07733
+	.even
+LC_2:
+	.word	040511
+	.word	07733
+	.even
+LC_3:
+	.word	-037267
+	.word	07733
+	.even
+LC_4:
+	.word	040311
+	.word	07730
+	.even
+LC_5:
+	.word	-037467
+	.word	07730
+	.text
+	.even
+	.globl	_fcos
+_fcos:
+	mov	r2,-(sp)
+	mov	r3,-(sp)
+	mov	r4,-(sp)
+	mov	r5,-(sp)
+	mov	sp,r5
+	add	$-030,sp
+	mov	$-010,r4
+	add	r5,r4
+	mov	LC_6+02,-(sp)
+	mov	LC_6,-(sp)
+	add	$-04,sp
+	mov	054(sp),(sp)
+	mov	056(sp),02(sp)
+	mov	r4,-(sp)
+	mov	$___addsf3,r0
+	jsr	pc,(r0)
+	add	$012,sp
+	mov	-010(r5),-026(r5)
+	mov	-06(r5),-030(r5)
+	mov	$___mulsf3,r3
+	mov	LC_7+02,-(sp)
+	mov	LC_7,-(sp)
+	add	$-04,sp
+	mov	-026(r5),(sp)
+	mov	-030(r5),02(sp)
+	mov	r4,-(sp)
+	jsr	pc,(r3)
+	add	$06,sp
+	mov	-010(r5),(sp)
+	mov	-06(r5),02(sp)
+	jsr	pc,___fixsfsi
+	mov	r1,02(sp)
+	sxt	(sp)
+	mov	$-014,r0
+	add	r5,r0
+	mov	r0,-(sp)
+	mov	$___floatsisf,r1
+	jsr	pc,(r1)
+	add	$06,sp
+	mov	$LC_8,r2
+	mov	02(r2),-(sp)
+	mov	(r2),-(sp)
+	add	$-04,sp
+	mov	-014(r5),(sp)
+	mov	-012(r5),02(sp)
+	mov	$-020,r0
+	add	r5,r0
+	mov	r0,-(sp)
+	jsr	pc,(r3)
+	mov	-020(r5),06(sp)
+	mov	-016(r5),010(sp)
+	mov	-026(r5),02(sp)
+	mov	-030(r5),04(sp)
+	mov	$-024,r1
+	add	r5,r1
+	mov	r1,(sp)
+	mov	$___subsf3,r2
+	jsr	pc,(r2)
+	add	$012,sp
+	mov	-024(r5),r2
+	mov	-022(r5),-026(r5)
+	mov	$LC_9,r0
+	mov	02(r0),-(sp)
+	mov	(r0),-(sp)
+	add	$-04,sp
+	mov	r2,(sp)
+	mov	-026(r5),02(sp)
+	jsr	pc,___gtsf2
+	add	$010,sp
+	tst	r0
+	bgt	L_41
+	jmp	L_39
+L_41:
+	mov	$LC_8,r0
+	mov	02(r0),-(sp)
+	mov	(r0),-(sp)
+	add	$-04,sp
+	mov	r2,(sp)
+	mov	-026(r5),02(sp)
+	mov	r4,-(sp)
+	mov	$___subsf3,r1
+	jsr	pc,(r1)
+	add	$012,sp
+	mov	-010(r5),r2
+	mov	-06(r5),-026(r5)
+L_29:
+	mov	LC_11+02,-(sp)
+	mov	LC_11,-(sp)
+	add	$-04,sp
+	mov	r2,(sp)
+	mov	-026(r5),02(sp)
+	jsr	pc,___gtsf2
+	add	$010,sp
+	tst	r0
+	bgt	L_42
+	jmp	L_40
+L_42:
+	add	$-04,sp
+	mov	r2,(sp)
+	mov	-026(r5),02(sp)
+	mov	$LC_9,r2
+	mov	02(r2),-(sp)
+	mov	(r2),-(sp)
+	mov	r4,-(sp)
+	mov	$___subsf3,r0
+	jsr	pc,(r0)
+	add	$012,sp
+	mov	-010(r5),r2
+	mov	-06(r5),-026(r5)
+L_33:
+	mov	$-04,r0
+	add	r5,r0
+	mov	r0,-(sp)
+	mov	$-02,r1
+	add	r5,r1
+	mov	r1,-(sp)
+	clr	-(sp)
+	mov	$043600,-(sp)
+	add	$-04,sp
+	mov	r2,(sp)
+	mov	-026(r5),02(sp)
+	mov	r4,-(sp)
+	jsr	pc,(r3)
+	add	$06,sp
+	mov	-010(r5),(sp)
+	mov	-06(r5),02(sp)
+	jsr	pc,___fixsfsi
+	add	$04,sp
+	mov	r1,-(sp)
+	jsr	pc,_cordic_calc
+	mov	-04(r5),-(sp)
+	sxt	-(sp)
+	mov	r4,-(sp)
+	mov	$___floatsisf,r0
+	jsr	pc,(r0)
+	add	$06,sp
+	clr	-(sp)
+	mov	$034600,-(sp)
+	add	$-04,sp
+	mov	-010(r5),(sp)
+	mov	-06(r5),02(sp)
+	mov	$-014,r1
+	add	r5,r1
+	mov	r1,-(sp)
+	jsr	pc,(r3)
+	add	$012,sp
+	mov	-014(r5),@050(sp)
+	mov	050(sp),r2
+	mov	-012(r5),02(r2)
+	add	$06,sp
+	mov	r2,r0
+	mov	r5,sp
+	mov	(sp)+,r5
+	mov	(sp)+,r4
+	mov	(sp)+,r3
+	mov	(sp)+,r2
+	rts	pc
+L_39:
+	mov	LC_10+02,-(sp)
+	mov	LC_10,-(sp)
+	add	$-04,sp
+	mov	r2,(sp)
+	mov	-026(r5),02(sp)
+	jsr	pc,___ltsf2
+	add	$010,sp
+	tst	r0
+	blt	L_43
+	jmp	L_29
+L_43:
+	mov	$LC_8,r0
+	mov	02(r0),-(sp)
+	mov	(r0),-(sp)
+	add	$-04,sp
+	mov	r2,(sp)
+	mov	-026(r5),02(sp)
+	mov	r4,-(sp)
+	mov	$___addsf3,r1
+	jsr	pc,(r1)
+	add	$012,sp
+	mov	-010(r5),r2
+	mov	-06(r5),-026(r5)
+	jmp	L_29
+L_40:
+	mov	LC_12+02,-(sp)
+	mov	LC_12,-(sp)
+	add	$-04,sp
+	mov	r2,(sp)
+	mov	-026(r5),02(sp)
+	jsr	pc,___ltsf2
+	add	$010,sp
+	tst	r0
+	blt	L_44
+	jmp	L_33
+L_44:
+	add	$-04,sp
+	mov	r2,(sp)
+	mov	-026(r5),02(sp)
+	mov	LC_10+02,-(sp)
+	mov	LC_10,-(sp)
+	mov	r4,-(sp)
+	mov	$___subsf3,r1
+	jsr	pc,(r1)
+	add	$012,sp
+	mov	-010(r5),r2
+	mov	-06(r5),-026(r5)
+	jmp	L_33
+	.data
+	.even
+LC_6:
+	.word	040311
+	.word	07733
+	.even
+LC_7:
+	.word	037442
+	.word	-03175
+	.even
+LC_8:
+	.word	040711
+	.word	07733
+	.even
+LC_9:
+	.word	040511
+	.word	07733
+	.even
+LC_10:
+	.word	-037267
+	.word	07733
+	.even
+LC_11:
+	.word	040311
+	.word	07730
+	.even
+LC_12:
+	.word	-037467
+	.word	07730
+	.text
+	.even
+	.globl	_main
+_main:
+	mov	r2,-(sp)
+	mov	r3,-(sp)
+	mov	r4,-(sp)
+	mov	r5,-(sp)
+	add	$-032,sp
+	jsr	pc,___main
+	jsr	pc,_InitKeyb
+	jsr	pc,_InitGraph
+	jsr	pc,_ClearScreen
+	mov	$-035540,r3
+	clr	r2
+	mov	$01200,r4
+L_47:
+	clr	-(sp)
+	mov	$042240,-(sp)
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	r2,02(sp)
+	mov	$036,r0
+	add	sp,r0
+	mov	r0,-(sp)
+	mov	$___addsf3,r5
+	jsr	pc,(r5)
+	add	$06,sp
+	mov	032(sp),(sp)
+	mov	034(sp),02(sp)
+	mov	$___fixsfsi,r5
+	jsr	pc,(r5)
+	add	$04,sp
+	mov	r1,(sp)
+	cmp	r1,$01177
+	bhi	L_46
+	clr	-(sp)
+	mov	$041440,-(sp)
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	r2,02(sp)
+	mov	$032,r0
+	add	sp,r0
+	mov	r0,-(sp)
+	jsr	pc,___divsf3
+	add	$06,sp
+	mov	026(sp),(sp)
+	mov	030(sp),02(sp)
+	mov	$032,r5
+	add	sp,r5
+	mov	r5,-(sp)
+	jsr	pc,_fsin
+	clr	-(sp)
+	mov	$041440,-(sp)
+	add	$-04,sp
+	mov	044(sp),(sp)
+	mov	046(sp),02(sp)
+	mov	$044,r0
+	add	sp,r0
+	mov	r0,-(sp)
+	jsr	pc,___mulsf3
+	add	$06,sp
+	mov	040(sp),(sp)
+	mov	042(sp),02(sp)
+	clr	-(sp)
+	mov	$042004,-(sp)
+	mov	$040,r5
+	add	sp,r5
+	mov	r5,-(sp)
+	jsr	pc,___subsf3
+	add	$06,sp
+	mov	034(sp),(sp)
+	mov	036(sp),02(sp)
+	mov	$___fixsfsi,r5
+	jsr	pc,(r5)
+	add	$012,sp
+	cmp	r1,$0407
+	bhi	L_46
+	mov	$07,-(sp)
+	mov	r1,-(sp)
+	mov	04(sp),-(sp)
+	jsr	pc,_PutPixel
+	add	$06,sp
+L_46:
+	add	$-04,sp
+	mov	r3,(sp)
+	mov	r2,02(sp)
+	mov	$016,r0
+	add	sp,r0
+	mov	r0,-(sp)
+	mov	$___extendsfdf2,r5
+	jsr	pc,(r5)
+	add	$06,sp
+	clr	-(sp)
+	clr	-(sp)
+	clr	-(sp)
+	mov	$040200,-(sp)
+	add	$-010,sp
+	mov	032(sp),(sp)
+	mov	034(sp),02(sp)
+	mov	036(sp),04(sp)
+	mov	040(sp),06(sp)
+	mov	$022,r0
+	add	sp,r0
+	mov	r0,-(sp)
+	mov	$___adddf3,r5
+	jsr	pc,(r5)
+	add	$012,sp
+	mov	012(sp),(sp)
+	mov	014(sp),02(sp)
+	mov	016(sp),04(sp)
+	mov	020(sp),06(sp)
+	mov	$036,r0
+	add	sp,r0
+	mov	r0,-(sp)
+	mov	$___truncdfsf2,r5
+	jsr	pc,(r5)
+	add	$012,sp
+	mov	026(sp),r3
+	mov	030(sp),r2
+	dec	r4
+	beq	L_49
+	jmp	L_47
+L_49:
+	jsr	pc,_WaitAnyKey
+	jsr	pc,_FinishGraph
+	jsr	pc,_FinishKeyb
+	add	$032,sp
+	mov	(sp)+,r5
+	mov	(sp)+,r4
+	mov	(sp)+,r3
+	mov	(sp)+,r2
+	rts	pc
+	.data
+	.even
+_angles:
+	.word	031104
+	.word	016654
+	.word	07656
+	.word	03765
+	.word	01776
+	.word	0777
+	.word	0400
+	.word	0200
+	.word	0100
+	.word	040

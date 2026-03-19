@@ -1,0 +1,8 @@
+*.out
+*.o
+*.lda
+*.map
+*.a
+*.cmd
+*.bin
+*.bak
