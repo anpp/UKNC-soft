@@ -85,7 +85,7 @@ void main()
         if (screenX >= 0 && screenX < WIDTH && screenY >= 0 && screenY < HEIGHT)
             PutPixel(screenX, screenY, 7); 
     }
-    WaitAnyKey();
+    //WaitAnyKey();
     FinishGraph();    
-    FinishKeyb();
+    //FinishKeyb();
 }
