@@ -1,9 +1,14 @@
-.globl _InitKeyb, _FinishKeyb, _WaitAnyKey, _kbhit
+.globl _InitKeyb, _FinishKeyb, _WaitAnyKey, _kbhit, _SetOnKeyEvent
 
 .text
 
+/CPU
 rsk2 = 0176674
-rdk2 = rsk2+2
+rdk2 = 0176676
+
+/PPU
+rsk1 = 0177076
+rdk1 = 0177072
 
 pplen = (pp.end - pp.beg) >> 1
 
@@ -25,6 +30,11 @@ WORDS:      .word   pplen
 
 key_pressed:   .word 0
 finished:      .word 0
+
+OnKeyDown:     .word   0
+OnKeyUp:       .word   0
+
+OldInt460:     .word   0
 
 /Подпрограмма перемещения в К2 адреса МП
 /=============================================================================
@@ -51,8 +61,43 @@ pp_mput:
 /=============================================================================
 
 
+/=============================================================================
+Int460:
+    mov  r0, -(sp)
+    mov  r1, -(sp)
+    mov  r2, -(sp)
+
+    mov  @$0176662, r2    /В r2 код нажатой или отжатой клавиши
+    mov  r2, -(sp)       /параметр в стеке для OnKeyDown или OnKeyUp
+
+    tst  OnKeyDown
+    beq  1f
+    
+    jsr  pc, @OnKeyDown
+    br  99f
+
+1:
+    tst  OnKeyUp
+    beq  99f
+
+    jsr  pc, @OnKeyUp
+
+99:
+    add  $2, sp        /чистка стека после вызова функции (вызова могло и не быть)
+
+    mov  (sp)+, r2
+    mov  (sp)+, r1
+    mov  (sp)+, r0
+    rti
+
 
 _InitKeyb:
+    bis   $0100, @$0176660      /Разрешение прерывания 460
+    mtps  $0200
+    mov   @$0460, OldInt460
+    mov   $Int460, @$0460
+    mtps  $0
+
     mput  mp
     bne	1f
 
@@ -70,6 +115,11 @@ _InitKeyb:
     rts  pc
 
 _FinishKeyb:
+    mtps   $0200
+    bic    $0200, @$0176660      /Запрет прерывания 460
+    mov    OldInt460, @$0460
+    mtps   $0
+
     / запуск подпрограммы в ПП FinishKeybPPU
     mov  addrPP, r0
     mov  r0, r1
@@ -101,6 +151,18 @@ _kbhit:
     mov  key_pressed, r0
     rts  pc
 
+
+/Первый аргумент - true, если на Down, false - Up
+/Второй аргумент - адрес функции
+_SetOnKeyEvent:
+    tst  2(sp)
+    beq  1f
+    mov  4(sp), OnKeyUp
+    rts  pc
+1:
+    mov  4(sp), OnKeyDown
+    rts  pc
+
 /=============================================================================================
 pp.beg:
     mtps  $0200
@@ -113,26 +175,39 @@ pp.beg:
     mtps  $0
     rts   pc
 
-IntKbd:	
+
+/=============================================================================
+PullCPU:
+    bitb   $020, @$rsk1     /готовность источника канала 1 PPU
+    beq    PullCPU
+    mov    2(sp), @$rdk1    /посылка байта для вызывания прерывания 460 в CPU
+
+    rts    pc
+
+
+IntKbd:
     mov  r0, -(sp)
+    mov  r1, -(sp)
     mov  @$0177010, -(sp)
 
     mov  @$0177702, r0
     bit  $0b10000000, r0                /key pressed?
     bne  100f
     /запишем в ЦП код нажатой клавиши
-    mov   $key_pressed, r0 
+    mov   $key_pressed, r1
     clc    
-    ror   r0
+    ror   r1
 
-    mov  r0, @$0177010
-    mov  $1, @$0177014
-    /mov  r0, @$0177014
-    /;cmp  r0, #0b01001011             / is it 'space'?
-    /;bne  10f
-    /;br   20f
-100:
+    mov  r1, @$0177010
+    mov  r0, @$0177014
+
+    mov  r0, -(sp)
+    jsr  pc, PullCPU
+    add  $2, sp
+
+100: 
     mov  (sp)+, @$0177010
+    mov  (sp)+, r1
     mov  (sp)+, r0
     rti
 

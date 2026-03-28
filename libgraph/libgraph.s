@@ -262,10 +262,11 @@ pp.beg:
     /Основной цикл
 MainPPU:
     mov $RunProcPPU, @$0177010
-    mov $0177014, r0
+    mov $0177014, r0    
 
     bit $0100000, @r0    /проверка флага завершения
     bne 100f
+     
 
     bit $1, @r0           /Проверка на PutPixel
     beq 2f
@@ -300,7 +301,7 @@ MainPPU:
     mov $0177014, r0
     bic $010, @r0
                          /PrintTop выполнена
-5:
+5:    
     jmp MainPPU
 100:    
     rts  pc
@@ -380,7 +381,6 @@ GetPixelPPU:
     / цвет в CPU
     mov $RecColor, @$0177010
     mov r1, @$0177014
-    
     rts  pc
 
 
@@ -449,5 +449,4 @@ str_buffer:       .fill 40, 1, 0  / Буфер для строки
 
 
 pp.end:
-
 
