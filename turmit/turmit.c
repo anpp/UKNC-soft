@@ -18,7 +18,7 @@ extern void PrintTop(char *buffer);
 extern void InitKeyb();
 extern void FinishKeyb();
 extern int kbhit();
-extern void SetOnKeyEvent(bool bDown, void *addr_func);
+extern void SetOnKeyEvent(void *addr_func);
 
 /* -------- тьюрмитная программа -------- */
 
@@ -163,15 +163,15 @@ int step()
 
 
 volatile char esc = false;
-void KeyDown(unsigned char key_code)
+void OnKeyEvent(bool Up, unsigned char key_code)
 {
-   esc = (key_code == KEY_AR2);
+   esc = (key_code == KEY_AR2 && !Up);
 }
 
 void main()
 {
     InitKeyb();
-    SetOnKeyEvent(true, KeyDown);
+    SetOnKeyEvent(OnKeyEvent);
 
     InitGraph();
     ClearScreen();

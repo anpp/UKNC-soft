@@ -1,16 +1,23 @@
 	.text
 	.even
-	.globl	_KeyDown
-_KeyDown:
+	.globl	_OnKeyEvent
+_OnKeyEvent:
+	mov	r2,-(sp)
+	mov	$01,r1
+	movb	04(sp),r0
+	xor	r0,r1
 	mov	$06,r0
-	movb	02(sp),r1
-	xor	r1,r0
+	movb	06(sp),r2
+	xor	r2,r0
 	bic	$0177400,r0
 	dec	r0
 	clc
 	ror	r0
 	ash	$-016,r0	
-	movb	r0,_esc
+	comb	r0
+	bicb	r0,r1
+	movb	r1,_esc
+	mov	(sp)+,r2
 	rts	pc
 	.even
 	.globl	_turn_ant
@@ -248,8 +255,7 @@ _main:
 	mov	r3,-(sp)
 	jsr	pc,___main
 	jsr	pc,_InitKeyb
-	mov	$_KeyDown,-(sp)
-	movb	$01,-(sp)
+	mov	$_OnKeyEvent,-(sp)
 	jsr	pc,_SetOnKeyEvent
 	jsr	pc,_InitGraph
 	jsr	pc,_ClearScreen
@@ -260,7 +266,7 @@ _main:
 	mov	$0204,_ant_y
 	mov	$01,_ant_dir
 	movb	$0101,_ant_state
-	add	$06,sp
+	add	$04,sp
 	br	L_40
 L_46:
 	movb	_esc,r0

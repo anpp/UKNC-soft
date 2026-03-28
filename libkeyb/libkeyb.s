@@ -31,8 +31,7 @@ WORDS:      .word   pplen
 key_pressed:   .word 0
 finished:      .word 0
 
-OnKeyDown:     .word   0
-OnKeyUp:       .word   0
+OnKeyEvent:    .word   0
 
 OldInt460:     .word   0
 
@@ -68,22 +67,22 @@ Int460:
     mov  r2, -(sp)
 
     mov  @$0176662, r2    /В r2 код нажатой или отжатой клавиши
-    mov  r2, -(sp)       /параметр в стеке для OnKeyDown или OnKeyUp
 
-    tst  OnKeyDown
-    beq  1f
+    tst  OnKeyEvent
+    beq  99f              /Если обработчик не установлен - выход
     
-    jsr  pc, @OnKeyDown
-    br  99f
+    mov  r2, r1
+    ash  $-7, r1          /В r1 1 - клавиша нажата, 0 - клавиша отжата
+    bic  $0b10000000, r2  /В r2 - код клавиши
 
-1:
-    tst  OnKeyUp
-    beq  99f
-
-    jsr  pc, @OnKeyUp
+    /параметры в стеке для OnKeyEvent    
+    mov  r2, -(sp)
+    mov  r1, -(sp)        
+    
+    jsr  pc, @OnKeyEvent
+    add  $4, sp        /чистка стека после вызова функции
 
 99:
-    add  $2, sp        /чистка стека после вызова функции (вызова могло и не быть)
 
     mov  (sp)+, r2
     mov  (sp)+, r1
@@ -152,15 +151,9 @@ _kbhit:
     rts  pc
 
 
-/Первый аргумент - true, если на Down, false - Up
-/Второй аргумент - адрес функции
+/Аргумент - адрес функции
 _SetOnKeyEvent:
-    tst  2(sp)
-    beq  1f
-    mov  4(sp), OnKeyUp
-    rts  pc
-1:
-    mov  4(sp), OnKeyDown
+    mov  2(sp), OnKeyEvent
     rts  pc
 
 /=============================================================================================
@@ -191,6 +184,12 @@ IntKbd:
     mov  @$0177010, -(sp)
 
     mov  @$0177702, r0
+    
+    /Прерывание в CPU
+    mov  r0, -(sp)
+    jsr  pc, PullCPU
+    add  $2, sp
+
     bit  $0b10000000, r0                /key pressed?
     bne  100f
     /запишем в ЦП код нажатой клавиши
@@ -200,10 +199,6 @@ IntKbd:
 
     mov  r1, @$0177010
     mov  r0, @$0177014
-
-    mov  r0, -(sp)
-    jsr  pc, PullCPU
-    add  $2, sp
 
 100: 
     mov  (sp)+, @$0177010
