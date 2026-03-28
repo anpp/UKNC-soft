@@ -1,18 +1,31 @@
 	.text
 	.even
+	.globl	_KeyDown
+_KeyDown:
+	mov	$06,r0
+	movb	02(sp),r1
+	xor	r1,r0
+	bic	$0177400,r0
+	dec	r0
+	clc
+	ror	r0
+	ash	$-016,r0	
+	movb	r0,_esc
+	rts	pc
+	.even
 	.globl	_turn_ant
 _turn_ant:
 	cmp	02(sp),$01
-	beq	L_5
+	beq	L_6
 	cmp	02(sp),$-01
-	bne	L_1
+	bne	L_3
 	mov	_ant_dir,r0
 	add	$03,r0
 	bic	$-04,r0
 	mov	r0,_ant_dir
-L_1:
+L_3:
 	rts	pc
-L_5:
+L_6:
 	mov	_ant_dir,r0
 	inc	r0
 	bic	$-04,r0
@@ -26,58 +39,58 @@ _move_ant:
 	mov	_ant_y,r0
 	mov	_ant_x,r1
 	tst	r2
-	bne	L_7
+	bne	L_8
 	dec	r0
 	mov	r0,_ant_y
-L_8:
+L_9:
 	tst	r1
-	blt	L_16
-L_11:
-	tst	r0
 	blt	L_17
-	cmp	r1,$01177
-	ble	L_12
-	clr	_ant_x
 L_12:
+	tst	r0
+	blt	L_18
+	cmp	r1,$01177
+	ble	L_13
+	clr	_ant_x
+L_13:
 	cmp	r0,$0407
-	ble	L_6
+	ble	L_7
 	clr	_ant_y
-L_6:
+L_7:
 	mov	(sp)+,r2
 	rts	pc
-L_7:
+L_8:
 	cmp	r2,$02
-	bne	L_9
+	bne	L_10
 	inc	r0
 	mov	r0,_ant_y
 	tst	r1
-	bge	L_11
-L_16:
+	bge	L_12
+L_17:
 	mov	$01177,_ant_x
 	tst	r0
-	bge	L_12
+	bge	L_13
 	mov	$0407,_ant_y
 	mov	(sp)+,r2
 	rts	pc
-L_17:
+L_18:
 	mov	$0407,_ant_y
 	cmp	r1,$01177
-	ble	L_6
+	ble	L_7
 	clr	_ant_x
 	mov	(sp)+,r2
 	rts	pc
-L_9:
+L_10:
 	cmp	r2,$03
-	bne	L_10
+	bne	L_11
 	dec	r1
 	mov	r1,_ant_x
-	br	L_8
-L_10:
+	br	L_9
+L_11:
 	cmp	r2,$01
-	bne	L_8
+	bne	L_9
 	inc	r1
 	mov	r1,_ant_x
-	br	L_8
+	br	L_9
 	.even
 	.globl	_find_rule
 _find_rule:
@@ -89,16 +102,16 @@ _find_rule:
 	clr	(sp)
 	mov	(sp),r0
 	cmp	r0,$07
-	blos	L_22
-	br	L_19
-L_20:
+	blos	L_23
+	br	L_20
+L_21:
 	mov	(sp),r0
 	inc	r0
 	mov	r0,(sp)
 	mov	(sp),r0
 	cmp	r0,$07
-	bhi	L_19
-L_22:
+	bhi	L_20
+L_23:
 	mov	(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -106,7 +119,7 @@ L_22:
 	add	r2,r0
 	asl	r0
 	cmpb	_prog(r0),r1
-	bne	L_20
+	bne	L_21
 	mov	(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -114,7 +127,7 @@ L_22:
 	add	r2,r0
 	asl	r0
 	cmp	_prog+02(r0),r5
-	bne	L_20
+	bne	L_21
 	mov	(sp),r1
 	mov	r1,r0
 	asl	r0
@@ -126,7 +139,7 @@ L_22:
 	mov	(sp)+,r5
 	mov	(sp)+,r2
 	rts	pc
-L_19:
+L_20:
 	clr	r0
 	add	$02,sp
 	mov	(sp)+,r5
@@ -148,16 +161,16 @@ _step:
 	mov	06(sp),r0
 	add	$04,sp
 	cmp	r0,$07
-	blos	L_25
-	br	L_30
-L_27:
+	blos	L_26
+	br	L_31
+L_28:
 	mov	02(sp),r0
 	inc	r0
 	mov	r0,02(sp)
 	mov	02(sp),r0
 	cmp	r0,$07
-	bhi	L_30
-L_25:
+	bhi	L_31
+L_26:
 	mov	02(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -165,7 +178,7 @@ L_25:
 	add	r2,r0
 	asl	r0
 	cmpb	r1,_prog(r0)
-	bne	L_27
+	bne	L_28
 	mov	02(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -173,7 +186,7 @@ L_25:
 	add	r2,r0
 	asl	r0
 	cmp	r5,_prog+02(r0)
-	bne	L_27
+	bne	L_28
 	mov	02(sp),r0
 	mov	r0,r2
 	asl	r2
@@ -192,14 +205,14 @@ L_25:
 	mov	(r5),r0
 	add	$06,sp
 	cmp	r0,$01
-	beq	L_36
+	beq	L_37
 	cmp	r0,$-01
-	bne	L_31
+	bne	L_32
 	mov	_ant_dir,r0
 	add	$03,r0
 	bic	$-04,r0
 	mov	r0,_ant_dir
-L_31:
+L_32:
 	asl	r2
 	add	$_prog+010,r2
 	movb	(r2),r0
@@ -210,18 +223,18 @@ L_31:
 	mov	(sp)+,r5
 	mov	(sp)+,r2
 	rts	pc
-L_30:
+L_31:
 	clr	r0
 	add	$04,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r2
 	rts	pc
-L_36:
+L_37:
 	mov	_ant_dir,r0
 	inc	r0
 	bic	$-04,r0
 	mov	r0,_ant_dir
-	br	L_31
+	br	L_32
 	.data
 LC_0:
 	.byte 0124,0165,0162,0155,0151,0164,0
@@ -235,6 +248,9 @@ _main:
 	mov	r3,-(sp)
 	jsr	pc,___main
 	jsr	pc,_InitKeyb
+	mov	$_KeyDown,-(sp)
+	movb	$01,-(sp)
+	jsr	pc,_SetOnKeyEvent
 	jsr	pc,_InitGraph
 	jsr	pc,_ClearScreen
 	mov	$LC_0,-(sp)
@@ -244,17 +260,17 @@ _main:
 	mov	$0204,_ant_y
 	mov	$01,_ant_dir
 	movb	$0101,_ant_state
-	add	$02,sp
-	br	L_39
-L_45:
-	jsr	pc,_kbhit
-	tst	r0
-	bne	L_38
-L_39:
+	add	$06,sp
+	br	L_40
+L_46:
+	movb	_esc,r0
+	tstb	r0
+	bne	L_39
+L_40:
 	jsr	pc,_step
 	tst	r0
-	bne	L_45
-L_38:
+	bne	L_46
+L_39:
 	mov	$LC_1,-(sp)
 	jsr	pc,(r3)
 	jsr	pc,_FinishGraph
@@ -263,8 +279,11 @@ L_38:
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
-	.globl	_ant_state
+	.globl	_esc
 	.data
+_esc:
+	.=.+ 01
+	.globl	_ant_state
 _ant_state:
 	.=.+ 01
 	.globl	_ant_dir

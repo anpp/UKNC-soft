@@ -6,6 +6,8 @@
 #define DOWN  2
 #define LEFT  3
 
+#define KEY_AR2  06
+
 extern void InitGraph();
 extern void FinishGraph();
 extern void ClearScreen();
@@ -16,7 +18,7 @@ extern void PrintTop(char *buffer);
 extern void InitKeyb();
 extern void FinishKeyb();
 extern int kbhit();
-
+extern void SetOnKeyEvent(bool bDown, void *addr_func);
 
 /* -------- тьюрмитная программа -------- */
 
@@ -157,9 +159,20 @@ int step()
 
 /* ------------------------------------ */
 
+
+
+
+volatile char esc = false;
+void KeyDown(unsigned char key_code)
+{
+   esc = (key_code == KEY_AR2);
+}
+
 void main()
 {
     InitKeyb();
+    SetOnKeyEvent(true, KeyDown);
+
     InitGraph();
     ClearScreen();
 
@@ -170,9 +183,9 @@ void main()
     ant_dir = RIGHT;
     ant_state = 'A';
 
+    while (step() && !esc)
+      ;
 
-    while (step() && !kbhit())
-        ;    
     PrintTop("       ");
     FinishGraph();    
     FinishKeyb();    
