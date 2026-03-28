@@ -632,7 +632,9 @@ L_46:
 	beq	L_49
 	jmp	L_47
 L_49:
+	jsr	pc,_WaitAnyKey
 	jsr	pc,_FinishGraph
+	jsr	pc,_FinishKeyb
 	add	$032,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r4

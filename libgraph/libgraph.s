@@ -5,7 +5,7 @@
 base_addr = .
 
 entry = 01000
-crt0size = 014
+crt0size = 016
 
 offset_size = base_addr - (entry + crt0size)
 

@@ -1,6 +1,7 @@
         .globl _start
         .globl _main
         .globl ___main
+        .globl _crt0size
 
 _start:
         mov     @$042, sp
@@ -9,3 +10,5 @@ _start:
 
 ___main:
         rts     pc
+
+_crt0size: .word . - _start

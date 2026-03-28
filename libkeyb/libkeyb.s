@@ -122,7 +122,8 @@ IntKbd:
     bne  100f
     /запишем в ЦП код нажатой клавиши
     mov   $key_pressed, r0 
-    asr   r0
+    clc    
+    ror   r0
 
     mov  r0, @$0177010
     mov  $1, @$0177014
@@ -146,7 +147,8 @@ FinishKeybPPU:
 
     /признак завершения в ЦП
     mov $finished, r0
-    asr r0
+    clc    
+    ror   r0
     mov r0, @$0177010
     mov $1, @$0177014    
 

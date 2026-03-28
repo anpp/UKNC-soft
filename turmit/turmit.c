@@ -159,14 +159,11 @@ int step()
 
 void main()
 {
-    char *buffer = "Turmit";
-    char *buffer1 = "        ";
-
     InitKeyb();
     InitGraph();
     ClearScreen();
 
-    PrintTop(buffer);
+    PrintTop("Turmit");
 
     ant_x = WIDTH / 2;
     ant_y = HEIGHT / 2;
@@ -176,7 +173,7 @@ void main()
 
     while (step() && !kbhit())
         ;    
-    PrintTop(buffer1);
+    PrintTop("       ");
     FinishGraph();    
     FinishKeyb();    
 }
