@@ -62,15 +62,17 @@ pp_mput:
 
 /=============================================================================
 Int460:
-    mov  r0, -(sp)
-    mov  r1, -(sp)
-    mov  r2, -(sp)
-
-    mov  @$0176662, r2    /В r2 код нажатой или отжатой клавиши
-
     tst  OnKeyEvent
     beq  99f              /Если обработчик не установлен - выход
     
+    /Cохраняем все регистры, так как непонятно, что будет в функции OnKeyEvent
+    mov  r0, -(sp)
+    mov  r1, -(sp)
+    mov  r2, -(sp)
+    mov  r3, -(sp)
+    mov  r4, -(sp)    
+
+    mov  @$0176662, r2    /В r2 код нажатой или отжатой клавиши
     mov  r2, r1
     ash  $-7, r1          /В r1 1 - клавиша нажата, 0 - клавиша отжата
     bic  $0b10000000, r2  /В r2 - код клавиши
@@ -82,17 +84,19 @@ Int460:
     jsr  pc, @OnKeyEvent
     add  $4, sp        /чистка стека после вызова функции
 
-99:
-
+    mov  (sp)+, r4
+    mov  (sp)+, r3
     mov  (sp)+, r2
     mov  (sp)+, r1
     mov  (sp)+, r0
+
+99:
     rti
 
 
 _InitKeyb:
-    bis   $0100, @$0176660      /Разрешение прерывания 460
     mtps  $0200
+    bis   $0100, @$0176660      /Разрешение прерывания 0460    
     mov   @$0460, OldInt460
     mov   $Int460, @$0460
     mtps  $0
@@ -114,11 +118,6 @@ _InitKeyb:
     rts  pc
 
 _FinishKeyb:
-    mtps   $0200
-    bic    $0200, @$0176660      /Запрет прерывания 460
-    mov    OldInt460, @$0460
-    mtps   $0
-
     / запуск подпрограммы в ПП FinishKeybPPU
     mov  addrPP, r0
     mov  r0, r1
@@ -136,6 +135,12 @@ _FinishKeyb:
     movb  $2, command
     mov   r1, addrPP
     mput  mp
+
+    mtps   $0200
+    bic    $0200, @$0176660      /Запрет прерывания 0460
+    mov    OldInt460, @$0460
+    mtps   $0
+
     rts   pc
 
 

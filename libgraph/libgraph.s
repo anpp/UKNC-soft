@@ -1,5 +1,5 @@
 .text
-.globl _InitGraph, _FinishGraph, _ClearScreen, _PutPixel, _GetPixel, _PrintTop
+.globl _InitGraph, _FinishGraph, _ClearScreen, _PutPixel, _GetPixel, _PrintTop, _PrintBottom
 .globl _RunPPU
 
 base_addr = .
@@ -40,7 +40,7 @@ addrCP1:     .word   0
 WORDS1:      .word   0
 .even
 
-Pxl:
+Pxl:      /(порядок не менять)
 PxlAddr: .word 0
 PixelX:  .word 0
 PxClr:   .word 0
@@ -55,15 +55,19 @@ running_proc:	.word 0   /слово флагов для запуска подп�
 01  - PutPixelPPU
 02  - GetPixelPPU
 04  - ClearSreenPPU
-010 - PrintTopPPU
+010 - PrintTopBottomPPU
 .
 .
 .
 0100000 - завершение главного цикла ПП
 */
 
-finished:            .word 0
-addr_buffer_string:  .word 0
+finished:                 .word 0
+
+/параметры для вывода строки в служебные экраны (порядок не менять)
+top_or_bottom:            .word 0  /0 - top, 1 - bottom
+position_service_string:  .word 0  / позиция вывода
+addr_buffer_string:       .word 0  / адрес строки
 
 
 .macro  mput  adrmp
@@ -212,12 +216,18 @@ _GetPixel:
 
 
 _PrintTop:
-    mov   2(sp), addr_buffer_string
+    mov   $0, top_or_bottom
+    br    1f
+_PrintBottom:
+    mov   $1, top_or_bottom
+1:
+    mov   2(sp), position_service_string
+    mov   4(sp), addr_buffer_string
 
     bis   $010, running_proc
-1:
+2:
     bit $010, running_proc
-    bne 1b
+    bne 2b
 
     rts  pc
 
@@ -293,14 +303,14 @@ MainPPU:
     bic $04, @r0
                          /ClearScreen выполнена
 4:
-    bit $010, @r0          /Проверка на PrintTop
+    bit $010, @r0          /Проверка на PrintTopBottom
     beq 5f
-    jsr pc, PrintTopPPU
+    jsr pc, PrintTopBottomPPU
 
     mov $RunProcPPU, @$0177010
     mov $0177014, r0
     bic $010, @r0
-                         /PrintTop выполнена
+                         /PrintTopBottom выполнена
 5:    
     jmp MainPPU
 100:    
@@ -384,10 +394,10 @@ GetPixelPPU:
     rts  pc
 
 
-PrintTopPPU:
+PrintTopBottomPPU:
     mov  pc, r1
     add  $str_buff - ., r1
-    mov  r1, adr_for_emt    
+    mov  r1, addr_for_emt    
     
     inc  r1
     mov  r1, r3
@@ -398,11 +408,23 @@ PrintTopPPU:
     clr (r3)+
     sob  r2, 11b 
 
-    mov  $addr_buffer_string, r0
+    mov  $0104052, code_emt  /emt 052 по-умолчанию
+
+    mov  $top_or_bottom, r0
     clc
-    ror  r0                 /В r0 адрес адреса строки в ЦП
-    mov  r0, @$0177010 
-    mov  @$0177014, r0
+    ror  r0                 
+    mov  r0, @$0177010
+    mov  @$0177014, r0  /В r0 параметр в ЦП - 0 - top, 1 - bottom
+    tstb r0
+    beq  111f                /top - ничего не делаем
+    mov  $0104056, code_emt   /emt 056
+ 
+111:
+    inc   @$0177010          /$position_service_string            
+    movb  @$0177014, @addr_for_emt      /Параметр в ЦП - позиция вывода
+ 
+    inc  @$0177010          /$addr_buffer_string
+    mov  @$0177014, r0      /В r0 адрес адреса строки в ЦП
     clc
     ror  r0                 /В r0 адрес строки в ЦП
     mov  r0, @$0177010 
@@ -426,8 +448,9 @@ PrintTopPPU:
 3:
     clrb @r1
 
+code_emt:
     emt  052
-adr_for_emt:  .word 0    
+addr_for_emt:  .word 0    
 
     rts  pc
 

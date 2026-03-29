@@ -13,7 +13,8 @@ extern void FinishGraph();
 extern void ClearScreen();
 extern void PutPixel(unsigned int x,unsigned int y, unsigned int color);
 extern unsigned int GetPixel(unsigned int x, unsigned int y);
-extern void PrintTop(char *buffer);
+extern void PrintTop(unsigned position, char *buffer);
+extern void PrintBottom(unsigned position, char *buffer);
 
 extern void InitKeyb();
 extern void FinishKeyb();
@@ -176,7 +177,7 @@ void main()
     InitGraph();
     ClearScreen();
 
-    PrintTop("Turmit");
+    PrintTop(1, "Turmit");
 
     ant_x = WIDTH / 2;
     ant_y = HEIGHT / 2;
@@ -186,7 +187,7 @@ void main()
     while (step() && !esc)
       ;
 
-    PrintTop("       ");
+    PrintTop(1, "       ");
     FinishGraph();    
     FinishKeyb();    
 }

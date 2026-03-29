@@ -260,13 +260,14 @@ _main:
 	jsr	pc,_InitGraph
 	jsr	pc,_ClearScreen
 	mov	$LC_0,-(sp)
+	mov	$01,-(sp)
 	mov	$_PrintTop,r3
 	jsr	pc,(r3)
 	mov	$0500,_ant_x
 	mov	$0204,_ant_y
 	mov	$01,_ant_dir
 	movb	$0101,_ant_state
-	add	$04,sp
+	add	$06,sp
 	br	L_40
 L_46:
 	movb	_esc,r0
@@ -278,10 +279,11 @@ L_40:
 	bne	L_46
 L_39:
 	mov	$LC_1,-(sp)
+	mov	$01,-(sp)
 	jsr	pc,(r3)
 	jsr	pc,_FinishGraph
 	jsr	pc,_FinishKeyb
-	add	$02,sp
+	add	$04,sp
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
