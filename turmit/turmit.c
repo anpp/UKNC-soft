@@ -6,8 +6,6 @@
 #define DOWN  2
 #define LEFT  3
 
-#define KEY_AR2  06
-
 extern void InitGraph();
 extern void FinishGraph();
 extern void ClearScreen();
@@ -162,11 +160,22 @@ int step()
 
 
 
+#define KEY_AR2    06
+#define KEY_SPACE  0113
 
+#define STATE_RUNNING  0
+#define STATE_PAUSE    1
+
+volatile char app_state = STATE_RUNNING;
 volatile char esc = false;
 void OnKeyEvent(bool Up, unsigned char key_code)
 {
    esc = (key_code == KEY_AR2 && !Up);
+   if(Up)
+   {
+      if(key_code == (KEY_SPACE & 15)) //код отжатия обрезан до 4 бит...
+        app_state = (app_state == STATE_RUNNING ? STATE_PAUSE : STATE_RUNNING);
+   }
 }
 
 void main()
@@ -185,7 +194,15 @@ void main()
     ant_state = 'A';
 
     while (step() && !esc)
-      ;
+    {
+       if(app_state == STATE_PAUSE)
+       {
+          PrintBottom(0, "PAUSE");
+          while(app_state == STATE_PAUSE)
+            ;
+          PrintBottom(0, "      ");
+       }
+    }
 
     PrintTop(1, "       ");
     FinishGraph();    

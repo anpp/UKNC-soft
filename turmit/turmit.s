@@ -2,37 +2,44 @@
 	.even
 	.globl	_OnKeyEvent
 _OnKeyEvent:
-	mov	r2,-(sp)
-	mov	$01,r1
-	movb	04(sp),r0
-	xor	r0,r1
-	mov	$06,r0
-	movb	06(sp),r2
-	xor	r2,r0
+	cmpb	04(sp),$06
+	beq	L_9
+	clrb	_esc
+	tstb	02(sp)
+	beq	L_1
+	cmpb	04(sp),$013
+	bne	L_1
+	movb	_app_state,r0
 	bic	$0177400,r0
 	dec	r0
 	clc
 	ror	r0
 	ash	$-016,r0	
-	comb	r0
-	bicb	r0,r1
-	movb	r1,_esc
-	mov	(sp)+,r2
+	movb	r0,_app_state
+L_1:
+	rts	pc
+L_9:
+	tstb	02(sp)
+	bne	L_3
+	movb	$01,_esc
+	rts	pc
+L_3:
+	clrb	_esc
 	rts	pc
 	.even
 	.globl	_turn_ant
 _turn_ant:
 	cmp	02(sp),$01
-	beq	L_6
+	beq	L_13
 	cmp	02(sp),$-01
-	bne	L_3
+	bne	L_10
 	mov	_ant_dir,r0
 	add	$03,r0
 	bic	$-04,r0
 	mov	r0,_ant_dir
-L_3:
+L_10:
 	rts	pc
-L_6:
+L_13:
 	mov	_ant_dir,r0
 	inc	r0
 	bic	$-04,r0
@@ -46,58 +53,58 @@ _move_ant:
 	mov	_ant_y,r0
 	mov	_ant_x,r1
 	tst	r2
-	bne	L_8
+	bne	L_15
 	dec	r0
 	mov	r0,_ant_y
-L_9:
+L_16:
 	tst	r1
-	blt	L_17
-L_12:
+	blt	L_24
+L_19:
 	tst	r0
-	blt	L_18
+	blt	L_25
 	cmp	r1,$01177
-	ble	L_13
+	ble	L_20
 	clr	_ant_x
-L_13:
+L_20:
 	cmp	r0,$0407
-	ble	L_7
+	ble	L_14
 	clr	_ant_y
-L_7:
+L_14:
 	mov	(sp)+,r2
 	rts	pc
-L_8:
+L_15:
 	cmp	r2,$02
-	bne	L_10
+	bne	L_17
 	inc	r0
 	mov	r0,_ant_y
 	tst	r1
-	bge	L_12
-L_17:
+	bge	L_19
+L_24:
 	mov	$01177,_ant_x
 	tst	r0
-	bge	L_13
+	bge	L_20
 	mov	$0407,_ant_y
 	mov	(sp)+,r2
 	rts	pc
-L_18:
+L_25:
 	mov	$0407,_ant_y
 	cmp	r1,$01177
-	ble	L_7
+	ble	L_14
 	clr	_ant_x
 	mov	(sp)+,r2
 	rts	pc
-L_10:
+L_17:
 	cmp	r2,$03
-	bne	L_11
+	bne	L_18
 	dec	r1
 	mov	r1,_ant_x
-	br	L_9
-L_11:
+	br	L_16
+L_18:
 	cmp	r2,$01
-	bne	L_9
+	bne	L_16
 	inc	r1
 	mov	r1,_ant_x
-	br	L_9
+	br	L_16
 	.even
 	.globl	_find_rule
 _find_rule:
@@ -109,16 +116,16 @@ _find_rule:
 	clr	(sp)
 	mov	(sp),r0
 	cmp	r0,$07
-	blos	L_23
-	br	L_20
-L_21:
+	blos	L_30
+	br	L_27
+L_28:
 	mov	(sp),r0
 	inc	r0
 	mov	r0,(sp)
 	mov	(sp),r0
 	cmp	r0,$07
-	bhi	L_20
-L_23:
+	bhi	L_27
+L_30:
 	mov	(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -126,7 +133,7 @@ L_23:
 	add	r2,r0
 	asl	r0
 	cmpb	_prog(r0),r1
-	bne	L_21
+	bne	L_28
 	mov	(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -134,7 +141,7 @@ L_23:
 	add	r2,r0
 	asl	r0
 	cmp	_prog+02(r0),r5
-	bne	L_21
+	bne	L_28
 	mov	(sp),r1
 	mov	r1,r0
 	asl	r0
@@ -146,7 +153,7 @@ L_23:
 	mov	(sp)+,r5
 	mov	(sp)+,r2
 	rts	pc
-L_20:
+L_27:
 	clr	r0
 	add	$02,sp
 	mov	(sp)+,r5
@@ -168,16 +175,16 @@ _step:
 	mov	06(sp),r0
 	add	$04,sp
 	cmp	r0,$07
-	blos	L_26
-	br	L_31
-L_28:
+	blos	L_33
+	br	L_38
+L_35:
 	mov	02(sp),r0
 	inc	r0
 	mov	r0,02(sp)
 	mov	02(sp),r0
 	cmp	r0,$07
-	bhi	L_31
-L_26:
+	bhi	L_38
+L_33:
 	mov	02(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -185,7 +192,7 @@ L_26:
 	add	r2,r0
 	asl	r0
 	cmpb	r1,_prog(r0)
-	bne	L_28
+	bne	L_35
 	mov	02(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -193,7 +200,7 @@ L_26:
 	add	r2,r0
 	asl	r0
 	cmp	r5,_prog+02(r0)
-	bne	L_28
+	bne	L_35
 	mov	02(sp),r0
 	mov	r0,r2
 	asl	r2
@@ -212,14 +219,14 @@ L_26:
 	mov	(r5),r0
 	add	$06,sp
 	cmp	r0,$01
-	beq	L_37
+	beq	L_44
 	cmp	r0,$-01
-	bne	L_32
+	bne	L_39
 	mov	_ant_dir,r0
 	add	$03,r0
 	bic	$-04,r0
 	mov	r0,_ant_dir
-L_32:
+L_39:
 	asl	r2
 	add	$_prog+010,r2
 	movb	(r2),r0
@@ -230,22 +237,26 @@ L_32:
 	mov	(sp)+,r5
 	mov	(sp)+,r2
 	rts	pc
-L_31:
+L_38:
 	clr	r0
 	add	$04,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r2
 	rts	pc
-L_37:
+L_44:
 	mov	_ant_dir,r0
 	inc	r0
 	bic	$-04,r0
 	mov	r0,_ant_dir
-	br	L_32
+	br	L_39
 	.data
 LC_0:
 	.byte 0124,0165,0162,0155,0151,0164,0
 LC_1:
+	.byte 0120,0101,0125,0123,0105,0
+LC_2:
+	.byte 040,040,040,040,040,040,0
+LC_3:
 	.byte 040,040,040,040,040,040,040,0
 	.text
 	.even
@@ -268,17 +279,20 @@ _main:
 	mov	$01,_ant_dir
 	movb	$0101,_ant_state
 	add	$06,sp
-	br	L_40
-L_46:
+	br	L_47
+L_49:
 	movb	_esc,r0
 	tstb	r0
-	bne	L_39
-L_40:
+	bne	L_51
+	movb	_app_state,r0
+	cmpb	r0,$01
+	beq	L_56
+L_47:
 	jsr	pc,_step
 	tst	r0
-	bne	L_46
-L_39:
-	mov	$LC_1,-(sp)
+	bne	L_49
+L_51:
+	mov	$LC_3,-(sp)
 	mov	$01,-(sp)
 	jsr	pc,(r3)
 	jsr	pc,_FinishGraph
@@ -287,9 +301,26 @@ L_39:
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
+L_56:
+	mov	$LC_1,-(sp)
+	clr	-(sp)
+	jsr	pc,_PrintBottom
+	add	$04,sp
+L_48:
+	movb	_app_state,r0
+	cmpb	r0,$01
+	beq	L_48
+	mov	$LC_2,-(sp)
+	clr	-(sp)
+	jsr	pc,_PrintBottom
+	add	$04,sp
+	br	L_47
 	.globl	_esc
 	.data
 _esc:
+	.=.+ 01
+	.globl	_app_state
+_app_state:
 	.=.+ 01
 	.globl	_ant_state
 _ant_state:
