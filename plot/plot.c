@@ -1,14 +1,8 @@
+#include "../libgraph/libgraph.h"
+#include "../libkeyb/libkeyb.h"
+
 #define WIDTH   640
 #define HEIGHT  264
-
-extern void InitGraph();
-extern void FinishGraph();
-extern void ClearScreen();
-extern void PutPixel(unsigned int x, unsigned int y, unsigned int color);
-
-extern void InitKeyb();
-extern void FinishKeyb();
-extern void WaitAnyKey();
 
 
 #define PI 3.14159265f

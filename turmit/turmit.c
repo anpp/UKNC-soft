@@ -1,3 +1,6 @@
+#include "../libgraph/libgraph.h"
+#include "../libkeyb/libkeyb.h"
+
 #define WIDTH   640
 #define HEIGHT  264
 
@@ -6,18 +9,6 @@
 #define DOWN  2
 #define LEFT  3
 
-extern void InitGraph();
-extern void FinishGraph();
-extern void ClearScreen();
-extern void PutPixel(unsigned int x,unsigned int y, unsigned int color);
-extern unsigned int GetPixel(unsigned int x, unsigned int y);
-extern void PrintTop(unsigned position, char *buffer);
-extern void PrintBottom(unsigned position, char *buffer);
-
-extern void InitKeyb();
-extern void FinishKeyb();
-extern int kbhit();
-extern void SetOnKeyEvent(void *addr_func);
 
 /* -------- тьюрмитная программа -------- */
 
@@ -72,6 +63,7 @@ struct rule prog[] = {
 {'A', 6, 0, -1, 'A'}  // Цвет 6 -> 0, поворот налево
 */
 //Красиво
+
 {'A', 0, 1,  1, 'A'},
 {'A', 1, 2,  1, 'A'},
 {'A', 2, 3, -1, 'A'},
@@ -80,6 +72,38 @@ struct rule prog[] = {
 {'A', 5, 6, -1, 'A'},
 {'A', 6, 7,  1, 'A'},
 {'A', 7, 0,  1, 'A'}
+
+//Морская звезда?
+/*
+{'A', 0, 1,  1, 'A'}, // R
+{'A', 1, 2,  1, 'A'}, // R
+{'A', 2, 3, -1, 'A'}, // L
+{'A', 3, 4, -1, 'A'}, // L
+{'A', 4, 5, -1, 'A'}, // L
+{'A', 5, 6,  1, 'A'}, // R
+{'A', 6, 7,  1, 'A'}, // R
+{'A', 7, 0, -1, 'A'}  // L
+*/
+//мега каша
+/*
+{'A', 0, 1,  1, 'A'},
+{'A', 1, 2,  1, 'A'},
+{'A', 2, 3,  1, 'A'},
+{'A', 3, 0, -1, 'A'},
+{'A', 4, 5, -1, 'A'},
+{'A', 5, 6, -1, 'A'},
+{'A', 6, 7, -1, 'A'},
+{'A', 7, 4,  1, 'A'}
+*/
+//материнская плата
+/*
+{'A', 0, 4,  1, 'A'},  
+{'A', 4, 6, -1, 'B'},
+{'A', 6, 0, -1, 'B'},
+{'B', 0, 4,  1, 'A'},
+{'B', 4, 4,  1, 'A'},
+{'B', 6, 4, -1, 'A'}
+*/
 };
 
 #define N_RULES (sizeof(prog)/sizeof(prog[0]))
