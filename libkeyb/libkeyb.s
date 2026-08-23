@@ -62,18 +62,20 @@ pp_mput:
 
 /=============================================================================
 Int460:
+/    mov  $1, key_pressed   /признак нажатия любой клавиши
+    mov  r2, -(sp)
+    
+    mov  @$0176662, r2    /В r2 код нажатой или отжатой клавиши (надо обязательно прочитать)
     tst  OnKeyEvent
     beq  99f              /Если обработчик не установлен - выход
     
     /Cохраняем все регистры, так как непонятно, что будет в функции OnKeyEvent
     mov  r0, -(sp)
     mov  r1, -(sp)
-    mov  r2, -(sp)
     mov  r3, -(sp)
     mov  r4, -(sp)    
     mov  r5, -(sp)
-
-    mov  @$0176662, r2    /В r2 код нажатой или отжатой клавиши
+    
     mov  r2, r1
     ash  $-7, r1          /В r1 0 - клавиша нажата, 1 - клавиша отжата
     bic  $0b10000000, r2  /В r2 - код клавиши
@@ -88,11 +90,11 @@ Int460:
     mov  (sp)+, r5
     mov  (sp)+, r4
     mov  (sp)+, r3
-    mov  (sp)+, r2
     mov  (sp)+, r1
     mov  (sp)+, r0
 
 99:
+    mov  (sp)+, r2
     tst  OldInt460     /на случай, если уже кто-то перехватил это прерывание
     beq  100f
     jmp  @OldInt460
@@ -118,9 +120,11 @@ _InitKeyb:
     movb  $030, command
     mput  mp
     
+    mov  $1, r0
     rts  pc
 
 1:
+    mov  $0, r0
     rts  pc
 
 _FinishKeyb:
@@ -151,7 +155,7 @@ _FinishKeyb:
 
 
 _WaitAnyKey:
-   mov   $0, key_pressed
+    mov   $0, key_pressed
 1:
     tst  key_pressed
     beq  1b

@@ -1,5 +1,5 @@
 .text
-.globl _InitGraph, _FinishGraph, _ClearScreen, _PutPixel, _GetPixel, _PrintTop, _PrintBottom
+.globl _InitGraph, _FinishGraph, _ClearScreen, _PutPixel, _GetPixel, _PrintTop, _PrintBottom, _InvertScreen
 .globl _RunPPU
 
 base_addr = .
@@ -56,6 +56,7 @@ running_proc:	.word 0   /слово флагов для запуска подп�
 02  - GetPixelPPU
 04  - ClearSreenPPU
 010 - PrintTopBottomPPU
+020 - InvertScreenPPU
 .
 .
 .
@@ -145,6 +146,14 @@ _ClearScreen:
 1:
     bit $04, running_proc
     bne 1b
+
+    rts  pc
+
+_InvertScreen:
+    bis $020, running_proc
+11:
+    bit $020, running_proc
+    bne 11b
 
     rts  pc
 
@@ -278,30 +287,31 @@ MainPPU:
     bne 100f
      
 
-    bit $1, @r0           /Проверка на PutPixel
+    bit $01, @r0           /Проверка на PutPixel
     beq 2f
     jsr pc, PutPixelPPU
 
     mov $RunProcPPU, @$0177010
     mov $0177014, r0
-    bic $1, @r0          /PutPixel выполнена
+    bic $01, @r0          /PutPixel выполнена
 2:
-    bit $2, @r0          /Проверка на GetPixel
+    bit $02, @r0          /Проверка на GetPixel
     beq 3f
     jsr pc, GetPixelPPU
 
     mov $RunProcPPU, @$0177010
     mov $0177014, r0
-    bic $2, @r0          /GetPixel выполнена
+    bic $02, @r0          /GetPixel выполнена
+
 3: 
-    bit $4, @r0          /Проверка на ClearScreen
+    bit $04, @r0          /Проверка на ClearScreen
     beq 4f
     jsr pc, ClearScreenPPU
 
     mov $RunProcPPU, @$0177010
     mov $0177014, r0
-    bic $04, @r0
-                         /ClearScreen выполнена
+    bic $04, @r0           /ClearScreen выполнена
+                         
 4:
     bit $010, @r0          /Проверка на PrintTopBottom
     beq 5f
@@ -311,7 +321,16 @@ MainPPU:
     mov $0177014, r0
     bic $010, @r0
                          /PrintTopBottom выполнена
-5:    
+5:
+    bit $020, @r0          /Проверка на InvertScreen
+    beq 6f
+    jsr pc, InvertScreenPPU
+
+    mov $RunProcPPU, @$0177010
+    mov $0177014, r0
+    bic $020, @r0         /InvertScreen выполнена
+
+6:  
     jmp MainPPU
 100:    
     rts  pc
@@ -328,6 +347,29 @@ ClearScreenPPU:
     mov	 $0100000, @r0
     mov	 $(80 * 286), r2
 1:
+    clr  @r1
+    inc	 @r0
+    sob	 r2, 1b
+
+    mov  (sp)+, r2
+    mov  (sp)+, r1
+    mov  (sp)+, r0
+
+    rts  pc
+
+InvertScreenPPU:
+    mov	 r0, -(sp)
+    mov	 r1, -(sp)
+    mov	 r2, -(sp)
+
+    mov  $0177010, r0      / регистр адреса ВОЗУ в ПП
+    mov  $0177024, r1
+    mov	 $0100000, @r0
+    mov	 $(80 * 286), r2
+1:
+    tst  @r1
+    com  @$0177020
+    com  @$0177022
     clr  @r1
     inc	 @r0
     sob	 r2, 1b
@@ -381,8 +423,8 @@ GetPixelPPU:
     asl r2
     asl r2               / r2 = n * 4
 
-    neg r2
-    mov @$0177020, r1    / старшее слово
+    neg r2              /сдвиг вправо
+    mov @$0177020, r1    / младшее слово
     mov @$0177022, r0    / старшее слово
     ashc r2, r0         / сдвиг 32 бит регистров r0:r1
 

@@ -1,7 +1,7 @@
 #ifndef LIB_KEYB_H
 #define LIB_KEYB_H
 
-extern void InitKeyb();
+extern bool InitKeyb();
 extern void FinishKeyb();
 extern int kbhit();
 extern void WaitAnyKey();
