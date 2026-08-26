@@ -265,7 +265,7 @@ _Line:
 /; --- Отрисовка с ведущей осью X (dx >= dy) ---
 DrawXMajor:
     mov     r3, r12
-    add     r12, r12
+    asl     r12
     mov     r12, r11
     sub     r2, r11          /; r11 = err = 2*dy - dx
 
@@ -299,7 +299,7 @@ DrawXMajor:
     add     r5, r1           /; Y += sy
     mov     r3, r14
     sub     r2, r14          /; r14 = dy - dx
-    add     r14, r14
+    asl     r14
     add     r14, r11         /; err += 2*(dy - dx)
     br      12f
 11:
@@ -315,7 +315,7 @@ DrawXMajor:
 /; --- Отрисовка с ведущей осью Y (dy > dx) ---
 DrawYMajor:
     mov     r2, r12
-    add     r12, r12
+    asl     r12
     mov     r12, r11
     sub     r3, r11          /; r11 = err = 2*dx - dy
 
@@ -348,7 +348,7 @@ DrawYMajor:
     add     r4, r0           /; X += sx
     mov     r2, r14
     sub     r3, r14          /; r14 = dx - dy
-    add     r14, r14
+    asl     r14
     add     r14, r11         /; err += 2*(dx - dy)
     br      22f
 21:
@@ -414,65 +414,63 @@ pp.beg:
     mov  @$02476, r0
     mov  @r0, offsetVPPU
 
-    / рулон в CPU
-    mov $OffPPU, @$0177010
-    mov offsetVPPU, @$0177014
+    mov $0177010, r4
+    mov $0177014, r5
 
+    / рулон в CPU
+    mov $OffPPU, @r4
+    mov offsetVPPU, @r5
+    
     jsr  pc, MainPPU
     rts  pc
 
 
     /Основной цикл
 MainPPU:
-    mov $RunProcPPU, @$0177010
-    mov $0177014, r0    
+    mov $RunProcPPU, @r4
+/;    mov @r5, r0    
 
-    bit $0100000, @r0    /проверка флага завершения
+    bit $0100000, @r5    /проверка флага завершения
     bne 100f
      
 
-    bit $01, @r0           /Проверка на PutPixel
+    bit $01, @r5           /Проверка на PutPixel
     beq 2f
     jsr pc, PutPixelPPU
 
-    mov $RunProcPPU, @$0177010
-    mov $0177014, r0
-    bic $01, @r0          /PutPixel выполнена
+    mov $RunProcPPU, @r4
+    bic $01, @r5          /PutPixel выполнена
 2:
-    bit $02, @r0          /Проверка на GetPixel
+    bit $02, @r5          /Проверка на GetPixel
     beq 3f
     jsr pc, GetPixelPPU
 
-    mov $RunProcPPU, @$0177010
-    mov $0177014, r0
-    bic $02, @r0          /GetPixel выполнена
+    mov $RunProcPPU, @r4
+    bic $02, @r5          /GetPixel выполнена
 
 3: 
-    bit $04, @r0          /Проверка на ClearScreen
+    bit $04, @r5          /Проверка на ClearScreen
     beq 4f
     jsr pc, ClearScreenPPU
 
-    mov $RunProcPPU, @$0177010
-    mov $0177014, r0
-    bic $04, @r0           /ClearScreen выполнена
+    mov $RunProcPPU, @r4
+    bic $04, @r5           /ClearScreen выполнена
                          
 4:
-    bit $010, @r0          /Проверка на PrintTopBottom
+    bit $010, @r5          /Проверка на PrintTopBottom
     beq 5f
     jsr pc, PrintTopBottomPPU
 
-    mov $RunProcPPU, @$0177010
-    mov $0177014, r0
-    bic $010, @r0
+    mov $RunProcPPU, @r4
+    bic $010, @r5
                          /PrintTopBottom выполнена
 5:
-    bit $020, @r0          /Проверка на InvertScreen
+    bit $020, @r5          /Проверка на InvertScreen
     beq 6f
     jsr pc, InvertScreenPPU
 
-    mov $RunProcPPU, @$0177010
-    mov $0177014, r0
-    bic $020, @r0         /InvertScreen выполнена
+    mov $RunProcPPU, @r4
+    bic $020, @r5         /InvertScreen выполнена
 
 6:
 
@@ -488,13 +486,12 @@ ClearScreenPPU:
 
     clr  @$0177020
     clr  @$0177022
-    mov  $0177010, r0      / регистр адреса ВОЗУ в ПП
     mov  $0177024, r1
-    mov	 $0100000, @r0
+    mov	 $0100000, @r4
     mov	 $(80 * 286), r2
 1:
     clr  @r1
-    inc	 @r0
+    inc	 @r4
     sob	 r2, 1b
 
     mov  (sp)+, r2
@@ -529,11 +526,11 @@ InvertScreenPPU:
 
 
 PutPixelPPU:    
-    mov $PxlAddress, @$0177010
-    mov @$0177014, r0          /В r0 готовый адрес из ЦП
+    mov $PxlAddress, @r4
+    mov @r5, r0          /В r0 готовый адрес из ЦП
 
-    inc @$0177010
-    mov @$0177014, r2          /в r2 координата X
+    inc (r4)
+    mov @r5, r2          /в r2 координата X
 
     bic $0b1111111111111000, r2 / В r2 номер точки в октете
 
@@ -541,13 +538,11 @@ PutPixelPPU:
     mov     $1, r3
     ash     r2, r3
 
-    inc @$0177010    / color
-    mov @$0177014, r2
-
-    bic $0b1111111111111000, r2
+    inc (r4)    / color
+    mov (r5), r2	
 
     / Запись пикселя (r0 - адрес, r2 - цвет, r3 - маска пикселя в октете)
-    mov r0, @$0177010
+    mov r0, @r4
     mov r2, @$0177016
     movb r3, @$0177024
 
@@ -555,15 +550,15 @@ PutPixelPPU:
 
 
 GetPixelPPU:
-    mov $PxlAddress, @$0177010
-    mov @$0177014, r0          /В r0 готовый адрес из ЦП
+    mov $PxlAddress, @r4
+    mov @r5, r0          /В r0 готовый адрес из ЦП
 
-    inc @$0177010
-    mov @$0177014, r2          /в r2 координата X
+    inc (r4)
+    mov @r5, r2          /в r2 координата X
 
     bic $0b1111111111111000, r2 / В r2 номер точки в октете
 
-    mov r0, @$0177010
+    mov r0, @r4
     tst @$0177024    / чтение регистров цвета фона
 
     / r2 = номер точки (0..7)
@@ -578,8 +573,8 @@ GetPixelPPU:
     bic $0b1111111111111000, r1
 
     / цвет в CPU
-    mov $RecColor, @$0177010
-    mov r1, @$0177014
+    mov $RecColor, @r4
+    mov r1, @r5
     rts  pc
 
 
