@@ -158,11 +158,16 @@ _InvertScreen:
 
 /Вычисление адрес вы ВОЗУ для ПП по координатам в PixelX, PixelY, результат в PxlAddr
 CalcAddress:
-    mov  r0, -(sp)
-    mov  r1, -(sp)
-
-    mov  PixelX, r0
-    mov  PixelY, r1
+/;сравнение предыдущих и новых координат, если равны - адрес не вычисляется
+    cmp  r0, PixelX
+    bne  11f
+    cmp  r1, PixelY
+    bne  11f
+    br   22f
+11:
+    /;сохранение пред. координат
+    mov  r0, PixelX
+    mov  r1, PixelY
 
     mul $80, r1
     /деление координаты x на 8
@@ -175,26 +180,16 @@ CalcAddress:
     sub $054540, r0 / 154540 - 100000 = 54540
 1:
     mov  r0,  PxlAddr
-
-    mov (sp)+, r1
-    mov (sp)+, r0
+22:
     rts  pc
 
 
 _PutPixel:    
     mov     6(sp), PxClr
-/сравнение предыдущих и новых координат, если равны - адрес не вычисляется
-    cmp  2(sp), PixelX
-    bne  1f
-    cmp  4(sp), PixelY
-    bne  1f
-    br   2f
-1:
-    mov     2(sp), PixelX
-    mov     4(sp), PixelY
-    
+    mov     2(sp), r0
+    mov     4(sp), r1   
     jsr  pc, CalcAddress
-2:
+
     bis $1, running_proc
 3:
     bit $1, running_proc
@@ -206,18 +201,10 @@ _PutPixel:
 
 _GetPixel:
     mov     6(sp), PxClr
-/сравнение предыдущих и новых координат, если равны - адрес не вычисляется
-    cmp  2(sp), PixelX
-    bne  1f
-    cmp  4(sp), PixelY
-    bne  1f
-    br   2f
-1:
-    mov     2(sp), PixelX
-    mov     4(sp), PixelY
-    
+    mov     2(sp), r0
+    mov     4(sp), r1 
     jsr  pc, CalcAddress
-2:
+
     bis $2, running_proc
 3:
     tst received_color
@@ -245,8 +232,6 @@ _Line:
     mov     6(sp), PixelX1
     mov     8(sp), PixelY1    
 
-    mov     r0, -(sp)
-    mov     r1, -(sp)
     mov     r2, -(sp)
     mov     r3, -(sp)
     mov     r4, -(sp)
@@ -288,12 +273,20 @@ DrawXMajor:
     inc     r13
 
 10:
-    /; Отправить пиксель (цвет 7, Y, X)
-    mov     PxClr, -(sp)
-    mov     r1, -(sp)
-    mov     r0, -(sp)    
-    jsr     pc, _PutPixel
-    add     $6, sp
+    /; Отправить пиксель (цвет, Y, X)
+33:
+    bit $1, running_proc /если уже идет вывод пиксел - ждем
+    bne 33b
+    /; CalcAddress портит r0, и r1, в них же  принимает координаты
+    mov  r0, -(sp)
+    mov  r1, -(sp)
+    jsr  pc, CalcAddress
+    mov (sp)+, r1
+    mov (sp)+, r0
+
+    bis $1, running_proc /флаг на запуск вывода пикселя
+
+
 
     /; Если дошли до конечной точки по X – выход
     cmp     r0, PixelX1
@@ -331,11 +324,18 @@ DrawYMajor:
 
 20:
     /; Отправить пиксель
-    mov     PxClr, -(sp)
-    mov     r1, -(sp)
-    mov     r0, -(sp)    
-    jsr     pc, _PutPixel
-    add     $6, sp
+333:
+    bit $1, running_proc /если уже идет вывод пиксел - ждем
+    bne 333b
+    /; CalcAddress портит r0, и r1, в них же  принимает координаты
+    mov  r0, -(sp)
+    mov  r1, -(sp)
+    jsr  pc, CalcAddress
+    mov (sp)+, r1
+    mov (sp)+, r0
+
+    bis $1, running_proc /флаг на запуск вывода пикселя
+
 
     /; Если дошли до конечной точки по Y – выход
     cmp     r1, PixelY1
@@ -365,8 +365,6 @@ LineExit:
     mov     (sp)+, r4
     mov     (sp)+, r3
     mov     (sp)+, r2
-    mov     (sp)+, r1
-    mov     (sp)+, r0
     rts     pc
 
 
