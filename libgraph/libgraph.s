@@ -1,5 +1,5 @@
 .text
-.globl _InitGraph, _FinishGraph, _ClearScreen, _PutPixel, _GetPixel, _PrintTop, _PrintBottom, _InvertScreen
+.globl _InitGraph, _FinishGraph, _ClearScreen, _PutPixel, _GetPixel, _PrintTop, _PrintBottom, _InvertScreen, _Line
 .globl _RunPPU
 
 base_addr = .
@@ -45,7 +45,6 @@ PxlAddr: .word 0
 PixelX:  .word 0
 PxClr:   .word 0
 PixelY:  .word 0
-
 
 received_color: .word   -1
 offsetV:	.word	0	/адрес верхней видеостроки пользовательского экрана
@@ -159,6 +158,9 @@ _InvertScreen:
 
 /Вычисление адрес вы ВОЗУ для ПП по координатам в PixelX, PixelY, результат в PxlAddr
 CalcAddress:
+    mov  r0, -(sp)
+    mov  r1, -(sp)
+
     mov  PixelX, r0
     mov  PixelY, r1
 
@@ -174,6 +176,8 @@ CalcAddress:
 1:
     mov  r0,  PxlAddr
 
+    mov (sp)+, r1
+    mov (sp)+, r0
     rts  pc
 
 
@@ -222,6 +226,148 @@ _GetPixel:
     mov $-1, received_color
     
     rts  pc
+
+
+PixelX0:  .word 0
+PixelY0:  .word 0
+PixelX1:  .word 0
+PixelY1:  .word 0
+r12: .word 0
+r11: .word 0
+r13: .word 0
+r14: .word 0
+
+_Line:
+    mov     10(sp), PxClr
+
+    mov     2(sp), PixelX0
+    mov     4(sp), PixelY0
+    mov     6(sp), PixelX1
+    mov     8(sp), PixelY1    
+
+    mov     r0, -(sp)
+    mov     r1, -(sp)
+    mov     r2, -(sp)
+    mov     r3, -(sp)
+    mov     r4, -(sp)
+    mov     r5, -(sp)
+
+    mov     PixelX0, r0 /x0
+    mov     PixelY0, r1 /y0
+    mov     PixelX1, r2 /x1
+    mov     PixelY1, r3 /y1   
+
+    mov     $1, r4           /; r4 = sx (шаг по X = +1)
+    / Вычисление dx = |LastX - FirstX| и sx (направление по X)
+    sub     r0, r2           /; r2 = LastX - FirstX
+    bge     1f
+    neg     r2               /; r2 = dx = |dx|
+    neg     r4               /; r4 = sx = -1
+1:                          /; r2 = dx
+
+    mov     $1, r5           /; r5 = sy (шаг по Y = +1)
+    / Вычисление dy = |LastY - FirstY| и sy (направление по Y)
+    sub     r1, r3           /; r3 = LastY - FirstY    
+    bge     2f
+    neg     r3               /; r3 = dy = |dy|
+    neg     r5               /; r5 = sy = -1
+2:                          /; r3 = dy
+
+    /; Сравнение dx и dy для определения ведущей оси
+    cmp     r2, r3
+    blt     DrawYMajor       /; Если dy > dx, идем по оси Y
+
+/; --- Отрисовка с ведущей осью X (dx >= dy) ---
+DrawXMajor:
+    mov     r3, r12
+    add     r12, r12
+    mov     r12, r11
+    sub     r2, r11          /; r11 = err = 2*dy - dx
+
+    mov     r2, r13          /; r13 = счётчик точек = dx
+    inc     r13
+
+10:
+    /; Отправить пиксель (цвет 7, Y, X)
+    mov     PxClr, -(sp)
+    mov     r1, -(sp)
+    mov     r0, -(sp)    
+    jsr     pc, _PutPixel
+    add     $6, sp
+
+    /; Если дошли до конечной точки по X – выход
+    cmp     r0, PixelX1
+    beq     LineExit
+
+    /; --- Исправленный порядок: сначала проверка ошибки ---
+    tst     r11
+    blt     11f              /; если err < 0, Y не меняем
+    /; err >= 0 – увеличиваем Y и корректируем err
+    add     r5, r1           /; Y += sy
+    mov     r3, r14
+    sub     r2, r14          /; r14 = dy - dx
+    add     r14, r14
+    add     r14, r11         /; err += 2*(dy - dx)
+    br      12f
+11:
+    add     r12, r11         /; err += 2*dy   (Y не меняется)
+12:
+    /; Теперь увеличиваем X (ведущая координата)
+    add     r4, r0           /; X += sx
+
+    dec     r13
+    bne     10b              /; если счётчик > 0 – продолжаем
+    br      LineExit
+
+/; --- Отрисовка с ведущей осью Y (dy > dx) ---
+DrawYMajor:
+    mov     r2, r12
+    add     r12, r12
+    mov     r12, r11
+    sub     r3, r11          /; r11 = err = 2*dx - dy
+
+    mov     r3, r13          /; r13 = счётчик точек = dy
+    inc     r13
+
+20:
+    /; Отправить пиксель
+    mov     PxClr, -(sp)
+    mov     r1, -(sp)
+    mov     r0, -(sp)    
+    jsr     pc, _PutPixel
+    add     $6, sp
+
+    /; Если дошли до конечной точки по Y – выход
+    cmp     r1, PixelY1
+    beq     LineExit
+
+    /; --- Исправленный порядок: сначала проверка ошибки ---
+    tst     r11
+    blt     21f              /; если err < 0, X не меняем
+    /; err >= 0 – увеличиваем X и корректируем err
+    add     r4, r0           /; X += sx
+    mov     r2, r14
+    sub     r3, r14          /; r14 = dx - dy
+    add     r14, r14
+    add     r14, r11         /; err += 2*(dx - dy)
+    br      22f
+21:
+    add     r12, r11         /; err += 2*dx   (X не меняется)
+22:
+    /; Теперь увеличиваем Y (ведущая координата)
+    add     r5, r1           /; Y += sy
+
+    dec     r13
+    bne     20b              /; если счётчик > 0 – продолжаем
+
+LineExit:
+    mov     (sp)+, r5
+    mov     (sp)+, r4
+    mov     (sp)+, r3
+    mov     (sp)+, r2
+    mov     (sp)+, r1
+    mov     (sp)+, r0
+    rts     pc
 
 
 _PrintTop:
@@ -330,7 +476,9 @@ MainPPU:
     mov $0177014, r0
     bic $020, @r0         /InvertScreen выполнена
 
-6:  
+6:
+
+7:  
     jmp MainPPU
 100:    
     rts  pc
@@ -361,19 +509,20 @@ InvertScreenPPU:
     mov	 r0, -(sp)
     mov	 r1, -(sp)
     mov	 r2, -(sp)
+    mov	 r3, -(sp)
 
     mov  $0177010, r0      / регистр адреса ВОЗУ в ПП
-    mov  $0177024, r1
+    mov  $0177012, r1       / 0 план
+    mov  $0177014, r2       / 1, 2 планы
     mov	 $0100000, @r0
-    mov	 $(80 * 286), r2
+    mov	 $(80 * 286), r3
 1:
-    tst  @r1
-    com  @$0177020
-    com  @$0177022
-    clr  @r1
+    com  @r1
+    com  @r2
     inc	 @r0
-    sob	 r2, 1b
+    sob	 r3, 1b
 
+    mov  (sp)+, r3
     mov  (sp)+, r2
     mov  (sp)+, r1
     mov  (sp)+, r0
@@ -434,6 +583,7 @@ GetPixelPPU:
     mov $RecColor, @$0177010
     mov r1, @$0177014
     rts  pc
+
 
 
 PrintTopBottomPPU:
