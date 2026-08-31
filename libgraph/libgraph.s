@@ -277,6 +277,7 @@ _Line:
 
     rts  pc
 
+
 _PrintTop:
     mov   $0, top_or_bottom
     br    1f
@@ -553,7 +554,7 @@ FinishGraphPPU:
 LinePPU:
     /;цвет
     mov $LineColorPPU, @r4
-    mov @r5, @$0177016
+    mov @r5, @$0177016        
 
     inc     (r4)
     mov     @r5, PixelX0PPU
@@ -575,12 +576,19 @@ LinePPU:
     inc     (r4)
     mov     @r5, PixelMaskPPU
 
+    /; сохраним регистр r5, во всех остальных попрограммах это РД
+    mov     r5, -(sp)
+
+    /;Абсолютный адрес таблицы масок в r1
+    mov     pc, r1
+    add     $MaskTable - ., r1
+
     /; Вычисление dx = |LastX - FirstX| и sx (направление по X)
     sub     x, r2           /; r2 = LastX - FirstX
-    bge     1f
-    neg     r2               /; r2 = dx = |dx|
-    neg     stepX               /; r4 = sx = -1
-    neg     stepAddrX
+    /bge     1f
+    /neg     r2               /; r2 = dx = |dx|
+    /neg     stepX               /; = sx = -1
+    /neg     stepAddrX
 1:                          /; r2 = dx
 
     /; Вычисление dy = |LastY - FirstY| и sy (направление по Y)
@@ -602,23 +610,18 @@ DrawXMajor:
     mov     r12, r11
     sub     r2, r11          /; r11 = err = 2*dy - dx
 
-    mov     r2, r13          /; r13 = счётчик точек = dx
-    inc     r13
+    mov     r2, r5          /; r5 = счётчик точек = dx
+    inc     r5
 
 10:
     /; Запись пикселя
-    mov PixelAddrPPU, @r4
+    mov PixelAddrPPU, @$0177010
     movb PixelMaskPPU, @$0177024
-
-    /; Если дошли до конечной точки по X – выход
-    cmp     x, PixelX1PPU
-    beq     LineExit
 
     /; --- Исправленный порядок: сначала проверка ошибки ---
     tst     r11
     blt     11f              /; если err < 0, Y не меняем
-    /; err >= 0 – увеличиваем Y и корректируем err
-    add     stepY, y           /; Y += sy
+    /; err >= 0 – увеличиваем адрес по Y (сама координата не нужна) и корректируем err
     add     stepAddrY, PixelAddrPPU
 
     cmp PixelAddrPPU, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
@@ -637,7 +640,7 @@ DrawXMajor:
     /; Теперь увеличиваем X (ведущая координата)
     add     stepX, x           /; X += sx
     mov     x, r0
-    bic     $0b1111111111111000, r0 ;/ В r0 номер точки в октете
+    bic     $0177770, R0 ;/ В r0 номер точки в октете
     bne     333f           /; добавлять адрес не нужно
     add     stepAddrX, PixelAddrPPU
     cmp PixelAddrPPU, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
@@ -645,12 +648,10 @@ DrawXMajor:
     sub $054540, PixelAddrPPU /; 154540 - 100000 = 54540
 333:
     /;вычисление маски пикселя
-    mov     $1, r1
-    ash     r0, r1
-    mov     r1, PixelMaskPPU
+    add     r1, r0
+    movb    (r0), PixelMaskPPU
 
-    dec     r13
-    bne     10b              /; если счётчик > 0 – продолжаем
+    sob     r5, 10b  /; если счётчик > 0 – продолжаем
     br      LineExit
 
 /; --- Отрисовка с ведущей осью Y (dy > dx) ---
@@ -660,17 +661,13 @@ DrawYMajor:
     mov     r12, r11
     sub     r3, r11          /; r11 = err = 2*dx - dy
 
-    mov     r3, r13          /; r13 = счётчик точек = dy
-    inc     r13
+    mov     r3, r5          /; r5 = счётчик точек = dy
+    inc     r5
 
 20:
     /; Запись пикселя
     mov PixelAddrPPU, @r4
     movb PixelMaskPPU, @$0177024
-
-    /; Если дошли до конечной точки по Y – выход
-    cmp     y, PixelY1PPU
-    beq     LineExit
 
     /; --- Исправленный порядок: сначала проверка ошибки ---
     tst     r11
@@ -678,7 +675,7 @@ DrawYMajor:
     /; err >= 0 – увеличиваем X и корректируем err
     add     stepX, x           /; X += sx
     mov     x, r0
-    bic     $0b1111111111111000, r0 ;/ В r0 номер точки в октете
+    bic     $0177770, R0 ;/ В r0 номер точки в октете
     bne     44f           /; добавлять адрес не нужно
     add     stepAddrX, PixelAddrPPU
     cmp PixelAddrPPU, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
@@ -686,9 +683,8 @@ DrawYMajor:
     sub $054540, PixelAddrPPU /; 154540 - 100000 = 54540
 44:
     /;вычисление маски пикселя
-    mov     $1, r1
-    ash     r0, r1
-    mov     r1, PixelMaskPPU
+    add     r1, r0
+    movb    (r0), PixelMaskPPU
 
     mov     r2, r14
     sub     r3, r14          /; r14 = dx - dy
@@ -698,8 +694,7 @@ DrawYMajor:
 21:
     add     r12, r11         /; err += 2*dx   (X не меняется)
 22:
-    /; Теперь увеличиваем Y (ведущая координата)
-    add     stepY, y           /; Y += sy
+    /; Теперь увеличиваем адрес по Y (ведущая координата), сама координата не нужны
     add     stepAddrY, PixelAddrPPU
 
     cmp PixelAddrPPU, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
@@ -707,10 +702,11 @@ DrawYMajor:
     sub $054540, PixelAddrPPU /; 154540 - 100000 = 54540
 444:
 
-    dec     r13
-    bne     20b              /; если счётчик > 0 – продолжаем
+    sob     r5, 20b /; если счётчик > 0 – продолжаем
 
 LineExit:
+    mov     (sp)+, r5
+
     rts     pc
 
 
@@ -724,7 +720,6 @@ PixelX1PPU:  .word 0
 PixelY1PPU:  .word 0
 r12: .word 0
 r11: .word 0
-r13: .word 0
 r14: .word 0
 x:   .word 0
 y:   .word 0
@@ -736,6 +731,8 @@ stepAddrY: .word 80
 
 PixelAddrPPU: .word 0
 PixelMaskPPU: .word 0
+
+MaskTable: .byte 01, 02, 04, 010, 020, 040, 0100, 0200
 
 str_buff:         .byte 0
 str_buffer:       .fill 40, 1, 0  / Буфер для строки

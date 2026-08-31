@@ -46,13 +46,25 @@ L_3:
 	add	$012,r2
 	add	$012,sp
 	sob	r3,L_3
+	mov	$07,-(sp)
+	mov	$0310,-(sp)
+	mov	$01130,-(sp)
+	mov	$012,-(sp)
+	mov	$012,-(sp)
+	jsr	pc,(r4)
+	mov	$06,-(sp)
+	clr	-(sp)
+	clr	-(sp)
+	mov	$0310,-(sp)
+	mov	$0536,-(sp)
+	jsr	pc,(r4)
 	jsr	pc,_WaitAnyKey
 	mov	$LC_1,-(sp)
 	mov	$01,-(sp)
 	jsr	pc,(r5)
 	jsr	pc,_FinishGraph
 	jsr	pc,_FinishKeyb
-	add	$04,sp
+	add	$030,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r4
 	mov	(sp)+,r3
