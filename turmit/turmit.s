@@ -358,41 +358,41 @@ _prog:
 	.=.+ 01
 	.word	02
 	.word	03
-	.word	01
+	.word	-01
 	.byte	0101
 	.=.+ 01
 	.byte	0101
 	.=.+ 01
 	.word	03
+	.word	04
+	.word	-01
+	.byte	0101
+	.=.+ 01
+	.byte	0101
+	.=.+ 01
+	.word	04
+	.word	05
+	.word	-01
+	.byte	0101
+	.=.+ 01
+	.byte	0101
+	.=.+ 01
+	.word	05
+	.word	06
+	.word	-01
+	.byte	0101
+	.=.+ 01
+	.byte	0101
+	.=.+ 01
+	.word	06
+	.word	07
+	.word	01
+	.byte	0101
+	.=.+ 01
+	.byte	0101
+	.=.+ 01
+	.word	07
 	.word	0
-	.word	-01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	04
-	.word	05
-	.word	-01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	05
-	.word	06
-	.word	-01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	06
-	.word	07
-	.word	-01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	07
-	.word	04
 	.word	01
 	.byte	0101
 	.=.+ 01
