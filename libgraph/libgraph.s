@@ -17,9 +17,11 @@ pplen = (pp.end - pp.beg) >> 1
 PxlPPU = (Pxl - offset_size) >> 1
 PxlColorPPU = (PxClr - offset_size) >> 1
 PxlAddress = (PxlAddr - offset_size) >> 1
+PxShiftPPU = (PxShift - offset_size) >> 1
 RecColor = (received_color - offset_size) >> 1
 OffPPU = (offsetV - offset_size) >> 1
 RunProcPPU = (running_proc - offset_size) >> 1
+LineColorPPU = (LineColor - offset_size) >> 1
 
 mp:
             .byte   0
@@ -42,8 +44,10 @@ WORDS1:      .word   0
 
 Pxl:      /(порядок не менять)
 PxlAddr: .word 0
-PixelX:  .word 0
+PxlMask: .word 0
 PxClr:   .word 0
+PxShift: .word 0
+PixelX:  .word 0
 PixelY:  .word 0
 
 received_color: .word   -1
@@ -56,6 +60,7 @@ running_proc:	.word 0   /слово флагов для запуска подп�
 04  - ClearSreenPPU
 010 - PrintTopBottomPPU
 020 - InvertScreenPPU
+040 - LinePPU
 .
 .
 .
@@ -180,6 +185,21 @@ CalcAddress:
     sub $054540, r0 / 154540 - 100000 = 54540
 1:
     mov  r0,  PxlAddr
+
+    /;вычисление маски пикселя (будет использовано в ПП)
+    mov PixelX, r0
+    bic $0b1111111111111000, r0 ;/ В r0 номер точки в октете
+    /; Подготовка маски для вывода пикселя
+    mov     $1, r1
+    ash     r0, r1
+    mov     r1, PxlMask
+
+    /; r0 = номер точки (0..7) - подготовка сдвига для GetPixel
+    asl r0
+    asl r0               / r0 = n * 4
+    neg r0              /сдвиг вправо
+    mov r0, PxShift
+
 22:
     rts  pc
 
@@ -215,158 +235,26 @@ _GetPixel:
     rts  pc
 
 
+LineColor:.word 0
 PixelX0:  .word 0
 PixelY0:  .word 0
 PixelX1:  .word 0
 PixelY1:  .word 0
-r12: .word 0
-r11: .word 0
-r13: .word 0
-r14: .word 0
 
 _Line:
-    mov     10(sp), PxClr
+    mov     10(sp), LineColor
 
     mov     2(sp), PixelX0
     mov     4(sp), PixelY0
     mov     6(sp), PixelX1
     mov     8(sp), PixelY1    
 
-    mov     r2, -(sp)
-    mov     r3, -(sp)
-    mov     r4, -(sp)
-    mov     r5, -(sp)
+    bis $040, running_proc
+1:
+    bit $040, running_proc
+    bne 1b
 
-    mov     PixelX0, r0 /x0
-    mov     PixelY0, r1 /y0
-    mov     PixelX1, r2 /x1
-    mov     PixelY1, r3 /y1   
-
-    mov     $1, r4           /; r4 = sx (шаг по X = +1)
-    / Вычисление dx = |LastX - FirstX| и sx (направление по X)
-    sub     r0, r2           /; r2 = LastX - FirstX
-    bge     1f
-    neg     r2               /; r2 = dx = |dx|
-    neg     r4               /; r4 = sx = -1
-1:                          /; r2 = dx
-
-    mov     $1, r5           /; r5 = sy (шаг по Y = +1)
-    / Вычисление dy = |LastY - FirstY| и sy (направление по Y)
-    sub     r1, r3           /; r3 = LastY - FirstY    
-    bge     2f
-    neg     r3               /; r3 = dy = |dy|
-    neg     r5               /; r5 = sy = -1
-2:                          /; r3 = dy
-
-    /; Сравнение dx и dy для определения ведущей оси
-    cmp     r2, r3
-    blt     DrawYMajor       /; Если dy > dx, идем по оси Y
-
-/; --- Отрисовка с ведущей осью X (dx >= dy) ---
-DrawXMajor:
-    mov     r3, r12
-    asl     r12
-    mov     r12, r11
-    sub     r2, r11          /; r11 = err = 2*dy - dx
-
-    mov     r2, r13          /; r13 = счётчик точек = dx
-    inc     r13
-
-10:
-    /; Отправить пиксель (цвет, Y, X)
-33:
-    bit $1, running_proc /если уже идет вывод пиксел - ждем
-    bne 33b
-    /; CalcAddress портит r0, и r1, в них же  принимает координаты
-    mov  r0, -(sp)
-    mov  r1, -(sp)
-    jsr  pc, CalcAddress
-    mov (sp)+, r1
-    mov (sp)+, r0
-
-    bis $1, running_proc /флаг на запуск вывода пикселя
-
-
-
-    /; Если дошли до конечной точки по X – выход
-    cmp     r0, PixelX1
-    beq     LineExit
-
-    /; --- Исправленный порядок: сначала проверка ошибки ---
-    tst     r11
-    blt     11f              /; если err < 0, Y не меняем
-    /; err >= 0 – увеличиваем Y и корректируем err
-    add     r5, r1           /; Y += sy
-    mov     r3, r14
-    sub     r2, r14          /; r14 = dy - dx
-    asl     r14
-    add     r14, r11         /; err += 2*(dy - dx)
-    br      12f
-11:
-    add     r12, r11         /; err += 2*dy   (Y не меняется)
-12:
-    /; Теперь увеличиваем X (ведущая координата)
-    add     r4, r0           /; X += sx
-
-    dec     r13
-    bne     10b              /; если счётчик > 0 – продолжаем
-    br      LineExit
-
-/; --- Отрисовка с ведущей осью Y (dy > dx) ---
-DrawYMajor:
-    mov     r2, r12
-    asl     r12
-    mov     r12, r11
-    sub     r3, r11          /; r11 = err = 2*dx - dy
-
-    mov     r3, r13          /; r13 = счётчик точек = dy
-    inc     r13
-
-20:
-    /; Отправить пиксель
-333:
-    bit $1, running_proc /если уже идет вывод пиксел - ждем
-    bne 333b
-    /; CalcAddress портит r0, и r1, в них же  принимает координаты
-    mov  r0, -(sp)
-    mov  r1, -(sp)
-    jsr  pc, CalcAddress
-    mov (sp)+, r1
-    mov (sp)+, r0
-
-    bis $1, running_proc /флаг на запуск вывода пикселя
-
-
-    /; Если дошли до конечной точки по Y – выход
-    cmp     r1, PixelY1
-    beq     LineExit
-
-    /; --- Исправленный порядок: сначала проверка ошибки ---
-    tst     r11
-    blt     21f              /; если err < 0, X не меняем
-    /; err >= 0 – увеличиваем X и корректируем err
-    add     r4, r0           /; X += sx
-    mov     r2, r14
-    sub     r3, r14          /; r14 = dx - dy
-    asl     r14
-    add     r14, r11         /; err += 2*(dx - dy)
-    br      22f
-21:
-    add     r12, r11         /; err += 2*dx   (X не меняется)
-22:
-    /; Теперь увеличиваем Y (ведущая координата)
-    add     r5, r1           /; Y += sy
-
-    dec     r13
-    bne     20b              /; если счётчик > 0 – продолжаем
-
-LineExit:
-    mov     (sp)+, r5
-    mov     (sp)+, r4
-    mov     (sp)+, r3
-    mov     (sp)+, r2
-    rts     pc
-
+    rts  pc
 
 _PrintTop:
     mov   $0, top_or_bottom
@@ -428,51 +316,55 @@ pp.beg:
     /Основной цикл
 MainPPU:
     mov $RunProcPPU, @r4
-/;    mov @r5, r0    
+    mov @r5, BitsProcPPU
 
-    bit $0100000, @r5    /проверка флага завершения
-    bne 100f
+    bmi 100f              /BitsProcPPU
      
-
-    bit $01, @r5           /Проверка на PutPixel
-    beq 2f
-    jsr pc, PutPixelPPU
-
+    asr BitsProcPPU           /Проверка на PutPixel
+    bcc 2f
+    jmp PutPixelPPU
+end_putpixel:
     mov $RunProcPPU, @r4
     bic $01, @r5          /PutPixel выполнена
 2:
-    bit $02, @r5          /Проверка на GetPixel
-    beq 3f
-    jsr pc, GetPixelPPU
-
+    asr BitsProcPPU          /Проверка на GetPixel
+    bcc 3f
+    jmp GetPixelPPU
+end_getpixel:
     mov $RunProcPPU, @r4
     bic $02, @r5          /GetPixel выполнена
 
 3: 
-    bit $04, @r5          /Проверка на ClearScreen
-    beq 4f
+    asr BitsProcPPU          /Проверка на ClearScreen
+    bcc 4f
     jsr pc, ClearScreenPPU
 
     mov $RunProcPPU, @r4
     bic $04, @r5           /ClearScreen выполнена
                          
 4:
-    bit $010, @r5          /Проверка на PrintTopBottom
-    beq 5f
+    asr BitsProcPPU          /Проверка на PrintTopBottom
+    bcc 5f
     jsr pc, PrintTopBottomPPU
 
     mov $RunProcPPU, @r4
     bic $010, @r5
                          /PrintTopBottom выполнена
 5:
-    bit $020, @r5          /Проверка на InvertScreen
-    beq 6f
+    asr BitsProcPPU          /Проверка на InvertScreen
+    bcc 6f
     jsr pc, InvertScreenPPU
 
     mov $RunProcPPU, @r4
     bic $020, @r5         /InvertScreen выполнена
 
 6:
+    asr BitsProcPPU          /Проверка на LinePPU
+    bcc 7f
+    jsr pc, LinePPU
+
+    mov $RunProcPPU, @r4
+    bic $040, @r5         /LinePPU выполнена
 
 7:  
     jmp MainPPU
@@ -530,13 +422,7 @@ PutPixelPPU:
     mov @r5, r0          /В r0 готовый адрес из ЦП
 
     inc (r4)
-    mov @r5, r2          /в r2 координата X
-
-    bic $0b1111111111111000, r2 / В r2 номер точки в октете
-
-    / Подготовка маски для вывода пикселя
-    mov     $1, r3
-    ash     r2, r3
+    mov @r5, r3          /в r3 маска пикселя
 
     inc (r4)    / color
     mov (r5), r2	
@@ -546,26 +432,19 @@ PutPixelPPU:
     mov r2, @$0177016
     movb r3, @$0177024
 
-    rts  pc
+    jmp end_putpixel
 
 
 GetPixelPPU:
     mov $PxlAddress, @r4
     mov @r5, r0          /В r0 готовый адрес из ЦП
 
-    inc (r4)
-    mov @r5, r2          /в r2 координата X
-
-    bic $0b1111111111111000, r2 / В r2 номер точки в октете
+    mov $PxShiftPPU, @r4
+    mov @r5, r2          /в r2 число сдвигов вправо для @$0177024
 
     mov r0, @r4
     tst @$0177024    / чтение регистров цвета фона
-
-    / r2 = номер точки (0..7)
-    asl r2
-    asl r2               / r2 = n * 4
-
-    neg r2              /сдвиг вправо
+    
     mov @$0177020, r1    / младшее слово
     mov @$0177022, r0    / старшее слово
     ashc r2, r0         / сдвиг 32 бит регистров r0:r1
@@ -575,7 +454,8 @@ GetPixelPPU:
     / цвет в CPU
     mov $RecColor, @r4
     mov r1, @r5
-    rts  pc
+
+    jmp end_getpixel
 
 
 
@@ -648,8 +528,188 @@ FinishGraphPPU:
     mov $1, @$0177014    
     rts  pc
 
+
+CalcAddressPPU:
+    mov r0, PixelX0PPU
+
+    mul $80, r1
+    /деление координаты x на 8
+    ash $-3, r0
+
+    add r1, r0
+    add offsetVPPU, r0
+    cmp r0, $0154540 / список 220 видеострок для области отображения меню УСТАНОВКА
+    blt 1f
+    sub $054540, r0 / 154540 - 100000 = 54540
+1:
+    mov  r0,  PxlAddrPPU
+
+    /;вычисление маски пикселя (будет использовано в ПП)
+    mov PixelX0PPU, r0
+    bic $0b1111111111111000, r0 ;/ В r0 номер точки в октете
+    /; Подготовка маски для вывода пикселя
+    mov     $1, r1
+    ash     r0, r1
+    mov     r1, PxlMaskPPU
+
+    rts pc
+
+LinePPU:    
+    /;цвет
+    mov $LineColorPPU, @r4
+    mov @r5, @$0177016
+
+    inc     (r4)
+    mov     @r5, PixelX0PPU
+    inc     (r4)
+    mov     @r5, PixelY0PPU
+    inc     (r4)
+    mov     @r5, PixelX1PPU
+    inc     (r4)
+    mov     @r5, PixelY1PPU
+
+    mov     PixelX0PPU, r0 /x0
+    mov     PixelY0PPU, r1 /y0
+    mov     PixelX1PPU, r2 /x1
+    mov     PixelY1PPU, r3 /y1   
+
+    mov     $1, stepX           /;sx (шаг по X = +1)
+    /; Вычисление dx = |LastX - FirstX| и sx (направление по X)
+    sub     r0, r2           /; r2 = LastX - FirstX
+    bge     1f
+    neg     r2               /; r2 = dx = |dx|
+    neg     stepX               /; r4 = sx = -1
+1:                          /; r2 = dx
+
+    mov     $1, stepY           /;sy (шаг по Y = +1)
+    /; Вычисление dy = |LastY - FirstY| и sy (направление по Y)
+    sub     r1, r3           /; r3 = LastY - FirstY    
+    bge     2f
+    neg     r3               /; r3 = dy = |dy|
+    neg     stepY               /; r5 = sy = -1
+2:                          /; r3 = dy
+
+    /; Сравнение dx и dy для определения ведущей оси
+    cmp     r2, r3
+    blt     DrawYMajor       /; Если dy > dx, идем по оси Y
+
+/; --- Отрисовка с ведущей осью X (dx >= dy) ---
+DrawXMajor:
+    mov     r3, r12
+    asl     r12
+    mov     r12, r11
+    sub     r2, r11          /; r11 = err = 2*dy - dx
+
+    mov     r2, r13          /; r13 = счётчик точек = dx
+    inc     r13
+
+10:
+    /; Отправить пиксель (цвет, Y, X)
+    /; CalcAddressPPU портит r0, и r1, в них же  принимает координаты
+    mov  r0, -(sp)
+    mov  r1, -(sp)
+    jsr  pc, CalcAddressPPU
+    mov (sp)+, r1
+    mov (sp)+, r0
+
+    / Запись пикселя (r0 - адрес, r2 - цвет, r3 - маска пикселя в октете)
+    mov PxlAddrPPU, @r4
+    movb PxlMaskPPU, @$0177024
+
+
+    /; Если дошли до конечной точки по X – выход
+    cmp     r0, PixelX1PPU
+    beq     LineExit
+
+    /; --- Исправленный порядок: сначала проверка ошибки ---
+    tst     r11
+    blt     11f              /; если err < 0, Y не меняем
+    /; err >= 0 – увеличиваем Y и корректируем err
+    add     stepY, r1           /; Y += sy
+    mov     r3, r14
+    sub     r2, r14          /; r14 = dy - dx
+    asl     r14
+    add     r14, r11         /; err += 2*(dy - dx)
+    br      12f
+11:
+    add     r12, r11         /; err += 2*dy   (Y не меняется)
+12:
+    /; Теперь увеличиваем X (ведущая координата)
+    add     stepX, r0           /; X += sx
+
+    dec     r13
+    bne     10b              /; если счётчик > 0 – продолжаем
+    br      LineExit
+
+/; --- Отрисовка с ведущей осью Y (dy > dx) ---
+DrawYMajor:
+    mov     r2, r12
+    asl     r12
+    mov     r12, r11
+    sub     r3, r11          /; r11 = err = 2*dx - dy
+
+    mov     r3, r13          /; r13 = счётчик точек = dy
+    inc     r13
+
+20:
+    /; Отправить пиксель
+    /; CalcAddressPPU портит r0, и r1, в них же  принимает координаты
+    mov  r0, -(sp)
+    mov  r1, -(sp)
+    jsr  pc, CalcAddressPPU
+    mov (sp)+, r1
+    mov (sp)+, r0
+
+    / Запись пикселя (r0 - адрес, r2 - цвет, r3 - маска пикселя в октете)
+    mov PxlAddrPPU, @r4
+    movb PxlMaskPPU, @$0177024
+
+
+    /; Если дошли до конечной точки по Y – выход
+    cmp     r1, PixelY1PPU
+    beq     LineExit
+
+    /; --- Исправленный порядок: сначала проверка ошибки ---
+    tst     r11
+    blt     21f              /; если err < 0, X не меняем
+    /; err >= 0 – увеличиваем X и корректируем err
+    add     stepX, r0           /; X += sx
+    mov     r2, r14
+    sub     r3, r14          /; r14 = dx - dy
+    asl     r14
+    add     r14, r11         /; err += 2*(dx - dy)
+    br      22f
+21:
+    add     r12, r11         /; err += 2*dx   (X не меняется)
+22:
+    /; Теперь увеличиваем Y (ведущая координата)
+    add     stepY, r1           /; Y += sy
+
+    dec     r13
+    bne     20b              /; если счётчик > 0 – продолжаем
+
+LineExit:
+    rts     pc
+
+
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:	  .word	0         /адрес верхней видеостроки пользовательского экрана
+BitsProcPPU:      .word 0         /битовая карта процессов
+
+PixelX0PPU:  .word 0
+PixelY0PPU:  .word 0
+PixelX1PPU:  .word 0
+PixelY1PPU:  .word 0
+r12: .word 0
+r11: .word 0
+r13: .word 0
+r14: .word 0
+
+stepX: .word 0
+stepY: .word 0
+
+PxlAddrPPU: .word 0
+PxlMaskPPU: .word 0
 
 str_buff:         .byte 0
 str_buffer:       .fill 40, 1, 0  / Буфер для строки
