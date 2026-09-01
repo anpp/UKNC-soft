@@ -47,8 +47,8 @@ PxlAddr: .word 0
 PxlMask: .word 0
 PxClr:   .word 0
 PxShift: .word 0
-PixelX:  .word 0
-PixelY:  .word 0
+PixelX:  .word -1
+PixelY:  .word -1
 
 received_color: .word   -1
 offsetV:	.word	0	/адрес верхней видеостроки пользовательского экрана
@@ -196,12 +196,6 @@ CalcAddress:
     ash     r0, r1
     mov     r1, PxlMask
 
-    /; r0 = номер точки (0..7) - подготовка сдвига для GetPixel
-    asl r0
-    asl r0               / r0 = n * 4
-    neg r0              /сдвиг вправо
-    mov r0, PxShift
-
 22:
     rts  pc
 
@@ -226,6 +220,14 @@ _GetPixel:
     mov     2(sp), r0
     mov     4(sp), r1 
     jsr  pc, CalcAddress
+
+    mov PixelX, r0
+    bic $0b1111111111111000, r0 ;/ В r0 номер точки в октете
+    /; r0 = номер точки (0..7) - подготовка сдвига для GetPixel
+    asl r0
+    asl r0               /; r0 = n * 4
+    neg r0               /;сдвиг вправо
+    mov r0, PxShift
 
     bis $2, running_proc
 3:
@@ -253,20 +255,6 @@ _Line:
 
     mov  PixelX0, r0
     mov  PixelY0, r1
-
-/;замена координат, если x0 > x1 или y0 > y1 
-    cmp  r0, PixelX1
-    blt  2f
-    mov  PixelX1, r0
-    mov  2(sp), PixelX1
-    mov  6(sp), PixelX0
-2:
-    cmp  r1, PixelY1
-    blt  3f
-    mov  PixelY1, r1
-    mov  4(sp), PixelY1
-    mov  8(sp), PixelY0
-3:
 
     jsr  pc, CalcAddress    
 
@@ -383,8 +371,8 @@ end_getpixel:
 6:
     asr BitsProcPPU          /Проверка на LinePPU
     bcc 7f
-    jsr pc, LinePPU
-
+    jmp LinePPU
+end_line:
     mov $RunProcPPU, @r4
     bic $040, @r5         /LinePPU выполнена
 
@@ -583,19 +571,37 @@ LinePPU:
     mov     pc, r1
     add     $MaskTable - ., r1
 
+    mov     $80, stepAddrY
+    mov     $1, stepAddrX
+
+    /;команды nop  - для прохода вправо по x
+    mov $0240, checkx1
+    mov $0240, checkx1 + 2
+    mov $0240, checkx2
+    mov $0240, checkx2 + 2
+    /; команды inc r0
+    mov $005200, stepx1
+    mov $005200, stepx2
+
     /; Вычисление dx = |LastX - FirstX| и sx (направление по X)
     sub     x, r2           /; r2 = LastX - FirstX
-    /bge     1f
-    /neg     r2               /; r2 = dx = |dx|
-    /neg     stepX               /; = sx = -1
-    /neg     stepAddrX
-1:                          /; r2 = dx
+    bge     1f
+    neg     r2               /; r2 = dx = |dx|
+    neg     stepAddrX
+    /; команды cmp r0, $7 - для прохода влево по x
+    mov     $020027, checkx1
+    mov     $000007, checkx1 + 2
+    mov     $020027, checkx2
+    mov     $000007, checkx2 + 2
+    /; команды dec r0
+    mov $005300, stepx1
+    mov $005300, stepx2
 
+1:                          /; r2 = dx
     /; Вычисление dy = |LastY - FirstY| и sy (направление по Y)
     sub     y, r3           /; r3 = LastY - FirstY    
     bge     2f
     neg     r3               /; r3 = dy = |dy|
-    neg     stepY               /; r5 = sy = -1
     neg     stepAddrY
 2:                          /; r3 = dy
 
@@ -624,10 +630,7 @@ DrawXMajor:
     /; err >= 0 – увеличиваем адрес по Y (сама координата не нужна) и корректируем err
     add     stepAddrY, PixelAddrPPU
 
-    cmp PixelAddrPPU, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 33f
-    sub $054540, PixelAddrPPU /; 154540 - 100000 = 54540
-33:
+    jsr     pc, CorrectAddress
 
     mov     r3, r14
     sub     r2, r14          /; r14 = dy - dx
@@ -638,14 +641,19 @@ DrawXMajor:
     add     r12, r11         /; err += 2*dy   (Y не меняется)
 12:
     /; Теперь увеличиваем X (ведущая координата)
-    add     stepX, x           /; X += sx
     mov     x, r0
-    bic     $0177770, R0 ;/ В r0 номер точки в октете
+stepx1:
+    inc     r0
+    mov     r0, x
+    bic     $0177770, R0  /; В r0 номер точки в октете
+checkx1:
+/;    cmp     r0, $7
+    nop
+    nop
     bne     333f           /; добавлять адрес не нужно
+    
     add     stepAddrX, PixelAddrPPU
-    cmp PixelAddrPPU, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 333f
-    sub $054540, PixelAddrPPU /; 154540 - 100000 = 54540
+    jsr     pc, CorrectAddress
 333:
     /;вычисление маски пикселя
     add     r1, r0
@@ -673,16 +681,21 @@ DrawYMajor:
     tst     r11
     blt     21f              /; если err < 0, X не меняем
     /; err >= 0 – увеличиваем X и корректируем err
-    add     stepX, x           /; X += sx
     mov     x, r0
-    bic     $0177770, R0 ;/ В r0 номер точки в октете
+stepx2:
+    inc     r0
+    mov     r0, x
+    bic     $0177770, R0  /; В r0 номер точки в октете
+checkx2:
+/;    cmp     r0, $7
+    nop
+    nop
     bne     44f           /; добавлять адрес не нужно
+
     add     stepAddrX, PixelAddrPPU
-    cmp PixelAddrPPU, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 44f
-    sub $054540, PixelAddrPPU /; 154540 - 100000 = 54540
-44:
-    /;вычисление маски пикселя
+    jsr     pc, CorrectAddress
+44:    
+   /;вычисление маски пикселя
     add     r1, r0
     movb    (r0), PixelMaskPPU
 
@@ -694,18 +707,26 @@ DrawYMajor:
 21:
     add     r12, r11         /; err += 2*dx   (X не меняется)
 22:
-    /; Теперь увеличиваем адрес по Y (ведущая координата), сама координата не нужны
+    /; Теперь увеличиваем адрес по Y (ведущая координата), сама координата не нужна
     add     stepAddrY, PixelAddrPPU
-
-    cmp PixelAddrPPU, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 444f
-    sub $054540, PixelAddrPPU /; 154540 - 100000 = 54540
-444:
-
+    jsr     pc, CorrectAddress
     sob     r5, 20b /; если счётчик > 0 – продолжаем
 
 LineExit:
     mov     (sp)+, r5
+
+    jmp     end_line
+
+CorrectAddress:
+    cmp     PixelAddrPPU, $0100000
+    blo     1f                      /; < 0100000 -> произошёл Underflow
+    cmp     PixelAddrPPU, $0154540
+    blo     2f                     /; В пределах [0100000..0154540) -> норма    
+    sub     $054540, PixelAddrPPU   /; Коррекция Overflow (>= 0154540)
+    br      2f
+1:
+    add     $054540, PixelAddrPPU   /; Коррекция Underflow (< 0100000)
+2:
 
     rts     pc
 
@@ -724,8 +745,6 @@ r14: .word 0
 x:   .word 0
 y:   .word 0
 
-stepX: .word 1
-stepY: .word 1
 stepAddrX: .word 1
 stepAddrY: .word 80
 
@@ -740,4 +759,3 @@ str_buffer:       .fill 40, 1, 0  / Буфер для строки
 
 
 pp.end:
-

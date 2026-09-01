@@ -58,13 +58,32 @@ L_3:
 	mov	$0310,-(sp)
 	mov	$0536,-(sp)
 	jsr	pc,(r4)
+	mov	$05,-(sp)
+	mov	$012,-(sp)
+	mov	$0226,-(sp)
+	mov	$0310,-(sp)
+	mov	$012,-(sp)
+	jsr	pc,(r4)
+	mov	$05,-(sp)
+	mov	$0334,-(sp)
+	mov	$012,-(sp)
+	mov	$036,-(sp)
+	mov	$0226,-(sp)
+	jsr	pc,(r4)
+	add	$050,sp
+	mov	$04,-(sp)
+	mov	$050,-(sp)
+	mov	$0310,-(sp)
+	mov	$0372,-(sp)
+	mov	$0764,-(sp)
+	jsr	pc,(r4)
 	jsr	pc,_WaitAnyKey
 	mov	$LC_1,-(sp)
 	mov	$01,-(sp)
 	jsr	pc,(r5)
 	jsr	pc,_FinishGraph
 	jsr	pc,_FinishKeyb
-	add	$030,sp
+	add	$016,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r4
 	mov	(sp)+,r3

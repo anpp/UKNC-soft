@@ -115,7 +115,7 @@ _find_rule:
 	mov	012(sp),r5
 	clr	(sp)
 	mov	(sp),r0
-	cmp	r0,$07
+	cmp	r0,$06
 	blos	L_30
 	br	L_27
 L_28:
@@ -123,7 +123,7 @@ L_28:
 	inc	r0
 	mov	r0,(sp)
 	mov	(sp),r0
-	cmp	r0,$07
+	cmp	r0,$06
 	bhi	L_27
 L_30:
 	mov	(sp),r2
@@ -174,7 +174,7 @@ _step:
 	clr	06(sp)
 	mov	06(sp),r0
 	add	$04,sp
-	cmp	r0,$07
+	cmp	r0,$06
 	blos	L_33
 	br	L_38
 L_35:
@@ -182,7 +182,7 @@ L_35:
 	inc	r0
 	mov	r0,02(sp)
 	mov	02(sp),r0
-	cmp	r0,$07
+	cmp	r0,$06
 	bhi	L_38
 L_33:
 	mov	02(sp),r2
@@ -343,56 +343,49 @@ _prog:
 	.byte	0101
 	.=.+ 01
 	.word	0
-	.word	01
-	.word	01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	01
-	.word	02
-	.word	01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	02
-	.word	03
-	.word	-01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	03
 	.word	04
-	.word	-01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	04
-	.word	05
-	.word	-01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	05
-	.word	06
-	.word	-01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	06
-	.word	07
-	.word	01
-	.byte	0101
-	.=.+ 01
-	.byte	0101
-	.=.+ 01
-	.word	07
 	.word	0
+	.byte	0103
+	.=.+ 01
+	.byte	0101
+	.=.+ 01
+	.word	04
+	.word	0
+	.word	0
+	.byte	0102
+	.=.+ 01
+	.byte	0102
+	.=.+ 01
+	.word	04
+	.word	04
 	.word	01
+	.byte	0101
+	.=.+ 01
+	.byte	0102
+	.=.+ 01
+	.word	07
+	.word	04
+	.word	01
+	.byte	0101
+	.=.+ 01
+	.byte	0103
+	.=.+ 01
+	.word	04
+	.word	0
+	.word	-01
+	.byte	0101
+	.=.+ 01
+	.byte	0103
+	.=.+ 01
+	.word	0
+	.word	07
+	.word	-01
+	.byte	0101
+	.=.+ 01
+	.byte	0103
+	.=.+ 01
+	.word	07
+	.word	04
+	.word	-01
 	.byte	0101
 	.=.+ 01
