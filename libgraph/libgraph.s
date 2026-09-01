@@ -544,23 +544,20 @@ LinePPU:
     mov $LineColorPPU, @r4
     mov @r5, @$0177016        
 
-    inc     (r4)
-    mov     @r5, PixelX0PPU
-    inc     (r4)
-    mov     @r5, PixelY0PPU
-    inc     (r4)
-    mov     @r5, PixelX1PPU
-    inc     (r4)
-    mov     @r5, PixelY1PPU
+    mov     $0177024, r2
 
-    mov     PixelX0PPU, x /x0
-    mov     PixelY0PPU, y /y0
-    mov     PixelX1PPU, r2 /x1
-    mov     PixelY1PPU, r3 /y1   
+    inc     (r4)
+    mov     @r5, x0
+    inc     (r4)
+    mov     @r5, y0
+    inc     (r4)
+    mov     @r5, x1
+    inc     (r4)
+    mov     @r5, y1
 
     /; адрес и маска для первого пикселя
     mov     $PxlAddress, @r4
-    mov     @r5, PixelAddrPPU
+    mov     @r5, r3          /;r3 - адрес текущего пикселя
     inc     (r4)
     mov     @r5, PixelMaskPPU
 
@@ -572,7 +569,6 @@ LinePPU:
     add     $MaskTable - ., r1
 
     mov     $80, stepAddrY
-    mov     $1, stepAddrX
 
     /;команды nop  - для прохода вправо по x
     mov $0240, checkx1
@@ -582,12 +578,14 @@ LinePPU:
     /; команды inc r0
     mov $005200, stepx1
     mov $005200, stepx2
+    /; команды inc r3
+    mov $005203, stepax1
+    mov $005203, stepax2
 
     /; Вычисление dx = |LastX - FirstX| и sx (направление по X)
-    sub     x, r2           /; r2 = LastX - FirstX
+    sub     x0, x1           /; r2 = LastX - FirstX
     bge     1f
-    neg     r2               /; r2 = dx = |dx|
-    neg     stepAddrX
+    neg     x1               /; r2 = dx = |dx|
     /; команды cmp r0, $7 - для прохода влево по x
     mov     $020027, checkx1
     mov     $000007, checkx1 + 2
@@ -596,44 +594,47 @@ LinePPU:
     /; команды dec r0
     mov $005300, stepx1
     mov $005300, stepx2
+    /; команды dec r3
+    mov $005303, stepax1
+    mov $005303, stepax2
 
 1:                          /; r2 = dx
     /; Вычисление dy = |LastY - FirstY| и sy (направление по Y)
-    sub     y, r3           /; r3 = LastY - FirstY    
+    sub     y0, y1           /; r3 = LastY - FirstY    
     bge     2f
-    neg     r3               /; r3 = dy = |dy|
+    neg     y1               /; r3 = dy = |dy|
     neg     stepAddrY
 2:                          /; r3 = dy
 
     /; Сравнение dx и dy для определения ведущей оси
-    cmp     r2, r3
+    cmp     x1, y1
     blt     DrawYMajor       /; Если dy > dx, идем по оси Y
 
 /; --- Отрисовка с ведущей осью X (dx >= dy) ---
 DrawXMajor:
-    mov     r3, r12
+    mov     y1, r12
     asl     r12
     mov     r12, r11
-    sub     r2, r11          /; r11 = err = 2*dy - dx
+    sub     x1, r11          /; r11 = err = 2*dy - dx
 
-    mov     r2, r5          /; r5 = счётчик точек = dx
+    mov     x1, r5          /; r5 = счётчик точек = dx
     inc     r5
 
 10:
     /; Запись пикселя
-    mov PixelAddrPPU, @$0177010
-    movb PixelMaskPPU, @$0177024
+    mov  r3, @r4
+    movb PixelMaskPPU, @r2
 
     /; --- Исправленный порядок: сначала проверка ошибки ---
     tst     r11
     blt     11f              /; если err < 0, Y не меняем
     /; err >= 0 – увеличиваем адрес по Y (сама координата не нужна) и корректируем err
-    add     stepAddrY, PixelAddrPPU
+    add     stepAddrY, r3
 
     jsr     pc, CorrectAddress
 
-    mov     r3, r14
-    sub     r2, r14          /; r14 = dy - dx
+    mov     y1, r14
+    sub     x1, r14          /; r14 = dy - dx
     asl     r14
     add     r14, r11         /; err += 2*(dy - dx)
     br      12f
@@ -641,18 +642,18 @@ DrawXMajor:
     add     r12, r11         /; err += 2*dy   (Y не меняется)
 12:
     /; Теперь увеличиваем X (ведущая координата)
-    mov     x, r0
+    mov     x0, r0
 stepx1:
     inc     r0
-    mov     r0, x
+    mov     r0, x0
     bic     $0177770, R0  /; В r0 номер точки в октете
 checkx1:
 /;    cmp     r0, $7
     nop
     nop
-    bne     333f           /; добавлять адрес не нужно
-    
-    add     stepAddrX, PixelAddrPPU
+    bne     333f           /; добавлять адрес не нужно    
+stepax1:
+    inc     r3
     jsr     pc, CorrectAddress
 333:
     /;вычисление маски пикселя
@@ -664,43 +665,43 @@ checkx1:
 
 /; --- Отрисовка с ведущей осью Y (dy > dx) ---
 DrawYMajor:
-    mov     r2, r12
+    mov     x1, r12
     asl     r12
     mov     r12, r11
-    sub     r3, r11          /; r11 = err = 2*dx - dy
+    sub     y1, r11          /; r11 = err = 2*dx - dy
 
-    mov     r3, r5          /; r5 = счётчик точек = dy
+    mov     y1, r5          /; r5 = счётчик точек = dy
     inc     r5
 
 20:
     /; Запись пикселя
-    mov PixelAddrPPU, @r4
-    movb PixelMaskPPU, @$0177024
+    mov  r3, @r4
+    movb PixelMaskPPU, @r2
 
     /; --- Исправленный порядок: сначала проверка ошибки ---
     tst     r11
     blt     21f              /; если err < 0, X не меняем
     /; err >= 0 – увеличиваем X и корректируем err
-    mov     x, r0
+    mov     x0, r0
 stepx2:
     inc     r0
-    mov     r0, x
+    mov     r0, x0
     bic     $0177770, R0  /; В r0 номер точки в октете
 checkx2:
 /;    cmp     r0, $7
     nop
     nop
     bne     44f           /; добавлять адрес не нужно
-
-    add     stepAddrX, PixelAddrPPU
+stepax2:
+    inc     r3
     jsr     pc, CorrectAddress
 44:    
    /;вычисление маски пикселя
     add     r1, r0
     movb    (r0), PixelMaskPPU
 
-    mov     r2, r14
-    sub     r3, r14          /; r14 = dx - dy
+    mov     x1, r14
+    sub     y1, r14          /; r14 = dx - dy
     asl     r14
     add     r14, r11         /; err += 2*(dx - dy)
     br      22f
@@ -708,7 +709,7 @@ checkx2:
     add     r12, r11         /; err += 2*dx   (X не меняется)
 22:
     /; Теперь увеличиваем адрес по Y (ведущая координата), сама координата не нужна
-    add     stepAddrY, PixelAddrPPU
+    add     stepAddrY, r3
     jsr     pc, CorrectAddress
     sob     r5, 20b /; если счётчик > 0 – продолжаем
 
@@ -718,14 +719,14 @@ LineExit:
     jmp     end_line
 
 CorrectAddress:
-    cmp     PixelAddrPPU, $0100000
+    cmp     r3, $0100000
     blo     1f                      /; < 0100000 -> произошёл Underflow
-    cmp     PixelAddrPPU, $0154540
+    cmp     r3, $0154540
     blo     2f                     /; В пределах [0100000..0154540) -> норма    
-    sub     $054540, PixelAddrPPU   /; Коррекция Overflow (>= 0154540)
+    sub     $054540, r3            /; Коррекция Overflow (>= 0154540)
     br      2f
 1:
-    add     $054540, PixelAddrPPU   /; Коррекция Underflow (< 0100000)
+    add     $054540, r3   /; Коррекция Underflow (< 0100000)
 2:
 
     rts     pc
@@ -735,20 +736,16 @@ CorrectAddress:
 offsetVPPU:	  .word	0         /адрес верхней видеостроки пользовательского экрана
 BitsProcPPU:      .word 0         /битовая карта процессов
 
-PixelX0PPU:  .word 0
-PixelY0PPU:  .word 0
-PixelX1PPU:  .word 0
-PixelY1PPU:  .word 0
 r12: .word 0
 r11: .word 0
 r14: .word 0
-x:   .word 0
-y:   .word 0
+x0:   .word 0
+y0:   .word 0
+x1:   .word 0
+y1:   .word 0
 
-stepAddrX: .word 1
 stepAddrY: .word 80
 
-PixelAddrPPU: .word 0
 PixelMaskPPU: .word 0
 
 MaskTable: .byte 01, 02, 04, 010, 020, 040, 0100, 0200
