@@ -1,5 +1,5 @@
 .text
-.globl _InitGraph, _FinishGraph, _ClearScreen, _PutPixel, _GetPixel, _PrintTop, _PrintBottom, _InvertScreen, _Line
+.globl _InitGraph, _FinishGraph, _ClearScreen, _PutPixel, _GetPixel, _PrintTop, _PrintBottom, _InvertScreen, _Line, _FillRect
 .globl _RunPPU
 
 base_addr = .
@@ -61,6 +61,7 @@ running_proc:	.word 0   /слово флагов для запуска подп�
 010 - PrintTopBottomPPU
 020 - InvertScreenPPU
 040 - LinePPU
+0100 - FillRectPPU
 .
 .
 .
@@ -265,6 +266,27 @@ _Line:
 
     rts  pc
 
+_FillRect:
+    mov     10(sp), LineColor /;используются те же переменные, что и для Line
+
+    mov     2(sp), PixelX0
+    mov     4(sp), PixelY0
+    mov     6(sp), PixelX1
+    mov     8(sp), PixelY1
+
+    mov  PixelX0, r0
+    mov  PixelY0, r1
+
+    jsr  pc, CalcAddress    
+
+    bis $0100, running_proc
+1:
+    bit $0100, running_proc
+    bne 1b
+
+    rts  pc
+
+
 
 _PrintTop:
     mov   $0, top_or_bottom
@@ -376,7 +398,16 @@ end_line:
     mov $RunProcPPU, @r4
     bic $040, @r5         /LinePPU выполнена
 
-7:  
+7:
+
+    asr BitsProcPPU          /Проверка на FillRectPPU
+    bcc 8f
+    jsr pc, FillRectPPU
+end_fillrect:
+    mov $RunProcPPU, @r4
+    bic $0100, @r5         /FillRectPPU выполнена
+
+8:  
     jmp MainPPU
 100:    
     rts  pc
@@ -573,7 +604,7 @@ LinePPU:
     mov     $PxlAddress, @r4
     mov     @r5, r3          /;r3 - адрес текущего пикселя
     inc     (r4)
-    mov     @r5, r1          /;r1 - маска пиксел в октете
+    mov     @r5, r1          /;r1 - маска пикселя в октете
 
     /; сохраним регистр r5, во всех остальных попрограммах это РД
     mov     r5, -(sp)
@@ -743,6 +774,147 @@ LineExit:
     jmp     end_line
 
 
+/;=========================FillRectPPU==============================================================
+
+.macro CorrectAddressFillRect
+    cmp     r3, $0154540
+    blo     2000f                      /; [0100000..0154540) -> Норма
+    sub     $054540, r3           /; Overflow (>= 0154540)
+2000:
+.endm
+
+
+FillRectPPU:
+    /; Цвет (устанавливается один раз перед циклами)
+    mov     $LineColorPPU, @r4
+    mov     @r5, @$0177016        
+
+    inc     (r4)
+    mov     @r5, x0
+    inc     (r4)
+    mov     @r5, y0
+    inc     (r4)
+    mov     @r5, r0               /; r0 = x1
+    inc     (r4)
+    mov     @r5, r1               /; r1 = y1
+
+    /; Адрес первого пикселя от ЦП
+    mov     $PxlAddress, @r4
+    mov     @r5, r3               /; r3 = адрес текущего пикселя (VRAM)
+
+    mov     r5, -(sp)             /; сохраняем рабочий регистр r5
+
+    /; --- Вычисление dy = y1 - y0 + 1 (высота прямоугольника) ---
+    sub     y0, r1
+    inc     r1                    /; r1 = dy (высота в пикселях)
+
+    /; --- Вычисление смещений битов и количества байтовых колонок ---
+    mov     x0, r2
+    bic     $0177770, r2          /; r2 = bit_start (x0 & 7)
+
+    mov     r0, r5
+    bic     $0177770, r5          /; r5 = bit_end (x1 & 7)
+    mov     r5, -(sp)             /; сохраняем bit_end на стек
+
+    asr     x0
+    asr     x0
+    asr     x0                    /; x0 = byte_start (x0 >> 3)
+
+    asr     r0
+    asr     r0
+    asr     r0                    /; r0 = byte_end (x1 >> 3)
+
+    sub     x0, r0                /; r0 = CountX (количество шагов по колонкам)
+
+    /; --- Проверка: всё в одной колонке или нет? ---
+    tst     r0
+    bne     MultiColumn
+
+/; ============================================================================
+/; ОДНА КОЛОНКА (CountX == 0)
+/; ============================================================================
+SingleColumn:
+    mov     pc, r5
+    add     $LeftMaskTable - ., r5
+    add     r5, r2
+    movb    (r2), r2
+
+    add     $8, r5                /;RightMaskTable
+    add     (sp)+, r5             /; (sp) = bit_end
+    movb    (r5), r5
+
+    comb    r5                    /; Инвертируем RightMask: биты > bit_end становятся 1
+    bicb    r5, r2
+
+1:  mov     r3, @r4               /; Засылаем адрес VRAM
+    movb    r2, @$0177024         /; Пишем маску
+    add     $80, r3
+    CorrectAddressFillRect
+    sob     r1, 1b                /; Счетчик высоты в r1
+
+    br      FillRectExit
+
+/; ============================================================================
+/; НЕСКОЛЬКО КОЛОНОК (CountX > 0)
+/; ============================================================================
+MultiColumn:
+    /; На вершине стека сейчас лежит bit_end
+    mov     r3, -(sp)             /; (sp) = адрес верхнего пикселя колонки
+
+    /; --- 1. ПЕРВАЯ КОЛОНКА (Левый край) ---
+    mov     pc, r5
+    add     $LeftMaskTable - ., r5
+    add     r5, r2
+    movb    (r2), r2               /; r2 = LeftMask
+    mov     r1, r5                /; r5 = копируем высоту для внутреннего цикла
+
+1:  mov     r3, @r4
+    movb    r2, @$0177024
+    add     $80, r3
+    CorrectAddressFillRect
+    sob     r5, 1b
+
+    mov     (sp), r3              /; восстанавливаем верхний адрес колонки
+    inc     r3                    /; шаг вправо по X (+1 байт)
+    CorrectAddressFillRect
+    mov     r3, (sp)              /; сохраняем новый верхний адрес
+    dec     r0                    /; CountX--
+    beq     DrawRightEdge         /; если средних колонок нет — сразу на правый край
+
+    /; --- 2. СРЕДНИЕ КОЛОНКИ (Сплошная маска 0377) ---
+DrawMiddle:
+2:  mov     r1, r5                /; r5 = копируем высоту dy
+3:  mov     r3, @r4
+    movb    $0377, @$0177024      /; сплошная заливка октета
+    add     $80, r3
+    CorrectAddressFillRect
+    sob     r5, 3b
+
+    mov     (sp), r3              /; восстанавливаем верх колонки
+    inc     r3                    /; шаг вправо (+1 байт)
+    CorrectAddressFillRect
+    mov     r3, (sp)              /; сохраняем новый верх
+    sob     r0, 2b                /; цикл по колонкам (r0)
+
+    /; --- 3. ПОСЛЕДНЯЯ КОЛОНКА (Правый край) ---
+DrawRightEdge:
+    tst     (sp)+                 /; снимаем сохранённый адрес колонки
+    mov     (sp)+, r5             /; r5 = восстанавливаем bit_end
+    mov     pc, r2
+    add     $RightMaskTable - ., r2
+    add     r2, r5
+    movb    (r5), r2/; r2 = RightMask
+
+4:  mov     r3, @r4
+    movb    r2, @$0177024
+    add     $80, r3
+    CorrectAddressFillRect
+    sob     r1, 4b                /; используем r1 (dy) в последнем цикле
+
+FillRectExit:
+    mov     (sp)+, r5             /; восстанавливаем изначальный r5
+    rts     pc
+
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:	  .word	0         /адрес верхней видеостроки пользовательского экрана
 BitsProcPPU:      .word 0         /битовая карта процессов
@@ -756,6 +928,14 @@ x1:   .word 0
 y1:   .word 0
 
 MaskTable: .byte 01, 02, 04, 010, 020, 040, 0100, 0200
+
+/; Биты от N до 7 включительно (левая граница прямоугольника)
+LeftMaskTable:
+    .byte 0377, 0376, 0374, 0370, 0360, 0340, 0300, 0200
+
+/; Биты от 0 до N включительно (правая граница прямоугольника)
+RightMaskTable:
+    .byte 0001, 0003, 0007, 0017, 0037, 0077, 0177, 0377
 
 str_buff:         .byte 0
 str_buffer:       .fill 40, 1, 0  / Буфер для строки

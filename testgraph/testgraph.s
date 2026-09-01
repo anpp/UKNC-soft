@@ -22,7 +22,7 @@ _main:
 	jsr	pc,(r5)
 	add	$04,sp
 	clr	r2
-	mov	$_Line,r4
+	mov	$_FillRect,r4
 	mov	$0100,r3
 L_2:
 	mov	$07,-(sp)
@@ -51,39 +51,59 @@ L_3:
 	mov	$01130,-(sp)
 	mov	$012,-(sp)
 	mov	$012,-(sp)
-	jsr	pc,(r4)
+	mov	$_Line,r2
+	jsr	pc,(r2)
 	mov	$06,-(sp)
 	clr	-(sp)
 	clr	-(sp)
 	mov	$0310,-(sp)
 	mov	$0536,-(sp)
-	jsr	pc,(r4)
+	jsr	pc,(r2)
 	mov	$05,-(sp)
 	mov	$012,-(sp)
 	mov	$0226,-(sp)
 	mov	$0310,-(sp)
 	mov	$012,-(sp)
-	jsr	pc,(r4)
+	jsr	pc,(r2)
 	mov	$05,-(sp)
 	mov	$0334,-(sp)
 	mov	$012,-(sp)
 	mov	$036,-(sp)
 	mov	$0226,-(sp)
-	jsr	pc,(r4)
+	jsr	pc,(r2)
 	add	$050,sp
 	mov	$04,-(sp)
 	mov	$050,-(sp)
 	mov	$0310,-(sp)
 	mov	$0372,-(sp)
 	mov	$0764,-(sp)
+	jsr	pc,(r2)
+	mov	$06,-(sp)
+	mov	$0264,-(sp)
+	mov	$0764,-(sp)
+	mov	$0144,-(sp)
+	mov	$0310,-(sp)
 	jsr	pc,(r4)
+	mov	$03,-(sp)
+	mov	$0310,-(sp)
+	mov	$0766,-(sp)
+	mov	$0265,-(sp)
+	mov	$0306,-(sp)
+	jsr	pc,(r4)
+	mov	$02,-(sp)
+	mov	$0144,-(sp)
+	mov	$0121,-(sp)
+	mov	$062,-(sp)
+	mov	$0121,-(sp)
+	jsr	pc,(r4)
+	add	$050,sp
 	jsr	pc,_WaitAnyKey
 	mov	$LC_1,-(sp)
 	mov	$01,-(sp)
 	jsr	pc,(r5)
 	jsr	pc,_FinishGraph
 	jsr	pc,_FinishKeyb
-	add	$016,sp
+	add	$04,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r4
 	mov	(sp)+,r3
