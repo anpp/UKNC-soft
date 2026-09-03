@@ -249,13 +249,27 @@ PixelY1:  .word 0
 _Line:
     mov     10(sp), LineColor
 
-    mov     2(sp), PixelX0
-    mov     4(sp), PixelY0
+    mov     2(sp), r0
+    mov     4(sp), r1
     mov     6(sp), PixelX1
     mov     8(sp), PixelY1
 
-    mov  PixelX0, r0
-    mov  PixelY0, r1
+    cmp  r0, PixelX1
+    blt  2f          /;X1 > X0 - не меняем координаты
+    /;X
+    mov  r0, -(sp)
+    mov  PixelX1, -(sp)
+    mov  (sp)+, r0
+    mov  (sp)+, PixelX1
+    /;Y
+    mov  r1, -(sp)
+    mov  PixelY1, -(sp)
+    mov  (sp)+, r1
+    mov  (sp)+, PixelY1
+
+2:
+    mov  r0, PixelX0
+    mov  r1, PixelY0
 
     jsr  pc, CalcAddress    
 
@@ -331,6 +345,17 @@ _RunPPU:
 
 /=============================================================================================
 pp.beg:
+    /; сперва таблица адресов
+    mov  pc, r1
+    add  $TAddr - ., r1
+    mov  pc, r0
+LT:
+    tst  (r1)        /;Есть ли еще адреса?
+    beq  begin       /;0 - уже нет
+    add  r0, (r1)+   /;Скорректировать адрес
+    br   LT          /;до конца таблицы
+
+begin:
     mov  @$02476, r0
     mov  @r0, offsetVPPU
 
@@ -402,7 +427,7 @@ end_line:
 
     asr BitsProcPPU          /Проверка на FillRectPPU
     bcc 8f
-    jsr pc, FillRectPPU
+    jmp FillRectPPU
 end_fillrect:
     mov $RunProcPPU, @r4
     bic $0100, @r5         /FillRectPPU выполнена
@@ -572,7 +597,7 @@ FinishGraphPPU:
 
 
 /;=========================LinePPU==============================================================
-.macro CorrectAddress
+.macro CorrectAddressLineUpDown
     cmp     r3, $0100000
     blo     1000f                      /; < 0100000 -> Underflow
     cmp     r3, $0154540
@@ -582,6 +607,13 @@ FinishGraphPPU:
 1000:
     add     $054540, r3           /; Underflow (< 0100000)
 2000:
+.endm
+
+.macro CorrectAddressLineUp
+    cmp     r3, $0154540
+    blo     1000f                      /; [0100000..0154540) -> Норма
+    sub     $054540, r3           /; Overflow (>= 0154540)
+1000:
 .endm
 
 LinePPU:
@@ -610,20 +642,7 @@ LinePPU:
     mov     r5, -(sp)
 
     /;Абсолютный адрес таблицы масок на вершине стека
-    mov     pc, -(sp)
-    add     $MaskTable - ., (sp)
-
-    /;команды nop  - для прохода вправо по x
-    mov $0240, checkx1
-    mov $0240, checkx1 + 2
-    mov $0240, checkx2
-    mov $0240, checkx2 + 2
-    /; команды inc r0
-    mov $005200, stepx1
-    mov $005200, stepx2
-    /; команды inc r3
-    mov $005203, stepax1
-    mov $005203, stepax2
+    mov     TMaskTable, -(sp)
 
     /; команды add $80, r3
     mov $062703, stepay1
@@ -631,35 +650,21 @@ LinePPU:
     mov $062703, stepay2
     mov $000120, stepay2 + 2
 
+    /; По X всегда идем вправо
     /; Вычисление dx = |LastX - FirstX| и sx (направление по X)
     sub     x0, x1           /; r2 = LastX - FirstX
-    bge     1f
-    neg     x1               /; r2 = dx = |dx|
-    /; команды cmp r0, $7 - для прохода влево по x
-    mov     $020027, checkx1
-    mov     $000007, checkx1 + 2
-    mov     $020027, checkx2
-    mov     $000007, checkx2 + 2
-    /; команды dec r0
-    mov $005300, stepx1
-    mov $005300, stepx2
-    /; команды dec r3
-    mov $005303, stepax1
-    mov $005303, stepax2
 
-1:                          /; r2 = dx
     /; Вычисление dy = |LastY - FirstY| и sy (направление по Y)
     sub     y0, y1           /; r3 = LastY - FirstY    
-    bge     2f
+    bge     1f
     neg     y1               /; r3 = dy = |dy|
-    ;/neg     stepAddrY
     /; команды sub $80, r3
     mov $0162703, stepay1
     mov $000120, stepay1 + 2
     mov $0162703, stepay2
     mov $000120, stepay2 + 2
 
-2:                          /; r3 = dy
+1:                          /; r3 = dy
 
     /; Сравнение dx и dy для определения ведущей оси
     cmp     x1, y1
@@ -689,7 +694,7 @@ DrawXMajor:
     /; err >= 0 – увеличиваем адрес по Y (сама координата не нужна) и корректируем err
 stepay1:
     add     $80, r3
-    CorrectAddress
+    CorrectAddressLineUpDown
 
     add     r14, r11         /; err += 2*(dy - dx)
     br      12f
@@ -698,18 +703,12 @@ stepay1:
 12:
     /; Теперь увеличиваем X (ведущая координата)
     mov     x0, r0
-stepx1:
     inc     r0
     mov     r0, x0
     bic     $0177770, R0  /; В r0 номер точки в октете
-checkx1:
-/;    cmp     r0, $7
-    nop
-    nop
     bne     333f           /; добавлять адрес не нужно    
-stepax1:
     inc     r3
-    CorrectAddress
+    CorrectAddressLineUp
 333:
     /;вычисление маски пикселя
     add     (sp), r0
@@ -740,18 +739,12 @@ DrawYMajor:
     blt     21f              /; если err < 0, X не меняем
     /; err >= 0 – увеличиваем X и корректируем err
     mov     x0, r0
-stepx2:
     inc     r0
     mov     r0, x0
     bic     $0177770, R0  /; В r0 номер точки в октете
-checkx2:
-/;    cmp     r0, $7
-    nop
-    nop
     bne     44f           /; добавлять адрес не нужно
-stepax2:
     inc     r3
-    CorrectAddress
+    CorrectAddressLineUp
 44:    
    /;вычисление маски пикселя
     add     (sp), r0
@@ -765,7 +758,7 @@ stepax2:
     /; Теперь увеличиваем адрес по Y (ведущая координата), сама координата не нужна
 stepay2:
     add     $80, r3
-    CorrectAddress
+    CorrectAddressLineUpDown
     sob     r5, 20b /; если счётчик > 0 – продолжаем
 
 LineExit:
@@ -814,7 +807,6 @@ FillRectPPU:
 
     mov     r0, r5
     bic     $0177770, r5          /; r5 = bit_end (x1 & 7)
-    mov     r5, -(sp)             /; сохраняем bit_end на стек
 
     asr     x0
     asr     x0
@@ -834,13 +826,10 @@ FillRectPPU:
 /; ОДНА КОЛОНКА (CountX == 0)
 /; ============================================================================
 SingleColumn:
-    mov     pc, r5
-    add     $LeftMaskTable - ., r5
-    add     r5, r2
+    add     TLeftMaskTable, r2
     movb    (r2), r2
 
-    add     $8, r5                /;RightMaskTable
-    add     (sp)+, r5             /; (sp) = bit_end
+    add     TRightMaskTable, r5
     movb    (r5), r5
 
     comb    r5                    /; Инвертируем RightMask: биты > bit_end становятся 1
@@ -858,13 +847,12 @@ SingleColumn:
 /; НЕСКОЛЬКО КОЛОНОК (CountX > 0)
 /; ============================================================================
 MultiColumn:
+    mov     r5, -(sp)             /; сохраняем bit_end на стек
     /; На вершине стека сейчас лежит bit_end
     mov     r3, -(sp)             /; (sp) = адрес верхнего пикселя колонки
 
     /; --- 1. ПЕРВАЯ КОЛОНКА (Левый край) ---
-    mov     pc, r5
-    add     $LeftMaskTable - ., r5
-    add     r5, r2
+    add     TLeftMaskTable, r2
     movb    (r2), r2               /; r2 = LeftMask
     mov     r1, r5                /; r5 = копируем высоту для внутреннего цикла
 
@@ -900,9 +888,7 @@ DrawMiddle:
 DrawRightEdge:
     tst     (sp)+                 /; снимаем сохранённый адрес колонки
     mov     (sp)+, r5             /; r5 = восстанавливаем bit_end
-    mov     pc, r2
-    add     $RightMaskTable - ., r2
-    add     r2, r5
+    add     TRightMaskTable, r5
     movb    (r5), r2/; r2 = RightMask
 
 4:  mov     r3, @r4
@@ -913,7 +899,7 @@ DrawRightEdge:
 
 FillRectExit:
     mov     (sp)+, r5             /; восстанавливаем изначальный r5
-    rts     pc
+    jmp     end_fillrect
 
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:	  .word	0         /адрес верхней видеостроки пользовательского экрана
@@ -936,6 +922,13 @@ LeftMaskTable:
 /; Биты от 0 до N включительно (правая граница прямоугольника)
 RightMaskTable:
     .byte 0001, 0003, 0007, 0017, 0037, 0077, 0177, 0377
+
+TAddr:  /; Таблица адресов
+TMaskTable:      .word MaskTable - LT
+TLeftMaskTable:  .word LeftMaskTable - LT
+TRightMaskTable: .word RightMaskTable - LT
+.word 0
+
 
 str_buff:         .byte 0
 str_buffer:       .fill 40, 1, 0  / Буфер для строки
