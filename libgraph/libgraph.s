@@ -438,10 +438,6 @@ end_fillrect:
     rts  pc
 
 ClearScreenPPU:
-    mov	 r0, -(sp)
-    mov	 r1, -(sp)
-    mov	 r2, -(sp)
-
     clr  @$0177020
     clr  @$0177022
     mov  $0177024, r1
@@ -452,33 +448,17 @@ ClearScreenPPU:
     inc	 @r4
     sob	 r2, 1b
 
-    mov  (sp)+, r2
-    mov  (sp)+, r1
-    mov  (sp)+, r0
-
     rts  pc
 
 InvertScreenPPU:
-    mov	 r0, -(sp)
-    mov	 r1, -(sp)
-    mov	 r2, -(sp)
-    mov	 r3, -(sp)
-
-    mov  $0177010, r0      / регистр адреса ВОЗУ в ПП
     mov  $0177012, r1       / 0 план
-    mov  $0177014, r2       / 1, 2 планы
-    mov	 $0100000, @r0
+    mov	 $0100000, @r4
     mov	 $(80 * 286), r3
 1:
     com  @r1
-    com  @r2
-    inc	 @r0
+    com  @r5         /;r5 = $0177014 (1, 2 планы)
+    inc	 @r4
     sob	 r3, 1b
-
-    mov  (sp)+, r3
-    mov  (sp)+, r2
-    mov  (sp)+, r1
-    mov  (sp)+, r0
 
     rts  pc
 
@@ -928,7 +908,6 @@ TMaskTable:      .word MaskTable - LT
 TLeftMaskTable:  .word LeftMaskTable - LT
 TRightMaskTable: .word RightMaskTable - LT
 .word 0
-
 
 str_buff:         .byte 0
 str_buffer:       .fill 40, 1, 0  / Буфер для строки
