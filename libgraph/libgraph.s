@@ -513,12 +513,6 @@ PrintTopBottomPPU:
     inc  r1
     mov  r1, r3
 
-    /Очистка буфера
-    mov  $20, r2    
-11:
-    clr (r3)+
-    sob  r2, 11b 
-
     mov  $0104052, code_emt  /emt 052 по-умолчанию
 
     mov  $top_or_bottom, r0
@@ -815,13 +809,16 @@ SingleColumn:
     comb    r5                    /; Инвертируем RightMask: биты > bit_end становятся 1
     bicb    r5, r2
 
+    mov     $80, -(sp)
     mov     $0177024, r5
+
 1:  mov     r3, @r4               /; Засылаем адрес VRAM
     movb    r2, @r5               /; Пишем маску
-    add     $80, r3
+    add     (sp), r3
     CorrectAddressFillRect
     sob     r1, 1b                /; Счетчик высоты в r1
 
+    tst     (sp)+
     br      FillRectExit
 
 /; ============================================================================
@@ -837,11 +834,15 @@ MultiColumn:
     movb    (r2), r2               /; r2 = LeftMask
     mov     r1, r5                /; r5 = копируем высоту для внутреннего цикла
 
+    mov     $80, -(sp)
+
 1:  mov     r3, @r4
     movb    r2, @$0177024
-    add     $80, r3
+    add     (sp), r3
     CorrectAddressFillRect
     sob     r5, 1b
+
+    tst     (sp)+
 
     mov     (sp), r3              /; восстанавливаем верхний адрес колонки
     inc     r3                    /; шаг вправо по X (+1 байт)
@@ -852,6 +853,8 @@ MultiColumn:
 
     /; --- 2. СРЕДНИЕ КОЛОНКИ (Сплошная маска 0377) ---
 DrawMiddle:
+    mov     $80, -(sp)
+ 
     mov     r1, -(sp)
     mov     $0177024, r1
     mov     $0377, r2
@@ -859,17 +862,19 @@ DrawMiddle:
 2:  mov     (sp), r5                /; r5 = копируем высоту dy
 3:  mov     r3, @r4
     movb    r2, @r1      /; сплошная заливка октета
-    add     $80, r3
+    add     2(sp), r3
     CorrectAddressFillRect
     sob     r5, 3b
 
-    mov     2(sp), r3              /; восстанавливаем верх колонки
+    mov     4(sp), r3              /; восстанавливаем верх колонки
     inc     r3                    /; шаг вправо (+1 байт)
     CorrectAddressFillRect
-    mov     r3, 2(sp)              /; сохраняем новый верх
+    mov     r3, 4(sp)              /; сохраняем новый верх
     sob     r0, 2b                /; цикл по колонкам (r0)
 
     mov     (sp)+, r1
+
+    tst     (sp)+
     /; --- 3. ПОСЛЕДНЯЯ КОЛОНКА (Правый край) ---
 DrawRightEdge:
     tst     (sp)+                 /; снимаем сохранённый адрес колонки
