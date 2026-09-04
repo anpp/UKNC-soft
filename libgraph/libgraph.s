@@ -852,19 +852,24 @@ MultiColumn:
 
     /; --- 2. СРЕДНИЕ КОЛОНКИ (Сплошная маска 0377) ---
 DrawMiddle:
-2:  mov     r1, r5                /; r5 = копируем высоту dy
+    mov     r1, -(sp)
+    mov     $0177024, r1
+    mov     $0377, r2
+
+2:  mov     (sp), r5                /; r5 = копируем высоту dy
 3:  mov     r3, @r4
-    movb    $0377, @$0177024      /; сплошная заливка октета
+    movb    r2, @r1      /; сплошная заливка октета
     add     $80, r3
     CorrectAddressFillRect
     sob     r5, 3b
 
-    mov     (sp), r3              /; восстанавливаем верх колонки
+    mov     2(sp), r3              /; восстанавливаем верх колонки
     inc     r3                    /; шаг вправо (+1 байт)
     CorrectAddressFillRect
-    mov     r3, (sp)              /; сохраняем новый верх
+    mov     r3, 2(sp)              /; сохраняем новый верх
     sob     r0, 2b                /; цикл по колонкам (r0)
 
+    mov     (sp)+, r1
     /; --- 3. ПОСЛЕДНЯЯ КОЛОНКА (Правый край) ---
 DrawRightEdge:
     tst     (sp)+                 /; снимаем сохранённый адрес колонки
@@ -872,8 +877,10 @@ DrawRightEdge:
     add     TRightMaskTable, r5
     movb    (r5), r2/; r2 = RightMask
 
+    mov     $0177024, r5 
+
 4:  mov     r3, @r4
-    movb    r2, @$0177024
+    movb    r2, @r5
     add     $80, r3
     CorrectAddressFillRect
     sob     r1, 4b                /; используем r1 (dy) в последнем цикле
