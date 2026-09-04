@@ -604,7 +604,7 @@ LinePPU:
     mov     $0177024, r2
 
     inc     (r4)
-    mov     @r5, x0
+    mov     @r5, r0 /;x0
     inc     (r4)
     mov     @r5, y0
     inc     (r4)
@@ -632,7 +632,7 @@ LinePPU:
 
     /; По X всегда идем вправо
     /; Вычисление dx = |LastX - FirstX| и sx (направление по X)
-    sub     x0, x1           /; r2 = LastX - FirstX
+    sub     r0, x1           /; r2 = LastX - FirstX
 
     /; Вычисление dy = |LastY - FirstY| и sy (направление по Y)
     sub     y0, y1           /; r3 = LastY - FirstY    
@@ -682,17 +682,17 @@ stepay1:
     add     r12, r11         /; err += 2*dy   (Y не меняется)
 12:
     /; Теперь увеличиваем X (ведущая координата)
-    mov     x0, r0
     inc     r0
-    mov     r0, x0
-    bic     $0177770, R0  /; В r0 номер точки в октете
+    mov     r0, -(sp)
+    bic     $0177770, (sp)  /; В (sp) номер точки в октете
     bne     333f           /; добавлять адрес не нужно    
     inc     r3
     CorrectAddressLineUp
 333:
     /;вычисление маски пикселя
-    add     (sp), r0
-    movb    (r0), r1
+    add     2(sp), (sp)    /;в 2(sp) - адрес таблицы масок, в (sp) - номер точки в октете
+    movb    @(sp), r1
+    tst     (sp)+    
 
     sob     r5, 10b  /; если счётчик > 0 – продолжаем
     br      LineExit
@@ -718,17 +718,17 @@ DrawYMajor:
     tst     r11
     blt     21f              /; если err < 0, X не меняем
     /; err >= 0 – увеличиваем X и корректируем err
-    mov     x0, r0
     inc     r0
-    mov     r0, x0
-    bic     $0177770, R0  /; В r0 номер точки в октете
+    mov     r0, -(sp)
+    bic     $0177770, (sp)  /; В (sp) номер точки в октете
     bne     44f           /; добавлять адрес не нужно
     inc     r3
     CorrectAddressLineUp
-44:    
-   /;вычисление маски пикселя
-    add     (sp), r0
-    movb    (r0), r1
+44:  
+    /;вычисление маски пикселя
+    add     2(sp), (sp)    /;в 2(sp) - адрес таблицы масок, в (sp) - номер точки в октете
+    movb    @(sp), r1
+    tst     (sp)+    
 
     add     r14, r11         /; err += 2*(dx - dy)
     br      22f
@@ -815,8 +815,9 @@ SingleColumn:
     comb    r5                    /; Инвертируем RightMask: биты > bit_end становятся 1
     bicb    r5, r2
 
+    mov     $0177024, r5
 1:  mov     r3, @r4               /; Засылаем адрес VRAM
-    movb    r2, @$0177024         /; Пишем маску
+    movb    r2, @r5               /; Пишем маску
     add     $80, r3
     CorrectAddressFillRect
     sob     r1, 1b                /; Счетчик высоты в r1

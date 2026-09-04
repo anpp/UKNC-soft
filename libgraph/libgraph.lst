@@ -31,8 +31,8 @@ GAS LISTING libgraph.s 			page 1
   28 0001 01       	command:    .byte   01
   29 0002 1A00     	            .word   032
   30 0004 0000     	addrPP:     .word   0
-  31 0006 4502     	WORD3:      .word   pplen
-  32 0008 4502     	WORDS:      .word   pplen
+  31 0006 4402     	WORD3:      .word   pplen
+  32 0008 4402     	WORDS:      .word   pplen
   33              	.even
   34              	
   35              	/структура для отправки данных во время работы (коорди
@@ -416,7 +416,7 @@ GAS LISTING libgraph.s 			page 1
  347              	pp.beg:
  348              	    /; сперва таблица адресов
  349 0288 C111     	    mov  pc, r1
- 350 028a C1655604 	    add  $TAddr - ., r1
+ 350 028a C1655404 	    add  $TAddr - ., r1
  351 028e C011     	    mov  pc, r0
 GAS LISTING libgraph.s 			page 8
 
@@ -429,14 +429,14 @@ GAS LISTING libgraph.s 			page 1
  357              	
  358              	begin:
  359 0298 C0173E05 	    mov  @$02476, r0
- 360 029c 37121604 	    mov  @r0, offsetVPPU
+ 360 029c 37121404 	    mov  @r0, offsetVPPU
  361              	
  362 02a0 C41508FE 	    mov $0177010, r4
  363 02a4 C5150CFE 	    mov $0177014, r5
  364              	
  365              	    / рулон в CPU
  366 02a8 CC151801 	    mov $OffPPU, @r4
- 367 02ac CD1D0604 	    mov offsetVPPU, @r5
+ 367 02ac CD1D0404 	    mov offsetVPPU, @r5
  368              	    
  369 02b0 F7090200 	    jsr  pc, MainPPU
  370 02b4 8700     	    rts  pc
@@ -445,18 +445,18 @@ GAS LISTING libgraph.s 			page 1
  373              	    /Основной цикл
  374              	MainPPU:
  375 02b6 CC151901 	    mov $RunProcPPU, @r4
- 376 02ba 7713FA03 	    mov @r5, BitsProcPPU
+ 376 02ba 7713F803 	    mov @r5, BitsProcPPU
  377              	
  378 02be 4181     	    bmi 100f              /BitsProcPPU
  379              	     
- 380 02c0 B70CF403 	    asr BitsProcPPU           /Проверка на PutPixel
+ 380 02c0 B70CF203 	    asr BitsProcPPU           /Проверка на PutPixel
  381 02c4 0686     	    bcc 2f
  382 02c6 7700AC00 	    jmp PutPixelPPU
  383              	end_putpixel:
  384 02ca CC151901 	    mov $RunProcPPU, @r4
  385 02ce CD450100 	    bic $01, @r5          /PutPixel выполнена
  386              	2:
- 387 02d2 B70CE203 	    asr BitsProcPPU          /Проверка на GetPixel
+ 387 02d2 B70CE003 	    asr BitsProcPPU          /Проверка на GetPixel
  388 02d6 0686     	    bcc 3f
  389 02d8 7700B600 	    jmp GetPixelPPU
  390              	end_getpixel:
@@ -464,7 +464,7 @@ GAS LISTING libgraph.s 			page 1
  392 02e0 CD450200 	    bic $02, @r5          /GetPixel выполнена
  393              	
  394              	3: 
- 395 02e4 B70CD003 	    asr BitsProcPPU          /Проверка на ClearScreen
+ 395 02e4 B70CCE03 	    asr BitsProcPPU          /Проверка на ClearScreen
  396 02e8 0686     	    bcc 4f
  397 02ea F7095600 	    jsr pc, ClearScreenPPU
  398              	
@@ -472,7 +472,7 @@ GAS LISTING libgraph.s 			page 1
  400 02f2 CD450400 	    bic $04, @r5           /ClearScreen выполнена
  401              	                         
  402              	4:
- 403 02f6 B70CBE03 	    asr BitsProcPPU          /Проверка на PrintTopBottom
+ 403 02f6 B70CBC03 	    asr BitsProcPPU          /Проверка на PrintTopBottom
  404 02fa 0686     	    bcc 5f
  405 02fc F709BC00 	    jsr pc, PrintTopBottomPPU
  406              	
@@ -483,7 +483,7 @@ GAS LISTING libgraph.s 			page 1
 
  409              	                         /PrintTopBottom выполнена
  410              	5:
- 411 0308 B70CAC03 	    asr BitsProcPPU          /Проверка на InvertScreen
+ 411 0308 B70CAA03 	    asr BitsProcPPU          /Проверка на InvertScreen
  412 030c 0686     	    bcc 6f
  413 030e F7094E00 	    jsr pc, InvertScreenPPU
  414              	
@@ -491,7 +491,7 @@ GAS LISTING libgraph.s 			page 1
  416 0316 CD451000 	    bic $020, @r5         /InvertScreen выполнена
  417              	
  418              	6:
- 419 031a B70C9A03 	    asr BitsProcPPU          /Проверка на LinePPU
+ 419 031a B70C9803 	    asr BitsProcPPU          /Проверка на LinePPU
  420 031e 0686     	    bcc 7f
  421 0320 77000801 	    jmp LinePPU
  422              	end_line:
@@ -500,9 +500,9 @@ GAS LISTING libgraph.s 			page 1
  425              	
  426              	7:
  427              	
- 428 032c B70C8803 	    asr BitsProcPPU          /Проверка на FillRectPPU
+ 428 032c B70C8603 	    asr BitsProcPPU          /Проверка на FillRectPPU
  429 0330 0686     	    bcc 8f
- 430 0332 77007E02 	    jmp FillRectPPU
+ 430 0332 77007A02 	    jmp FillRectPPU
  431              	end_fillrect:
  432 0336 CC151901 	    mov $RunProcPPU, @r4
  433 033a CD454000 	    bic $0100, @r5         /FillRectPPU выполнена
@@ -585,7 +585,7 @@ GAS LISTING libgraph.s 			page 1
  507              	
  508              	PrintTopBottomPPU:
  509 03bc C111     	    mov  pc, r1
- 510 03be C1652A03 	    add  $str_buff - ., r1
+ 510 03be C1652803 	    add  $str_buff - ., r1
  511 03c2 77104E00 	    mov  r1, addr_for_emt    
  512              	    
  513 03c6 810A     	    inc  r1
@@ -691,193 +691,192 @@ GAS LISTING libgraph.s 			page 1
  604 0434 C21514FE 	    mov     $0177024, r2
  605              	
  606 0438 8C0A     	    inc     (r4)
- 607 043a 77138202 	    mov     @r5, x0
- 608 043e 8C0A     	    inc     (r4)
- 609 0440 77137E02 	    mov     @r5, y0
- 610 0444 8C0A     	    inc     (r4)
- 611 0446 77137A02 	    mov     @r5, x1
- 612 044a 8C0A     	    inc     (r4)
- 613 044c 77137602 	    mov     @r5, y1
+ 607 043a 4013     	    mov     @r5, r0 /;x0
+ 608 043c 8C0A     	    inc     (r4)
+ 609 043e 77137E02 	    mov     @r5, y0
+ 610 0442 8C0A     	    inc     (r4)
+ 611 0444 77137A02 	    mov     @r5, x1
+ 612 0448 8C0A     	    inc     (r4)
+ 613 044a 77137602 	    mov     @r5, y1
  614              	
  615              	    /; адрес и маска для первого пикселя
- 616 0450 CC151101 	    mov     $PxlAddress, @r4
- 617 0454 4313     	    mov     @r5, r3          /;r3 - адрес текущего пикселя
- 618 0456 8C0A     	    inc     (r4)
- 619 0458 4113     	    mov     @r5, r1          /;r1 - маска пикселя в октете
+ 616 044e CC151101 	    mov     $PxlAddress, @r4
+ 617 0452 4313     	    mov     @r5, r3          /;r3 - адрес текущего пикселя
+ 618 0454 8C0A     	    inc     (r4)
+ 619 0456 4113     	    mov     @r5, r1          /;r1 - маска пикселя в октете
  620              	
  621              	    /; сохраним регистр r5, во всех остальных попрограмма�
- 622 045a 6611     	    mov     r5, -(sp)
+ 622 0458 6611     	    mov     r5, -(sp)
  623              	
  624              	    /;Абсолютный адрес таблицы масок на вершине стека
- 625 045c E61D8002 	    mov     TMaskTable, -(sp)
+ 625 045a E61D8002 	    mov     TMaskTable, -(sp)
  626              	
  627              	    /; команды add $80, r3
- 628 0460 F715C365 	    mov $062703, stepay1
- 628      7A00
- 629 0466 F7155000 	    mov $000120, stepay1 + 2
- 629      7600
- 630 046c F715C365 	    mov $062703, stepay2
- 630      1E01
+ 628 045e F715C365 	    mov $062703, stepay1
+ 628      7800
+ 629 0464 F7155000 	    mov $000120, stepay1 + 2
+ 629      7400
+ 630 046a F715C365 	    mov $062703, stepay2
+ 630      1C01
 GAS LISTING libgraph.s 			page 13
 
 
- 631 0472 F7155000 	    mov $000120, stepay2 + 2
- 631      1A01
+ 631 0470 F7155000 	    mov $000120, stepay2 + 2
+ 631      1801
  632              	
  633              	    /; По X всегда идем вправо
  634              	    /; Вычисление dx = |LastX - FirstX| и sx (направление по X)
- 635 0478 F7ED4402 	    sub     x0, x1           /; r2 = LastX - FirstX
- 635      4602
+ 635 0476 37E04802 	    sub     r0, x1           /; r2 = LastX - FirstX
  636              	
  637              	    /; Вычисление dy = |LastY - FirstY| и sy (направление по Y)
- 638 047e F7ED4002 	    sub     y0, y1           /; r3 = LastY - FirstY    
- 638      4202
- 639 0484 0E04     	    bge     1f
- 640 0486 370B3C02 	    neg     y1               /; r3 = dy = |dy|
+ 638 047a F7ED4202 	    sub     y0, y1           /; r3 = LastY - FirstY    
+ 638      4402
+ 639 0480 0E04     	    bge     1f
+ 640 0482 370B3E02 	    neg     y1               /; r3 = dy = |dy|
  641              	    /; команды sub $80, r3
- 642 048a F715C3E5 	    mov $0162703, stepay1
+ 642 0486 F715C3E5 	    mov $0162703, stepay1
  642      5000
- 643 0490 F7155000 	    mov $000120, stepay1 + 2
+ 643 048c F7155000 	    mov $000120, stepay1 + 2
  643      4C00
- 644 0496 F715C3E5 	    mov $0162703, stepay2
+ 644 0492 F715C3E5 	    mov $0162703, stepay2
  644      F400
- 645 049c F7155000 	    mov $000120, stepay2 + 2
+ 645 0498 F7155000 	    mov $000120, stepay2 + 2
  645      F000
  646              	
  647              	1:                          /; r3 = dy
  648              	
  649              	    /; Сравнение dx и dy для определения ведущей оси
- 650 04a2 F72D1E02 	    cmp     x1, y1
- 650      1E02
- 651 04a8 4105     	    blt     DrawYMajor       /; Если dy > dx, идем по оси Y
+ 650 049e F72D2002 	    cmp     x1, y1
+ 650      2002
+ 651 04a4 4105     	    blt     DrawYMajor       /; Если dy > dx, идем по оси Y
  652              	
  653              	/; --- Отрисовка с ведущей осью X (dx >= dy) ---
  654              	DrawXMajor:
- 655 04aa F71D1802 	    mov     y1, r12
- 655      0A02
- 656 04b0 F70C0602 	    asl     r12
- 657 04b4 F71D0202 	    mov     r12, r11
- 657      0202
- 658 04ba F7ED0602 	    sub     x1, r11          /; r11 = err = 2*dy - dx
- 658      FC01
- 659 04c0 F71D0202 	    mov     y1, r14
- 659      F801
- 660 04c6 F7EDFA01 	    sub     x1, r14          /; r14 = dy - dx
- 660      F201
- 661 04cc F70CEE01 	    asl     r14
+ 655 04a6 F71D1A02 	    mov     y1, r12
+ 655      0C02
+ 656 04ac F70C0802 	    asl     r12
+ 657 04b0 F71D0402 	    mov     r12, r11
+ 657      0402
+ 658 04b6 F7ED0802 	    sub     x1, r11          /; r11 = err = 2*dy - dx
+ 658      FE01
+ 659 04bc F71D0402 	    mov     y1, r14
+ 659      FA01
+ 660 04c2 F7EDFC01 	    sub     x1, r14          /; r14 = dy - dx
+ 660      F401
+ 661 04c8 F70CF001 	    asl     r14
  662              	
- 663 04d0 C51DF001 	    mov     x1, r5          /; r5 = счётчик точек = dx
- 664 04d4 850A     	    inc     r5
+ 663 04cc C51DF201 	    mov     x1, r5          /; r5 = счётчик точек = dx
+ 664 04d0 850A     	    inc     r5
  665              	
  666              	10:
  667              	    /; Запись пикселя
- 668 04d6 CC10     	    mov  r3, @r4
- 669 04d8 4A90     	    movb r1, @r2
+ 668 04d2 CC10     	    mov  r3, @r4
+ 669 04d4 4A90     	    movb r1, @r2
  670              	
  671              	    /; --- Исправленный порядок: сначала проверка ошибки --
- 672 04da F70BDE01 	    tst     r11
- 673 04de 1105     	    blt     11f              /; если err < 0, Y не меняем
+ 672 04d6 F70BE001 	    tst     r11
+ 673 04da 1105     	    blt     11f              /; если err < 0, Y не меняем
  674              	    /; err >= 0 – увеличиваем адрес по Y (сама координата не н
+ 675              	stepay1:
 GAS LISTING libgraph.s 			page 14
 
 
- 675              	stepay1:
- 676 04e0 C3655000 	    add     $80, r3
- 677 04e4 D7200080 	    CorrectAddressLineUpDown
+ 676 04dc C3655000 	    add     $80, r3
+ 677 04e0 D7200080 	    CorrectAddressLineUpDown
  677      0687D720 
  677      60D90587 
  677      C3E56059 
  677      0201C365 
  678              	
- 679 04fa F76DC001 	    add     r14, r11         /; err += 2*(dy - dx)
- 679      BC01
- 680 0500 0301     	    br      12f
+ 679 04f6 F76DC201 	    add     r14, r11         /; err += 2*(dy - dx)
+ 679      BE01
+ 680 04fc 0301     	    br      12f
  681              	11:
- 682 0502 F76DB401 	    add     r12, r11         /; err += 2*dy   (Y не меняется)
- 682      B401
+ 682 04fe F76DB601 	    add     r12, r11         /; err += 2*dy   (Y не меняется)
+ 682      B601
  683              	12:
  684              	    /; Теперь увеличиваем X (ведущая координата)
- 685 0508 C01DB401 	    mov     x0, r0
- 686 050c 800A     	    inc     r0
- 687 050e 3710AE01 	    mov     r0, x0
- 688 0512 C045F8FF 	    bic     $0177770, R0  /; В r0 номер точки в октете
- 689 0516 0602     	    bne     333f           /; добавлять адрес не нужно    
- 690 0518 830A     	    inc     r3
- 691 051a D72060D9 	    CorrectAddressLineUp
- 691      0287C3E5 
- 691      6059
- 692              	333:
- 693              	    /;вычисление маски пикселя
- 694 0524 8063     	    add     (sp), r0
- 695 0526 0192     	    movb    (r0), r1
+ 685 0504 800A     	    inc     r0
+ 686 0506 2610     	    mov     r0, -(sp)
+ 687 0508 CE45F8FF 	    bic     $0177770, (sp)  /; В (sp) номер точки в октете
+ 688 050c 0602     	    bne     333f           /; добавлять адрес не нужно    
+ 689 050e 830A     	    inc     r3
+ 690 0510 D72060D9 	    CorrectAddressLineUp
+ 690      0287C3E5 
+ 690      6059
+ 691              	333:
+ 692              	    /;вычисление маски пикселя
+ 693 051a 8E6D0200 	    add     2(sp), (sp)    /;в 2(sp) - адрес таблицы масок, в (sp) - номер 
+ 694 051e 819F0000 	    movb    @(sp), r1
+ 695 0522 D60B     	    tst     (sp)+    
  696              	
- 697 0528 6A7F     	    sob     r5, 10b  /; если счётчик > 0 – продолжаем
- 698 052a 4001     	    br      LineExit
+ 697 0524 6A7F     	    sob     r5, 10b  /; если счётчик > 0 – продолжаем
+ 698 0526 4001     	    br      LineExit
  699              	
  700              	/; --- Отрисовка с ведущей осью Y (dy > dx) ---
  701              	DrawYMajor:
- 702 052c F71D9401 	    mov     x1, r12
- 702      8801
- 703 0532 F70C8401 	    asl     r12
- 704 0536 F71D8001 	    mov     r12, r11
- 704      8001
- 705 053c F7ED8601 	    sub     y1, r11          /; r11 = err = 2*dx - dy
- 705      7A01
- 706 0542 F71D7E01 	    mov     x1, r14
- 706      7601
- 707 0548 F7ED7A01 	    sub     y1, r14          /; r14 = dx - dy
- 707      7001
- 708 054e F70C6C01 	    asl     r14
+ 702 0528 F71D9601 	    mov     x1, r12
+ 702      8A01
+ 703 052e F70C8601 	    asl     r12
+ 704 0532 F71D8201 	    mov     r12, r11
+ 704      8201
+ 705 0538 F7ED8801 	    sub     y1, r11          /; r11 = err = 2*dx - dy
+ 705      7C01
+ 706 053e F71D8001 	    mov     x1, r14
+ 706      7801
+ 707 0544 F7ED7C01 	    sub     y1, r14          /; r14 = dx - dy
+ 707      7201
+ 708 054a F70C6E01 	    asl     r14
  709              	
- 710 0552 C51D7001 	    mov     y1, r5          /; r5 = счётчик точек = dy
- 711 0556 850A     	    inc     r5
+ 710 054e C51D7201 	    mov     y1, r5          /; r5 = счётчик точек = dy
+ 711 0552 850A     	    inc     r5
  712              	20:
  713              	    /; Запись пикселя
- 714 0558 CC10     	    mov  r3, @r4
- 715 055a 4A90     	    movb r1, @r2
+ 714 0554 CC10     	    mov  r3, @r4
+ 715 0556 4A90     	    movb r1, @r2
  716              	
  717              	    /; --- Исправленный порядок: сначала проверка ошибки --
- 718 055c F70B5C01 	    tst     r11
+ 718 0558 F70B5E01 	    tst     r11
+ 719 055c 1405     	    blt     21f              /; если err < 0, X не меняем
 GAS LISTING libgraph.s 			page 15
 
 
- 719 0560 1405     	    blt     21f              /; если err < 0, X не меняем
  720              	    /; err >= 0 – увеличиваем X и корректируем err
- 721 0562 C01D5A01 	    mov     x0, r0
- 722 0566 800A     	    inc     r0
- 723 0568 37105401 	    mov     r0, x0
- 724 056c C045F8FF 	    bic     $0177770, R0  /; В r0 номер точки в октете
- 725 0570 0602     	    bne     44f           /; добавлять адрес не нужно
- 726 0572 830A     	    inc     r3
- 727 0574 D72060D9 	    CorrectAddressLineUp
- 727      0287C3E5 
- 727      6059
- 728              	44:    
- 729              	   /;вычисление маски пикселя
- 730 057e 8063     	    add     (sp), r0
- 731 0580 0192     	    movb    (r0), r1
+ 721 055e 800A     	    inc     r0
+ 722 0560 2610     	    mov     r0, -(sp)
+ 723 0562 CE45F8FF 	    bic     $0177770, (sp)  /; В (sp) номер точки в октете
+ 724 0566 0602     	    bne     44f           /; добавлять адрес не нужно
+ 725 0568 830A     	    inc     r3
+ 726 056a D72060D9 	    CorrectAddressLineUp
+ 726      0287C3E5 
+ 726      6059
+ 727              	44:  
+ 728              	    /;вычисление маски пикселя
+ 729 0574 8E6D0200 	    add     2(sp), (sp)    /;в 2(sp) - адрес таблицы масок, в (sp) - номер 
+ 730 0578 819F0000 	    movb    @(sp), r1
+ 731 057c D60B     	    tst     (sp)+    
  732              	
- 733 0582 F76D3801 	    add     r14, r11         /; err += 2*(dx - dy)
- 733      3401
- 734 0588 0301     	    br      22f
+ 733 057e F76D3A01 	    add     r14, r11         /; err += 2*(dx - dy)
+ 733      3601
+ 734 0584 0301     	    br      22f
  735              	21:
- 736 058a F76D2C01 	    add     r12, r11         /; err += 2*dx   (X не меняется)
- 736      2C01
+ 736 0586 F76D2E01 	    add     r12, r11         /; err += 2*dx   (X не меняется)
+ 736      2E01
  737              	22:
  738              	    /; Теперь увеличиваем адрес по Y (ведущая координата),
  739              	stepay2:
- 740 0590 C3655000 	    add     $80, r3
- 741 0594 D7200080 	    CorrectAddressLineUpDown
+ 740 058c C3655000 	    add     $80, r3
+ 741 0590 D7200080 	    CorrectAddressLineUpDown
  741      0687D720 
  741      60D90587 
  741      C3E56059 
  741      0201C365 
- 742 05aa 6A7F     	    sob     r5, 20b /; если счётчик > 0 – продолжаем
+ 742 05a6 6A7F     	    sob     r5, 20b /; если счётчик > 0 – продолжаем
  743              	
  744              	LineExit:
- 745 05ac D60B     	    tst     (sp)+
- 746 05ae 8515     	    mov     (sp)+, r5
- 747 05b0 770070FD 	    jmp     end_line
+ 745 05a8 D60B     	    tst     (sp)+
+ 746 05aa 8515     	    mov     (sp)+, r5
+ 747 05ac 770074FD 	    jmp     end_line
  748              	
  749              	
  750              	/;=========================FillRectPPU=============================================================
@@ -892,188 +891,189 @@ GAS LISTING libgraph.s 			page 1
  759              	
  760              	FillRectPPU:
  761              	    /; Цвет (устанавливается один раз перед циклами)
- 762 05b4 CC15C401 	    mov     $LineColorPPU, @r4
- 763 05b8 5F130EFE 	    mov     @r5, @$0177016        
+ 762 05b0 CC15C401 	    mov     $LineColorPPU, @r4
+ 763 05b4 5F130EFE 	    mov     @r5, @$0177016        
  764              	
- 765 05bc 8C0A     	    inc     (r4)
- 766 05be 7713FE00 	    mov     @r5, x0
- 767 05c2 8C0A     	    inc     (r4)
+ 765 05b8 8C0A     	    inc     (r4)
+ 766 05ba 77130001 	    mov     @r5, x0
+ 767 05be 8C0A     	    inc     (r4)
+ 768 05c0 7713FC00 	    mov     @r5, y0
 GAS LISTING libgraph.s 			page 16
 
 
- 768 05c4 7713FA00 	    mov     @r5, y0
- 769 05c8 8C0A     	    inc     (r4)
- 770 05ca 4013     	    mov     @r5, r0               /; r0 = x1
- 771 05cc 8C0A     	    inc     (r4)
- 772 05ce 4113     	    mov     @r5, r1               /; r1 = y1
+ 769 05c4 8C0A     	    inc     (r4)
+ 770 05c6 4013     	    mov     @r5, r0               /; r0 = x1
+ 771 05c8 8C0A     	    inc     (r4)
+ 772 05ca 4113     	    mov     @r5, r1               /; r1 = y1
  773              	
  774              	    /; Адрес первого пикселя от ЦП
- 775 05d0 CC151101 	    mov     $PxlAddress, @r4
- 776 05d4 4313     	    mov     @r5, r3               /; r3 = адрес текущего пикселя (VRAM)
+ 775 05cc CC151101 	    mov     $PxlAddress, @r4
+ 776 05d0 4313     	    mov     @r5, r3               /; r3 = адрес текущего пикселя (VRAM)
  777              	
- 778 05d6 6611     	    mov     r5, -(sp)             /; сохраняем рабочий регистр r5
+ 778 05d2 6611     	    mov     r5, -(sp)             /; сохраняем рабочий регистр r5
  779              	
  780              	    /; --- Вычисление dy = y1 - y0 + 1 (высота прямоугольника) ---
- 781 05d8 C1EDE600 	    sub     y0, r1
- 782 05dc 810A     	    inc     r1                    /; r1 = dy (высота в пикселях)
+ 781 05d4 C1EDE800 	    sub     y0, r1
+ 782 05d8 810A     	    inc     r1                    /; r1 = dy (высота в пикселях)
  783              	
  784              	    /; --- Вычисление смещений битов и количества байтовы�
- 785 05de C21DDE00 	    mov     x0, r2
- 786 05e2 C245F8FF 	    bic     $0177770, r2          /; r2 = bit_start (x0 & 7)
+ 785 05da C21DE000 	    mov     x0, r2
+ 786 05de C245F8FF 	    bic     $0177770, r2          /; r2 = bit_start (x0 & 7)
  787              	
- 788 05e6 0510     	    mov     r0, r5
- 789 05e8 C545F8FF 	    bic     $0177770, r5          /; r5 = bit_end (x1 & 7)
+ 788 05e2 0510     	    mov     r0, r5
+ 789 05e4 C545F8FF 	    bic     $0177770, r5          /; r5 = bit_end (x1 & 7)
  790              	
- 791 05ec B70CD000 	    asr     x0
- 792 05f0 B70CCC00 	    asr     x0
- 793 05f4 B70CC800 	    asr     x0                    /; x0 = byte_start (x0 >> 3)
+ 791 05e8 B70CD200 	    asr     x0
+ 792 05ec B70CCE00 	    asr     x0
+ 793 05f0 B70CCA00 	    asr     x0                    /; x0 = byte_start (x0 >> 3)
  794              	
- 795 05f8 800C     	    asr     r0
- 796 05fa 800C     	    asr     r0
- 797 05fc 800C     	    asr     r0                    /; r0 = byte_end (x1 >> 3)
+ 795 05f4 800C     	    asr     r0
+ 796 05f6 800C     	    asr     r0
+ 797 05f8 800C     	    asr     r0                    /; r0 = byte_end (x1 >> 3)
  798              	
- 799 05fe C0EDBE00 	    sub     x0, r0                /; r0 = CountX (количество шагов по колонк
+ 799 05fa C0EDC000 	    sub     x0, r0                /; r0 = CountX (количество шагов по колонк
  800              	
  801              	    /; --- Проверка: всё в одной колонке или нет? ---
- 802 0602 C00B     	    tst     r0
- 803 0604 1402     	    bne     MultiColumn
+ 802 05fe C00B     	    tst     r0
+ 803 0600 1502     	    bne     MultiColumn
  804              	
  805              	/; ============================================================================
  806              	/; ОДНА КОЛОНКА (CountX == 0)
  807              	/; ============================================================================
  808              	SingleColumn:
- 809 0606 C26DD800 	    add     TLeftMaskTable, r2
- 810 060a 8292     	    movb    (r2), r2
+ 809 0602 C26DDA00 	    add     TLeftMaskTable, r2
+ 810 0606 8292     	    movb    (r2), r2
  811              	
- 812 060c C56DD400 	    add     TRightMaskTable, r5
- 813 0610 4593     	    movb    (r5), r5
+ 812 0608 C56DD600 	    add     TRightMaskTable, r5
+ 813 060c 4593     	    movb    (r5), r5
  814              	
- 815 0612 458A     	    comb    r5                    /; Инвертируем RightMask: биты > bit_end стан�
- 816 0614 42C1     	    bicb    r5, r2
+ 815 060e 458A     	    comb    r5                    /; Инвертируем RightMask: биты > bit_end стан�
+ 816 0610 42C1     	    bicb    r5, r2
  817              	
- 818 0616 CC10     	1:  mov     r3, @r4               /; Засылаем адрес VRAM
- 819 0618 9F9014FE 	    movb    r2, @$0177024         /; Пишем маску
- 820 061c C3655000 	    add     $80, r3
- 821 0620 D72060D9 	    CorrectAddressFillRect
- 821      0287C3E5 
- 821      6059
- 822 062a 4B7E     	    sob     r1, 1b                /; Счетчик высоты в r1
+ 818 0612 C51514FE 	    mov     $0177024, r5
+ 819 0616 CC10     	1:  mov     r3, @r4               /; Засылаем адрес VRAM
+ 820 0618 8D90     	    movb    r2, @r5               /; Пишем маску
+ 821 061a C3655000 	    add     $80, r3
+ 822 061e D72060D9 	    CorrectAddressFillRect
+ 822      0287C3E5 
+ 822      6059
+ 823 0628 4A7E     	    sob     r1, 1b                /; Счетчик высоты в r1
 GAS LISTING libgraph.s 			page 17
 
 
- 823              	
- 824 062c 4101     	    br      FillRectExit
- 825              	
- 826              	/; ============================================================================
- 827              	/; НЕСКОЛЬКО КОЛОНОК (CountX > 0)
- 828              	/; ============================================================================
- 829              	MultiColumn:
- 830 062e 6611     	    mov     r5, -(sp)             /; сохраняем bit_end на стек
- 831              	    /; На вершине стека сейчас лежит bit_end
- 832 0630 E610     	    mov     r3, -(sp)             /; (sp) = адрес верхнего пикселя колонк
- 833              	
- 834              	    /; --- 1. ПЕРВАЯ КОЛОНКА (Левый край) ---
- 835 0632 C26DAC00 	    add     TLeftMaskTable, r2
- 836 0636 8292     	    movb    (r2), r2               /; r2 = LeftMask
- 837 0638 4510     	    mov     r1, r5                /; r5 = копируем высоту для внутреннег
- 838              	
- 839 063a CC10     	1:  mov     r3, @r4
- 840 063c 9F9014FE 	    movb    r2, @$0177024
- 841 0640 C3655000 	    add     $80, r3
- 842 0644 D72060D9 	    CorrectAddressFillRect
- 842      0287C3E5 
- 842      6059
- 843 064e 4B7F     	    sob     r5, 1b
- 844              	
- 845 0650 8313     	    mov     (sp), r3              /; восстанавливаем верхний адрес ко�
- 846 0652 830A     	    inc     r3                    /; шаг вправо по X (+1 байт)
- 847 0654 D72060D9 	    CorrectAddressFillRect
- 847      0287C3E5 
- 847      6059
- 848 065e CE10     	    mov     r3, (sp)              /; сохраняем новый верхний адрес
- 849 0660 C00A     	    dec     r0                    /; CountX--
- 850 0662 1603     	    beq     DrawRightEdge         /; если средних колонок нет — сразу �
- 851              	
- 852              	    /; --- 2. СРЕДНИЕ КОЛОНКИ (Сплошная маска 0377) ---
- 853              	DrawMiddle:
- 854 0664 4510     	2:  mov     r1, r5                /; r5 = копируем высоту dy
- 855 0666 CC10     	3:  mov     r3, @r4
- 856 0668 DF95FF00 	    movb    $0377, @$0177024      /; сплошная заливка октета
- 856      14FE
- 857 066e C3655000 	    add     $80, r3
- 858 0672 D72060D9 	    CorrectAddressFillRect
- 858      0287C3E5 
- 858      6059
- 859 067c 4C7F     	    sob     r5, 3b
- 860              	
- 861 067e 8313     	    mov     (sp), r3              /; восстанавливаем верх колонки
- 862 0680 830A     	    inc     r3                    /; шаг вправо (+1 байт)
- 863 0682 D72060D9 	    CorrectAddressFillRect
- 863      0287C3E5 
- 863      6059
- 864 068c CE10     	    mov     r3, (sp)              /; сохраняем новый верх
- 865 068e 167E     	    sob     r0, 2b                /; цикл по колонкам (r0)
- 866              	
- 867              	    /; --- 3. ПОСЛЕДНЯЯ КОЛОНКА (Правый край) ---
- 868              	DrawRightEdge:
- 869 0690 D60B     	    tst     (sp)+                 /; снимаем сохранённый адрес колонк�
- 870 0692 8515     	    mov     (sp)+, r5             /; r5 = восстанавливаем bit_end
+ 824              	
+ 825 062a 4101     	    br      FillRectExit
+ 826              	
+ 827              	/; ============================================================================
+ 828              	/; НЕСКОЛЬКО КОЛОНОК (CountX > 0)
+ 829              	/; ============================================================================
+ 830              	MultiColumn:
+ 831 062c 6611     	    mov     r5, -(sp)             /; сохраняем bit_end на стек
+ 832              	    /; На вершине стека сейчас лежит bit_end
+ 833 062e E610     	    mov     r3, -(sp)             /; (sp) = адрес верхнего пикселя колонк
+ 834              	
+ 835              	    /; --- 1. ПЕРВАЯ КОЛОНКА (Левый край) ---
+ 836 0630 C26DAC00 	    add     TLeftMaskTable, r2
+ 837 0634 8292     	    movb    (r2), r2               /; r2 = LeftMask
+ 838 0636 4510     	    mov     r1, r5                /; r5 = копируем высоту для внутреннег
+ 839              	
+ 840 0638 CC10     	1:  mov     r3, @r4
+ 841 063a 9F9014FE 	    movb    r2, @$0177024
+ 842 063e C3655000 	    add     $80, r3
+ 843 0642 D72060D9 	    CorrectAddressFillRect
+ 843      0287C3E5 
+ 843      6059
+ 844 064c 4B7F     	    sob     r5, 1b
+ 845              	
+ 846 064e 8313     	    mov     (sp), r3              /; восстанавливаем верхний адрес ко�
+ 847 0650 830A     	    inc     r3                    /; шаг вправо по X (+1 байт)
+ 848 0652 D72060D9 	    CorrectAddressFillRect
+ 848      0287C3E5 
+ 848      6059
+ 849 065c CE10     	    mov     r3, (sp)              /; сохраняем новый верхний адрес
+ 850 065e C00A     	    dec     r0                    /; CountX--
+ 851 0660 1603     	    beq     DrawRightEdge         /; если средних колонок нет — сразу �
+ 852              	
+ 853              	    /; --- 2. СРЕДНИЕ КОЛОНКИ (Сплошная маска 0377) ---
+ 854              	DrawMiddle:
+ 855 0662 4510     	2:  mov     r1, r5                /; r5 = копируем высоту dy
+ 856 0664 CC10     	3:  mov     r3, @r4
+ 857 0666 DF95FF00 	    movb    $0377, @$0177024      /; сплошная заливка октета
+ 857      14FE
+ 858 066c C3655000 	    add     $80, r3
+ 859 0670 D72060D9 	    CorrectAddressFillRect
+ 859      0287C3E5 
+ 859      6059
+ 860 067a 4C7F     	    sob     r5, 3b
+ 861              	
+ 862 067c 8313     	    mov     (sp), r3              /; восстанавливаем верх колонки
+ 863 067e 830A     	    inc     r3                    /; шаг вправо (+1 байт)
+ 864 0680 D72060D9 	    CorrectAddressFillRect
+ 864      0287C3E5 
+ 864      6059
+ 865 068a CE10     	    mov     r3, (sp)              /; сохраняем новый верх
+ 866 068c 167E     	    sob     r0, 2b                /; цикл по колонкам (r0)
+ 867              	
+ 868              	    /; --- 3. ПОСЛЕДНЯЯ КОЛОНКА (Правый край) ---
+ 869              	DrawRightEdge:
+ 870 068e D60B     	    tst     (sp)+                 /; снимаем сохранённый адрес колонк�
+ 871 0690 8515     	    mov     (sp)+, r5             /; r5 = восстанавливаем bit_end
 GAS LISTING libgraph.s 			page 18
 
 
- 871 0694 C56D4C00 	    add     TRightMaskTable, r5
- 872 0698 4293     	    movb    (r5), r2/; r2 = RightMask
- 873              	
- 874 069a CC10     	4:  mov     r3, @r4
- 875 069c 9F9014FE 	    movb    r2, @$0177024
- 876 06a0 C3655000 	    add     $80, r3
- 877 06a4 D72060D9 	    CorrectAddressFillRect
- 877      0287C3E5 
- 877      6059
- 878 06ae 4B7E     	    sob     r1, 4b                /; используем r1 (dy) в последнем цикле
- 879              	
- 880              	FillRectExit:
- 881 06b0 8515     	    mov     (sp)+, r5             /; восстанавливаем изначальный r5
- 882 06b2 770080FC 	    jmp     end_fillrect
- 883              	
- 884              	//====================ДАННЫЕ ПП======================================================
- 885 06b6 0000     	offsetVPPU:	  .word	0         /адрес верхней видеостроки пользоват�
- 886 06b8 0000     	BitsProcPPU:      .word 0         /битовая карта процессов
- 887              	
- 888 06ba 0000     	r12: .word 0
- 889 06bc 0000     	r11: .word 0
- 890 06be 0000     	r14: .word 0
- 891 06c0 0000     	x0:   .word 0
- 892 06c2 0000     	y0:   .word 0
- 893 06c4 0000     	x1:   .word 0
- 894 06c6 0000     	y1:   .word 0
- 895              	
- 896 06c8 01020408 	MaskTable: .byte 01, 02, 04, 010, 020, 040, 0100, 0200
- 896      10204080 
- 897              	
- 898              	/; Биты от N до 7 включительно (левая граница прямоуголь�
- 899              	LeftMaskTable:
- 900 06d0 FFFEFCF8 	    .byte 0377, 0376, 0374, 0370, 0360, 0340, 0300, 0200
- 900      F0E0C080 
- 901              	
- 902              	/; Биты от 0 до N включительно (правая граница прямоугол�
- 903              	RightMaskTable:
- 904 06d8 0103070F 	    .byte 0001, 0003, 0007, 0017, 0037, 0077, 0177, 0377
- 904      1F3F7FFF 
- 905              	
- 906              	TAddr:  /; Таблица адресов
- 907 06e0 3804     	TMaskTable:      .word MaskTable - LT
- 908 06e2 4004     	TLeftMaskTable:  .word LeftMaskTable - LT
- 909 06e4 4804     	TRightMaskTable: .word RightMaskTable - LT
- 910 06e6 0000     	.word 0
- 911              	
- 912 06e8 00       	str_buff:         .byte 0
- 913 06e9 00000000 	str_buffer:       .fill 40, 1, 0  / Буфер для строки
- 913      00000000 
- 913      00000000 
- 913      00000000 
- 913      00000000 
- 914 0711 00       	.even
- 915              	
+ 872 0692 C56D4C00 	    add     TRightMaskTable, r5
+ 873 0696 4293     	    movb    (r5), r2/; r2 = RightMask
+ 874              	
+ 875 0698 CC10     	4:  mov     r3, @r4
+ 876 069a 9F9014FE 	    movb    r2, @$0177024
+ 877 069e C3655000 	    add     $80, r3
+ 878 06a2 D72060D9 	    CorrectAddressFillRect
+ 878      0287C3E5 
+ 878      6059
+ 879 06ac 4B7E     	    sob     r1, 4b                /; используем r1 (dy) в последнем цикле
+ 880              	
+ 881              	FillRectExit:
+ 882 06ae 8515     	    mov     (sp)+, r5             /; восстанавливаем изначальный r5
+ 883 06b0 770082FC 	    jmp     end_fillrect
+ 884              	
+ 885              	//====================ДАННЫЕ ПП======================================================
+ 886 06b4 0000     	offsetVPPU:	  .word	0         /адрес верхней видеостроки пользоват�
+ 887 06b6 0000     	BitsProcPPU:      .word 0         /битовая карта процессов
+ 888              	
+ 889 06b8 0000     	r12: .word 0
+ 890 06ba 0000     	r11: .word 0
+ 891 06bc 0000     	r14: .word 0
+ 892 06be 0000     	x0:   .word 0
+ 893 06c0 0000     	y0:   .word 0
+ 894 06c2 0000     	x1:   .word 0
+ 895 06c4 0000     	y1:   .word 0
+ 896              	
+ 897 06c6 01020408 	MaskTable: .byte 01, 02, 04, 010, 020, 040, 0100, 0200
+ 897      10204080 
+ 898              	
+ 899              	/; Биты от N до 7 включительно (левая граница прямоуголь�
+ 900              	LeftMaskTable:
+ 901 06ce FFFEFCF8 	    .byte 0377, 0376, 0374, 0370, 0360, 0340, 0300, 0200
+ 901      F0E0C080 
+ 902              	
+ 903              	/; Биты от 0 до N включительно (правая граница прямоугол�
+ 904              	RightMaskTable:
+ 905 06d6 0103070F 	    .byte 0001, 0003, 0007, 0017, 0037, 0077, 0177, 0377
+ 905      1F3F7FFF 
+ 906              	
+ 907              	TAddr:  /; Таблица адресов
+ 908 06de 3604     	TMaskTable:      .word MaskTable - LT
+ 909 06e0 3E04     	TLeftMaskTable:  .word LeftMaskTable - LT
+ 910 06e2 4604     	TRightMaskTable: .word RightMaskTable - LT
+ 911 06e4 0000     	.word 0
+ 912              	
+ 913 06e6 00       	str_buff:         .byte 0
+ 914 06e7 00000000 	str_buffer:       .fill 40, 1, 0  / Буфер для строки
+ 914      00000000 
+ 914      00000000 
+ 914      00000000 
+ 914      00000000 
+ 915 070f 00       	.even
  916              	
- 917              	pp.end:
+ 917              	
+ 918              	pp.end:
