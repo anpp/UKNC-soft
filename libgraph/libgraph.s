@@ -1,6 +1,6 @@
 .text
-.globl _InitGraph, _FinishGraph, _ClearScreen, _PutPixel, _GetPixel, _PrintTop, _PrintBottom, _InvertScreen, _Line, _FillRect
-.globl _RunPPU
+.globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
+.globl _runPPU
 
 base_addr = .
 
@@ -108,7 +108,7 @@ pp_mput:
 
 
 
-_InitGraph:
+_initGraph:
     mput  mp
     bne	1f
 
@@ -125,7 +125,7 @@ _InitGraph:
 1:
     rts  pc
 
-_FinishGraph:
+_finishGraph:
     bis $0100000, running_proc  /флаг завершения для ПП
 
     / запуск подпрограммы в ПП FinishGraphPPU
@@ -146,7 +146,7 @@ _FinishGraph:
     rts   pc
 
 
-_ClearScreen:
+_clearScreen:
     bis $04, running_proc
 1:
     bit $04, running_proc
@@ -154,7 +154,7 @@ _ClearScreen:
 
     rts  pc
 
-_InvertScreen:
+_invertScreen:
     bis $020, running_proc
 11:
     bit $020, running_proc
@@ -201,7 +201,7 @@ CalcAddress:
     rts  pc
 
 
-_PutPixel:    
+_putPixel:    
     mov     6(sp), PxClr
     mov     2(sp), r0
     mov     4(sp), r1   
@@ -216,7 +216,7 @@ _PutPixel:
 
 
 
-_GetPixel:
+_getPixel:
     mov     6(sp), PxClr
     mov     2(sp), r0
     mov     4(sp), r1 
@@ -246,7 +246,7 @@ PixelY0:  .word 0
 PixelX1:  .word 0
 PixelY1:  .word 0
 
-_Line:
+_line:
     mov     10(sp), LineColor
 
     mov     2(sp), r0
@@ -280,7 +280,7 @@ _Line:
 
     rts  pc
 
-_FillRect:
+_fillRect:
     mov     10(sp), LineColor /;используются те же переменные, что и для Line
 
     mov     2(sp), PixelX0
@@ -302,10 +302,10 @@ _FillRect:
 
 
 
-_PrintTop:
+_printTop:
     mov   $0, top_or_bottom
     br    1f
-_PrintBottom:
+_printBottom:
     mov   $1, top_or_bottom
 1:
     mov   2(sp), position_service_string
@@ -319,7 +319,7 @@ _PrintBottom:
     rts  pc
 
 
-_RunPPU:
+_runPPU:
     mov  4(sp), r0
     clc
     ror  r0

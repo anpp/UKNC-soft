@@ -165,13 +165,13 @@ int step()
     unsigned volatile color;
     volatile struct rule *r;
 
-    color = GetPixel(ant_x, ant_y);
+    color = getPixel(ant_x, ant_y);
 
     r = find_rule(ant_state, color);
     if (r == 0)
         return 0;   /* смерть */
 
-    PutPixel(ant_x, ant_y, r->new_color);
+    putPixel(ant_x, ant_y, r->new_color);
 
     turn_ant(r->turn);
     ant_state = r->next_state;
@@ -204,13 +204,13 @@ void OnKeyEvent(bool Up, unsigned char key_code)
 
 void main()
 {
-    InitKeyb();
-    SetOnKeyEvent(OnKeyEvent);
+    initKeyb();
+    setOnKeyEvent(OnKeyEvent);
 
-    InitGraph();
-    ClearScreen();
+    initGraph();
+    clearScreen();
 
-    PrintTop(1, "Turmit");
+    printTop(1, "Turmit");
 
     ant_x = WIDTH / 2;
     ant_y = HEIGHT / 2;
@@ -221,14 +221,14 @@ void main()
     {
        if(app_state == STATE_PAUSE)
        {
-          PrintBottom(0, "PAUSE");
+          printBottom(0, "PAUSE");
           while(app_state == STATE_PAUSE)
             ;
-          PrintBottom(0, "      ");
+          printBottom(0, "      ");
        }
     }
 
-    PrintTop(1, "       ");
-    FinishGraph();    
-    FinishKeyb();    
+    printTop(1, "       ");
+    finishGraph();    
+    finishKeyb();    
 }

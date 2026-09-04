@@ -1,5 +1,46 @@
 	.text
 	.even
+	.globl	_rect
+_rect:
+	mov	r2,-(sp)
+	mov	r3,-(sp)
+	mov	r4,-(sp)
+	mov	r5,-(sp)
+	mov	014(sp),r5
+	mov	016(sp),r3
+	mov	022(sp),r4
+	mov	r4,-(sp)
+	mov	022(sp),-(sp)
+	mov	016(sp),-(sp)
+	mov	r5,-(sp)
+	mov	022(sp),-(sp)
+	mov	$_fillRect,r2
+	jsr	pc,(r2)
+	mov	r4,-(sp)
+	mov	r5,-(sp)
+	mov	r3,-(sp)
+	mov	r5,-(sp)
+	mov	034(sp),-(sp)
+	jsr	pc,(r2)
+	mov	r4,-(sp)
+	mov	046(sp),-(sp)
+	mov	r3,-(sp)
+	mov	r5,-(sp)
+	mov	r3,-(sp)
+	jsr	pc,(r2)
+	mov	r4,-(sp)
+	mov	060(sp),-(sp)
+	mov	r3,-(sp)
+	mov	064(sp),-(sp)
+	mov	060(sp),-(sp)
+	jsr	pc,(r2)
+	add	$050,sp
+	mov	(sp)+,r5
+	mov	(sp)+,r4
+	mov	(sp)+,r3
+	mov	(sp)+,r2
+	rts	pc
+	.even
 	.globl	_cordic_calc
 _cordic_calc:
 	mov	r2,-(sp)
@@ -12,7 +53,7 @@ _cordic_calc:
 	clr	r4
 	mov	$023335,r1
 	mov	$012,r2
-L_4:
+L_6:
 	mov	r0,r3
 	neg	r3
 	mov	r3,(sp)
@@ -23,15 +64,15 @@ L_4:
 	ash	(sp),r3	
 	mov	r3,04(sp)
 	tst	r5
-	blt	L_2
+	blt	L_4
 	sub	02(sp),r1
 	add	r3,r4
 	mov	r0,r3
 	asl	r3
 	sub	_angles(r3),r5
-L_3:
+L_5:
 	inc	r0
-	sob	r2,L_4
+	sob	r2,L_6
 	mov	r1,@022(sp)
 	mov	r4,@024(sp)
 	add	$06,sp
@@ -40,13 +81,13 @@ L_3:
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
-L_2:
+L_4:
 	add	02(sp),r1
 	sub	04(sp),r4
 	mov	r0,r3
 	asl	r3
 	add	_angles(r3),r5
-	br	L_3
+	br	L_5
 	.even
 	.globl	_fsin
 _fsin:
@@ -109,9 +150,9 @@ _fsin:
 	jsr	pc,___gtsf2
 	add	$010,sp
 	tst	r0
-	bgt	L_22
-	jmp	L_20
-L_22:
+	bgt	L_23
+	jmp	L_21
+L_23:
 	mov	$LC_1,r0
 	mov	02(r0),-(sp)
 	mov	(r0),-(sp)
@@ -124,7 +165,7 @@ L_22:
 	add	$012,sp
 	mov	-010(r5),r3
 	mov	-06(r5),-022(r5)
-L_10:
+L_11:
 	mov	LC_4+02,-(sp)
 	mov	LC_4,-(sp)
 	add	$-04,sp
@@ -133,9 +174,9 @@ L_10:
 	jsr	pc,___gtsf2
 	add	$010,sp
 	tst	r0
-	bgt	L_23
-	jmp	L_21
-L_23:
+	bgt	L_24
+	jmp	L_22
+L_24:
 	add	$-04,sp
 	mov	r3,(sp)
 	mov	-022(r5),02(sp)
@@ -148,7 +189,7 @@ L_23:
 	add	$012,sp
 	mov	-010(r5),r3
 	mov	-06(r5),-022(r5)
-L_14:
+L_15:
 	mov	$-04,r0
 	add	r5,r0
 	mov	r0,-(sp)
@@ -196,7 +237,7 @@ L_14:
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
-L_20:
+L_21:
 	mov	LC_3+02,-(sp)
 	mov	LC_3,-(sp)
 	add	$-04,sp
@@ -205,9 +246,9 @@ L_20:
 	jsr	pc,___ltsf2
 	add	$010,sp
 	tst	r0
-	blt	L_24
-	jmp	L_10
-L_24:
+	blt	L_25
+	jmp	L_11
+L_25:
 	mov	$LC_1,r0
 	mov	02(r0),-(sp)
 	mov	(r0),-(sp)
@@ -219,8 +260,8 @@ L_24:
 	add	$012,sp
 	mov	-010(r5),r3
 	mov	-06(r5),-022(r5)
-	jmp	L_10
-L_21:
+	jmp	L_11
+L_22:
 	mov	LC_5+02,-(sp)
 	mov	LC_5,-(sp)
 	add	$-04,sp
@@ -229,9 +270,9 @@ L_21:
 	jsr	pc,___ltsf2
 	add	$010,sp
 	tst	r0
-	blt	L_25
-	jmp	L_14
-L_25:
+	blt	L_26
+	jmp	L_15
+L_26:
 	add	$-04,sp
 	mov	r3,(sp)
 	mov	-022(r5),02(sp)
@@ -243,7 +284,7 @@ L_25:
 	add	$012,sp
 	mov	-010(r5),r3
 	mov	-06(r5),-022(r5)
-	jmp	L_14
+	jmp	L_15
 	.data
 	.even
 LC_0:
@@ -343,9 +384,9 @@ _fcos:
 	jsr	pc,___gtsf2
 	add	$010,sp
 	tst	r0
-	bgt	L_41
-	jmp	L_39
-L_41:
+	bgt	L_42
+	jmp	L_40
+L_42:
 	mov	$LC_8,r0
 	mov	02(r0),-(sp)
 	mov	(r0),-(sp)
@@ -358,7 +399,7 @@ L_41:
 	add	$012,sp
 	mov	-010(r5),r2
 	mov	-06(r5),-026(r5)
-L_29:
+L_30:
 	mov	LC_11+02,-(sp)
 	mov	LC_11,-(sp)
 	add	$-04,sp
@@ -367,9 +408,9 @@ L_29:
 	jsr	pc,___gtsf2
 	add	$010,sp
 	tst	r0
-	bgt	L_42
-	jmp	L_40
-L_42:
+	bgt	L_43
+	jmp	L_41
+L_43:
 	add	$-04,sp
 	mov	r2,(sp)
 	mov	-026(r5),02(sp)
@@ -382,7 +423,7 @@ L_42:
 	add	$012,sp
 	mov	-010(r5),r2
 	mov	-06(r5),-026(r5)
-L_33:
+L_34:
 	mov	$-04,r0
 	add	r5,r0
 	mov	r0,-(sp)
@@ -430,7 +471,7 @@ L_33:
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
-L_39:
+L_40:
 	mov	LC_10+02,-(sp)
 	mov	LC_10,-(sp)
 	add	$-04,sp
@@ -439,9 +480,9 @@ L_39:
 	jsr	pc,___ltsf2
 	add	$010,sp
 	tst	r0
-	blt	L_43
-	jmp	L_29
-L_43:
+	blt	L_44
+	jmp	L_30
+L_44:
 	mov	$LC_8,r0
 	mov	02(r0),-(sp)
 	mov	(r0),-(sp)
@@ -454,8 +495,8 @@ L_43:
 	add	$012,sp
 	mov	-010(r5),r2
 	mov	-06(r5),-026(r5)
-	jmp	L_29
-L_40:
+	jmp	L_30
+L_41:
 	mov	LC_12+02,-(sp)
 	mov	LC_12,-(sp)
 	add	$-04,sp
@@ -464,9 +505,9 @@ L_40:
 	jsr	pc,___ltsf2
 	add	$010,sp
 	tst	r0
-	blt	L_44
-	jmp	L_33
-L_44:
+	blt	L_45
+	jmp	L_34
+L_45:
 	add	$-04,sp
 	mov	r2,(sp)
 	mov	-026(r5),02(sp)
@@ -478,7 +519,7 @@ L_44:
 	add	$012,sp
 	mov	-010(r5),r2
 	mov	-06(r5),-026(r5)
-	jmp	L_33
+	jmp	L_34
 	.data
 	.even
 LC_6:
@@ -518,13 +559,13 @@ _main:
 	mov	r5,-(sp)
 	add	$-032,sp
 	jsr	pc,___main
-	jsr	pc,_InitKeyb
-	jsr	pc,_InitGraph
-	jsr	pc,_ClearScreen
+	jsr	pc,_initKeyb
+	jsr	pc,_initGraph
+	jsr	pc,_clearScreen
 	mov	$-035540,r3
 	clr	r2
 	mov	$01200,r4
-L_47:
+L_48:
 	clr	-(sp)
 	mov	$042240,-(sp)
 	add	$-04,sp
@@ -543,7 +584,7 @@ L_47:
 	add	$04,sp
 	mov	r1,(sp)
 	cmp	r1,$01177
-	bhi	L_46
+	bhi	L_47
 	clr	-(sp)
 	mov	$041440,-(sp)
 	add	$-04,sp
@@ -585,13 +626,13 @@ L_47:
 	jsr	pc,(r5)
 	add	$012,sp
 	cmp	r1,$0407
-	bhi	L_46
+	bhi	L_47
 	mov	$07,-(sp)
 	mov	r1,-(sp)
 	mov	04(sp),-(sp)
-	jsr	pc,_PutPixel
+	jsr	pc,_putPixel
 	add	$06,sp
-L_46:
+L_47:
 	add	$-04,sp
 	mov	r3,(sp)
 	mov	r2,02(sp)
@@ -629,11 +670,12 @@ L_46:
 	mov	026(sp),r3
 	mov	030(sp),r2
 	dec	r4
-	beq	L_49
-	jmp	L_47
-L_49:
-	jsr	pc,_FinishGraph
-	jsr	pc,_FinishKeyb
+	beq	L_50
+	jmp	L_48
+L_50:
+	jsr	pc,_waitAnyKey
+	jsr	pc,_finishGraph
+	jsr	pc,_finishKeyb
 	add	$032,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r4

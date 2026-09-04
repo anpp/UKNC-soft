@@ -1,24 +1,24 @@
 #ifndef LIB_GRAPH_H
 #define LIB_GRAPH_H
 
-extern void InitGraph();
-extern void FinishGraph();
-extern void ClearScreen();
-extern void PutPixel(unsigned int x,unsigned int y, unsigned int color);
-extern unsigned int GetPixel(unsigned int x, unsigned int y);
-extern void PrintTop(unsigned position, char *buffer);
-extern void PrintBottom(unsigned position, char *buffer);
-extern void InvertScreen();
-extern void Line(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color);
-extern void FillRect(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color);
+extern void initGraph();
+extern void finishGraph();
+extern void clearScreen();
+extern void putPixel(unsigned int x,unsigned int y, unsigned int color);
+extern unsigned int getPixel(unsigned int x, unsigned int y);
+extern void printTop(unsigned position, char *buffer);
+extern void printBottom(unsigned position, char *buffer);
+extern void invertScreen();
+extern void line(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color);
+extern void fillRect(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color);
 
 
-void Rect(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color)
+void rect(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color)
 {
-  FillRect(x1, y1, x1, y2, color);
-  FillRect(x1, y1, x2, y1, color);
-  FillRect(x2, y1, x2, y2, color);
-  FillRect(x1, y2, x2, y2, color);
+  fillRect(x1, y1, x1, y2, color);
+  fillRect(x1, y1, x2, y1, color);
+  fillRect(x2, y1, x2, y2, color);
+  fillRect(x1, y2, x2, y2, color);
 }
 
 #endif //LIB_GRAPH_H

@@ -27,19 +27,60 @@ L_3:
 	clrb	_esc
 	rts	pc
 	.even
+	.globl	_rect
+_rect:
+	mov	r2,-(sp)
+	mov	r3,-(sp)
+	mov	r4,-(sp)
+	mov	r5,-(sp)
+	mov	014(sp),r5
+	mov	016(sp),r3
+	mov	022(sp),r4
+	mov	r4,-(sp)
+	mov	022(sp),-(sp)
+	mov	016(sp),-(sp)
+	mov	r5,-(sp)
+	mov	022(sp),-(sp)
+	mov	$_fillRect,r2
+	jsr	pc,(r2)
+	mov	r4,-(sp)
+	mov	r5,-(sp)
+	mov	r3,-(sp)
+	mov	r5,-(sp)
+	mov	034(sp),-(sp)
+	jsr	pc,(r2)
+	mov	r4,-(sp)
+	mov	046(sp),-(sp)
+	mov	r3,-(sp)
+	mov	r5,-(sp)
+	mov	r3,-(sp)
+	jsr	pc,(r2)
+	mov	r4,-(sp)
+	mov	060(sp),-(sp)
+	mov	r3,-(sp)
+	mov	064(sp),-(sp)
+	mov	060(sp),-(sp)
+	jsr	pc,(r2)
+	add	$050,sp
+	mov	(sp)+,r5
+	mov	(sp)+,r4
+	mov	(sp)+,r3
+	mov	(sp)+,r2
+	rts	pc
+	.even
 	.globl	_turn_ant
 _turn_ant:
 	cmp	02(sp),$01
-	beq	L_13
+	beq	L_14
 	cmp	02(sp),$-01
-	bne	L_10
+	bne	L_11
 	mov	_ant_dir,r0
 	add	$03,r0
 	bic	$-04,r0
 	mov	r0,_ant_dir
-L_10:
+L_11:
 	rts	pc
-L_13:
+L_14:
 	mov	_ant_dir,r0
 	inc	r0
 	bic	$-04,r0
@@ -53,58 +94,58 @@ _move_ant:
 	mov	_ant_y,r0
 	mov	_ant_x,r1
 	tst	r2
-	bne	L_15
+	bne	L_16
 	dec	r0
 	mov	r0,_ant_y
-L_16:
+L_17:
 	tst	r1
-	blt	L_24
-L_19:
-	tst	r0
 	blt	L_25
-	cmp	r1,$01177
-	ble	L_20
-	clr	_ant_x
 L_20:
+	tst	r0
+	blt	L_26
+	cmp	r1,$01177
+	ble	L_21
+	clr	_ant_x
+L_21:
 	cmp	r0,$0407
-	ble	L_14
+	ble	L_15
 	clr	_ant_y
-L_14:
+L_15:
 	mov	(sp)+,r2
 	rts	pc
-L_15:
+L_16:
 	cmp	r2,$02
-	bne	L_17
+	bne	L_18
 	inc	r0
 	mov	r0,_ant_y
 	tst	r1
-	bge	L_19
-L_24:
+	bge	L_20
+L_25:
 	mov	$01177,_ant_x
 	tst	r0
-	bge	L_20
+	bge	L_21
 	mov	$0407,_ant_y
 	mov	(sp)+,r2
 	rts	pc
-L_25:
+L_26:
 	mov	$0407,_ant_y
 	cmp	r1,$01177
-	ble	L_14
+	ble	L_15
 	clr	_ant_x
 	mov	(sp)+,r2
 	rts	pc
-L_17:
+L_18:
 	cmp	r2,$03
-	bne	L_18
+	bne	L_19
 	dec	r1
 	mov	r1,_ant_x
-	br	L_16
-L_18:
+	br	L_17
+L_19:
 	cmp	r2,$01
-	bne	L_16
+	bne	L_17
 	inc	r1
 	mov	r1,_ant_x
-	br	L_16
+	br	L_17
 	.even
 	.globl	_find_rule
 _find_rule:
@@ -116,16 +157,16 @@ _find_rule:
 	clr	(sp)
 	mov	(sp),r0
 	cmp	r0,$06
-	blos	L_30
-	br	L_27
-L_28:
+	blos	L_31
+	br	L_28
+L_29:
 	mov	(sp),r0
 	inc	r0
 	mov	r0,(sp)
 	mov	(sp),r0
 	cmp	r0,$06
-	bhi	L_27
-L_30:
+	bhi	L_28
+L_31:
 	mov	(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -133,7 +174,7 @@ L_30:
 	add	r2,r0
 	asl	r0
 	cmpb	_prog(r0),r1
-	bne	L_28
+	bne	L_29
 	mov	(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -141,7 +182,7 @@ L_30:
 	add	r2,r0
 	asl	r0
 	cmp	_prog+02(r0),r5
-	bne	L_28
+	bne	L_29
 	mov	(sp),r1
 	mov	r1,r0
 	asl	r0
@@ -153,7 +194,7 @@ L_30:
 	mov	(sp)+,r5
 	mov	(sp)+,r2
 	rts	pc
-L_27:
+L_28:
 	clr	r0
 	add	$02,sp
 	mov	(sp)+,r5
@@ -167,7 +208,7 @@ _step:
 	add	$-04,sp
 	mov	_ant_y,-(sp)
 	mov	_ant_x,-(sp)
-	jsr	pc,_GetPixel
+	jsr	pc,_getPixel
 	mov	r0,04(sp)
 	mov	04(sp),r5
 	movb	_ant_state,r1
@@ -175,16 +216,16 @@ _step:
 	mov	06(sp),r0
 	add	$04,sp
 	cmp	r0,$06
-	blos	L_33
-	br	L_38
-L_35:
+	blos	L_34
+	br	L_39
+L_36:
 	mov	02(sp),r0
 	inc	r0
 	mov	r0,02(sp)
 	mov	02(sp),r0
 	cmp	r0,$06
-	bhi	L_38
-L_33:
+	bhi	L_39
+L_34:
 	mov	02(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -192,7 +233,7 @@ L_33:
 	add	r2,r0
 	asl	r0
 	cmpb	r1,_prog(r0)
-	bne	L_35
+	bne	L_36
 	mov	02(sp),r2
 	mov	r2,r0
 	asl	r0
@@ -200,7 +241,7 @@ L_33:
 	add	r2,r0
 	asl	r0
 	cmp	r5,_prog+02(r0)
-	bne	L_35
+	bne	L_36
 	mov	02(sp),r0
 	mov	r0,r2
 	asl	r2
@@ -214,19 +255,19 @@ L_33:
 	mov	r0,-(sp)
 	mov	_ant_y,-(sp)
 	mov	_ant_x,-(sp)
-	jsr	pc,_PutPixel
+	jsr	pc,_putPixel
 	add	$_prog+06,r5
 	mov	(r5),r0
 	add	$06,sp
 	cmp	r0,$01
-	beq	L_44
+	beq	L_45
 	cmp	r0,$-01
-	bne	L_39
+	bne	L_40
 	mov	_ant_dir,r0
 	add	$03,r0
 	bic	$-04,r0
 	mov	r0,_ant_dir
-L_39:
+L_40:
 	asl	r2
 	add	$_prog+010,r2
 	movb	(r2),r0
@@ -237,18 +278,18 @@ L_39:
 	mov	(sp)+,r5
 	mov	(sp)+,r2
 	rts	pc
-L_38:
+L_39:
 	clr	r0
 	add	$04,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r2
 	rts	pc
-L_44:
+L_45:
 	mov	_ant_dir,r0
 	inc	r0
 	bic	$-04,r0
 	mov	r0,_ant_dir
-	br	L_39
+	br	L_40
 	.data
 LC_0:
 	.byte 0124,0165,0162,0155,0151,0164,0
@@ -265,56 +306,56 @@ _main:
 	mov	r2,-(sp)
 	mov	r3,-(sp)
 	jsr	pc,___main
-	jsr	pc,_InitKeyb
+	jsr	pc,_initKeyb
 	mov	$_OnKeyEvent,-(sp)
-	jsr	pc,_SetOnKeyEvent
-	jsr	pc,_InitGraph
-	jsr	pc,_ClearScreen
+	jsr	pc,_setOnKeyEvent
+	jsr	pc,_initGraph
+	jsr	pc,_clearScreen
 	mov	$LC_0,-(sp)
 	mov	$01,-(sp)
-	mov	$_PrintTop,r3
+	mov	$_printTop,r3
 	jsr	pc,(r3)
 	mov	$0500,_ant_x
 	mov	$0204,_ant_y
 	mov	$01,_ant_dir
 	movb	$0101,_ant_state
 	add	$06,sp
-	br	L_47
-L_49:
+	br	L_48
+L_50:
 	movb	_esc,r0
 	tstb	r0
-	bne	L_51
+	bne	L_52
 	movb	_app_state,r0
 	cmpb	r0,$01
-	beq	L_56
-L_47:
+	beq	L_57
+L_48:
 	jsr	pc,_step
 	tst	r0
-	bne	L_49
-L_51:
+	bne	L_50
+L_52:
 	mov	$LC_3,-(sp)
 	mov	$01,-(sp)
 	jsr	pc,(r3)
-	jsr	pc,_FinishGraph
-	jsr	pc,_FinishKeyb
+	jsr	pc,_finishGraph
+	jsr	pc,_finishKeyb
 	add	$04,sp
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
-L_56:
+L_57:
 	mov	$LC_1,-(sp)
 	clr	-(sp)
-	jsr	pc,_PrintBottom
+	jsr	pc,_printBottom
 	add	$04,sp
-L_48:
+L_49:
 	movb	_app_state,r0
 	cmpb	r0,$01
-	beq	L_48
+	beq	L_49
 	mov	$LC_2,-(sp)
 	clr	-(sp)
-	jsr	pc,_PrintBottom
+	jsr	pc,_printBottom
 	add	$04,sp
-	br	L_47
+	br	L_48
 	.globl	_esc
 	.data
 _esc:

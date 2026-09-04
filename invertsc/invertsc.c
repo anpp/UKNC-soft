@@ -6,19 +6,19 @@
 
 void main()
 {
-    InitKeyb();
-    InitGraph();
+    initKeyb();
+    initGraph();
 
-    PrintTop(1, "INVERT SCREEN");
-    PrintBottom(1, "PRESS ANY KEY");
+    printTop(1, "INVERT SCREEN");
+    printBottom(1, "PRESS ANY KEY");
 
-    InvertScreen();
-    WaitAnyKey();
-    InvertScreen();
+    invertScreen();
+    waitAnyKey();
+    invertScreen();
 
-    PrintTop(1, "                   ");
-    PrintBottom(1, "                ");
+    printTop(1, "                   ");
+    printBottom(1, "                ");
     
-    FinishGraph();    
-    FinishKeyb();    
+    finishGraph();    
+    finishKeyb();    
 }

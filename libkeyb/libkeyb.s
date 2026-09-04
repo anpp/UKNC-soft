@@ -1,4 +1,4 @@
-.globl _InitKeyb, _FinishKeyb, _WaitAnyKey, _kbhit, _SetOnKeyEvent
+.globl _initKeyb, _finishKeyb, _waitAnyKey, _kbhit, _setOnKeyEvent
 
 .text
 
@@ -102,7 +102,7 @@ Int460:
     rti
 
 
-_InitKeyb:
+_initKeyb:
     mtps  $0200
     bis   $0100, @$0176660      /Разрешение прерывания 0460    
     mov   @$0460, OldInt460
@@ -127,7 +127,7 @@ _InitKeyb:
     mov  $0, r0
     rts  pc
 
-_FinishKeyb:
+_finishKeyb:
     / запуск подпрограммы в ПП FinishKeybPPU
     mov  addrPP, r0
     mov  r0, r1
@@ -154,7 +154,7 @@ _FinishKeyb:
     rts   pc
 
 
-_WaitAnyKey:
+_waitAnyKey:
     mov   $0, key_pressed
 1:
     tst  key_pressed
@@ -167,7 +167,7 @@ _kbhit:
 
 
 /Аргумент - адрес функции
-_SetOnKeyEvent:
+_setOnKeyEvent:
     mov  2(sp), OnKeyEvent
     rts  pc
 

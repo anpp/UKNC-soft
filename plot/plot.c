@@ -57,9 +57,9 @@ float fcos(float x)
 
 void main()
 {
-    InitKeyb();
-    InitGraph();
-    ClearScreen();
+    initKeyb();
+    initGraph();
+    clearScreen();
 
     float a = 40.0f;
     float y;
@@ -77,9 +77,9 @@ void main()
         int screenY = (int)(centerY - y);
 
         if (screenX >= 0 && screenX < WIDTH && screenY >= 0 && screenY < HEIGHT)
-            PutPixel(screenX, screenY, 7); 
+            putPixel(screenX, screenY, 7); 
     }
-    WaitAnyKey();
-    FinishGraph();    
-    FinishKeyb();
+    waitAnyKey();
+    finishGraph();    
+    finishKeyb();
 }
