@@ -1,5 +1,6 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
+.globl _putChar
 .globl _runPPU
 
 base_addr = .
@@ -22,6 +23,7 @@ RecColor = (received_color - offset_size) >> 1
 OffPPU = (offsetV - offset_size) >> 1
 RunProcPPU = (running_proc - offset_size) >> 1
 LineColorPPU = (LineColor - offset_size) >> 1
+CharPPU = (char - offset_size) >> 1
 
 mp:
             .byte   0
@@ -53,6 +55,9 @@ PixelY:  .word -1
 received_color: .word   -1
 offsetV:	.word	0	/адрес верхней видеостроки пользовательского экрана
 
+char:  .byte 0
+.even
+
 running_proc:	.word 0   /слово флагов для запуска подпрограмм в ПП
 /*
 01  - PutPixelPPU
@@ -62,6 +67,7 @@ running_proc:	.word 0   /слово флагов для запуска подп�
 020 - InvertScreenPPU
 040 - LinePPU
 0100 - FillRectPPU
+0200 - PutCharPPU
 .
 .
 .
@@ -223,7 +229,7 @@ _getPixel:
     jsr  pc, CalcAddress
 
     mov PixelX, r0
-    bic $0b1111111111111000, r0 ;/ В r0 номер точки в октете
+    bic $0b1111111111111000, r0 /; В r0 номер точки в октете
     /; r0 = номер точки (0..7) - подготовка сдвига для GetPixel
     asl r0
     asl r0               /; r0 = n * 4
@@ -300,6 +306,25 @@ _fillRect:
 
     rts  pc
 
+
+_putChar:
+    mov     8(sp), PxClr
+    mov     6(sp), r1 
+    mov     4(sp), r0
+    movb    2(sp), char
+
+    jsr  pc, CalcAddress    
+
+    mov PixelX, r0
+    bic $0b1111111111111000, r0  /; В r0 номер точки в октете
+    mov r0, PxShift              /;номер точки в октете для PutCharPPU
+
+    bis $0200, running_proc
+1:
+    bit $0200, running_proc
+    bne 1b
+
+    rts  pc
 
 
 _printTop:
@@ -424,7 +449,6 @@ end_line:
     bic $040, @r5         /LinePPU выполнена
 
 7:
-
     asr BitsProcPPU          /Проверка на FillRectPPU
     bcc 8f
     jmp FillRectPPU
@@ -432,7 +456,13 @@ end_fillrect:
     mov $RunProcPPU, @r4
     bic $0100, @r5         /FillRectPPU выполнена
 
-8:  
+8:
+    asr BitsProcPPU          /Проверка на PutCharPPU
+    bcc 9f
+    jsr pc, PutCharPPU
+    mov $RunProcPPU, @r4
+    bic $0200, @r5         /PutCharPPU выполнена
+9:  
     jmp MainPPU
 100:    
     rts  pc
@@ -754,7 +784,7 @@ LineExit:
 FillRectPPU:
     /; Цвет (устанавливается один раз перед циклами)
     mov     $LineColorPPU, @r4
-    mov     @r5, @$0177016        
+    mov     @r5, @$0177016
 
     inc     (r4)
     mov     @r5, x0
@@ -894,6 +924,54 @@ FillRectExit:
     mov     (sp)+, r5             /; восстанавливаем изначальный r5
     jmp     end_fillrect
 
+
+
+/;=========================PutCharPPU==============================================================
+PutCharPPU:  
+    mov   r5, -(sp)
+
+    mov   $CharPPU, @r4
+    mov   @r5, r1          /; char
+
+    mov   $PxlAddress, @r4
+    mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
+
+    inc   (r4)             /; маска
+    inc   (r4)             /; color
+    mov   @r5, @$0177016
+
+    mov $PxShiftPPU, @r4
+    mov @r5, r5           /; r5 = величина сдвига (0..7)
+
+    mul   $11, r1
+    add   FntTable, r1     /; r1 = адрес символа в ПЗУ
+    mov   $11, r2
+
+1:   
+    movb  (r1)+, r3        /; Считываем 1 байт строки шрифта
+    bic   $0177400, r3     /; Очищаем старший байт r3 (0x00FF & r3)
+    ash   r5, r3           /; Сдвигаем 16-битное слово r3 влево на r5 бит
+
+    /; --- Запись первого (левого) байта ---
+    mov   r0, @r4          
+    bisb  r3, @$0177024    /; Накладываем левую часть пикселей
+
+    /; --- Запись второго (правого) байта ---
+    swab  r3               /; Меняем байты местами (старший байт -> в младший)
+    inc   @r4
+    bisb  r3, @$0177024    /; Накладываем правую часть пикселей
+
+    /; --- Переход на следующую строку ---
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blo   10f
+    sub   $054540, r0
+10:
+    sob   r2, 1b
+
+    mov   (sp)+, r5
+    rts   pc
+
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:	  .word	0         /адрес верхней видеостроки пользовательского экрана
 BitsProcPPU:      .word 0         /битовая карта процессов
@@ -905,6 +983,8 @@ x0:   .word 0
 y0:   .word 0
 x1:   .word 0
 y1:   .word 0
+
+FntTable: .word 0117430
 
 MaskTable: .byte 01, 02, 04, 010, 020, 040, 0100, 0200
 
