@@ -483,7 +483,8 @@ end_putchar:
 9:
     asr BitsProcPPU          /Проверка на CirclePPU
     bcc 10f
-    jsr pc, CirclePPU
+    jmp CirclePPU
+end_circle:
     mov $RunProcPPU, @r4
     bic $0400, @r5         /CirclePPU выполнена
 
@@ -1030,7 +1031,8 @@ CircleLoop:
     bgt     CircleExit        /; Если X > Y — закончили
 
     /; --- Отрисовка 8 симметричных точек ---
-    jsr     pc, Plot8Points
+    jmp    Plot8Points
+end_plot8point:
 
     /; --- Обновление ошибки D ---
     tst     r2                /; Проверяем знак D
@@ -1060,7 +1062,7 @@ CircleLoop:
 
 CircleExit:
     mov     (sp)+, r5
-    rts     pc
+    jmp     end_circle
 
 /; ============================================================================
 /; Plot8Points — Отрисовка 8 точек по симметрии
@@ -1129,7 +1131,7 @@ Plot8Points:
 
     mov     (sp)+, r1
     mov     (sp)+, r0
-    rts     pc
+    jmp     end_plot8point
 
 /;r0 - x, r1 - y
 PutPixel: 
