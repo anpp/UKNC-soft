@@ -4,6 +4,17 @@
 #define WIDTH   640
 #define HEIGHT  264
 
+void button(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2)
+{
+   rect(x1, y1, x2, y2, 0);
+   fillRect(x1 + 1, y1 + 1, x2 - 1, y1 + 2, 7);
+   fillRect(x1 + 1, y2 - 2, x2 - 1, y2 - 1, 3);
+   fillRect(x2 - 2, y1 + 2, x2 - 1, y2 - 1, 3);
+   fillRect(x1 + 1, y1 + 1, x1 + 2, y2 - 1, 7);
+   putText("Ok", x1 + 9, y1 + 3, 0);
+}
+
+
 void main()
 {
     initKeyb();
@@ -36,7 +47,7 @@ line(620, 30, 20, 220, 3);
 
 line(500, 250, 200, 40, 4);
 
-    fillRect(200, 100, 500, 180, 0);
+    fillRect(200, 100, 500, 180, 6);
     fillRect(198, 181, 502, 205, 3);
 
     fillRect(80, 50, 82, 100, 2);
@@ -50,6 +61,10 @@ line(500, 250, 200, 40, 4);
     putChar('A', 57, 236, 4);
 
     putText("Text!", 58, 200, 7);
+
+    putText1("Text!\nbla bla bla", 100, 150, 5);
+
+    button(60, 68, 92, 83);
 
     waitAnyKey();
     printTop(1, "              ");

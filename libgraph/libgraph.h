@@ -29,4 +29,20 @@ void putText(const char *str, unsigned int x, unsigned int y, unsigned int color
         putChar(*str++, x, y, color);
 }
 
+//putText с обработкой переносов
+void putText1(const char *str, unsigned int x, unsigned int y, unsigned int color) 
+{
+    for (unsigned int start_x = x; *str; str++) 
+    {
+        if (*str == '\n') 
+        {
+            x = start_x;
+            y += 11; 
+            continue;
+        }
+        putChar(*str, x, y, color);
+        x += 8;
+    }
+}
+
 #endif //LIB_GRAPH_H
