@@ -1,6 +1,6 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
-.globl _putChar
+.globl _putChar, _circle
 .globl _runPPU
 
 base_addr = .
@@ -24,6 +24,8 @@ OffPPU = (offsetV - offset_size) >> 1
 RunProcPPU = (running_proc - offset_size) >> 1
 LineColorPPU = (LineColor - offset_size) >> 1
 CharPPU = (char - offset_size) >> 1
+XPPU = (PixelX - offset_size) >> 1
+RadiusPPU = (Radius - offset_size) >> 1
 
 mp:
             .byte   0
@@ -51,6 +53,7 @@ PxClr:   .word 0
 PxShift: .word 0
 PixelX:  .word -1
 PixelY:  .word -1
+Radius:  .word 0
 
 received_color: .word   -1
 offsetV:	.word	0	/адрес верхней видеостроки пользовательского экрана
@@ -68,6 +71,7 @@ running_proc:	.word 0   /слово флагов для запуска подп�
 040 - LinePPU
 0100 - FillRectPPU
 0200 - PutCharPPU
+0400 - CirclePPU
 .
 .
 .
@@ -189,9 +193,9 @@ CalcAddress:
 
     add r1, r0
     add offsetV, r0
-    cmp r0, $0154540 / список 220 видеострок для области отображения меню УСТАНОВКА
+    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
     blt 1f
-    sub $054540, r0 / 154540 - 100000 = 54540
+    sub $054540, r0 /; 154540 - 100000 = 54540
 1:
     mov  r0,  PxlAddr
 
@@ -322,6 +326,19 @@ _putChar:
     bis $0200, running_proc
 1:
     bit $0200, running_proc
+    bne 1b
+
+    rts  pc
+
+_circle:
+    mov     8(sp), PxClr
+    mov     6(sp), Radius 
+    mov     4(sp), PixelY
+    mov     2(sp), PixelX
+
+    bis $0400, running_proc
+1:
+    bit $0400, running_proc
     bne 1b
 
     rts  pc
@@ -463,7 +480,14 @@ end_fillrect:
 end_putchar:
     mov $RunProcPPU, @r4
     bic $0200, @r5         /PutCharPPU выполнена
-9:  
+9:
+    asr BitsProcPPU          /Проверка на CirclePPU
+    bcc 10f
+    jsr pc, CirclePPU
+    mov $RunProcPPU, @r4
+    bic $0400, @r5         /CirclePPU выполнена
+
+10:  
     jmp MainPPU
 100:    
     rts  pc
@@ -606,7 +630,7 @@ FinishGraphPPU:
     cmp     r3, $0100000
     blo     1000f                      /; < 0100000 -> Underflow
     cmp     r3, $0154540
-    blo     2000f                      /; [0100000..0154540) -> Норма
+    blt     2000f                      /; [0100000..0154540) -> Норма
     sub     $054540, r3           /; Overflow (>= 0154540)
     br      2000f
 1000:
@@ -616,7 +640,7 @@ FinishGraphPPU:
 
 .macro CorrectAddressLineUp
     cmp     r3, $0154540
-    blo     1000f                      /; [0100000..0154540) -> Норма
+    blt     1000f                      /; [0100000..0154540) -> Норма
     sub     $054540, r3           /; Overflow (>= 0154540)
 1000:
 .endm
@@ -776,7 +800,7 @@ LineExit:
 
 .macro CorrectAddressFillRect
     cmp     r3, $0154540
-    blo     2000f                      /; [0100000..0154540) -> Норма
+    blt     2000f                      /; [0100000..0154540) -> Норма
     sub     $054540, r3           /; Overflow (>= 0154540)
 2000:
 .endm
@@ -948,8 +972,6 @@ PutCharPPU:
     add   FntTable, r1     /; r1 = адрес символа в ПЗУ
     mov   $11, r2
 
-/;mov $0124372, r1
-
 1:   
     movb  (r1)+, r3        /; Считываем 1 байт строки шрифта
     bic   $0177400, r3     /; Очищаем старший байт r3 (0x00FF & r3)
@@ -963,7 +985,7 @@ PutCharPPU:
     swab  r3               /; Меняем байты местами (старший байт -> в младший)
     inc   @r4
     cmp   @r4, $0154540
-    blo   20f
+    blt   20f
     sub   $054540, @r4
 20:
 
@@ -972,13 +994,172 @@ PutCharPPU:
     /; --- Переход на следующую строку ---
     add   $80, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
-    blo   10f
+    blt   10f
     sub   $054540, r0
 10:
     sob   r2, 1b
 
     mov   (sp)+, r5
     jmp   end_putchar
+
+
+/;=========================CirclePPU==============================================================
+CirclePPU:
+    mov   r5, -(sp)
+
+    mov   $PxlColorPPU, @r4
+    mov   @r5, @$0177016
+
+    mov   $XPPU, @r4
+    mov   @r5, xc
+    inc   (r4)             /;y
+    mov   @r5, yc
+    inc   (r4)             /;radius
+    mov   @r5, r1          /; r1 = радиус
+
+    clr     r0                /; r0 = X = 0
+
+    /; --- Вычисление начальной ошибки: D = 3 - 2*R ---
+    mov     $3, r2            /; r2 = 3
+    mov     r1, r5
+    asl     r5                /; r5 = 2*R
+    sub     r5, r2            /; r2 = D = 3 - 2*R
+
+CircleLoop:
+    cmp     r0, r1            /; Пока X <= Y
+    bgt     CircleExit        /; Если X > Y — закончили
+
+    /; --- Отрисовка 8 симметричных точек ---
+    jsr     pc, Plot8Points
+
+    /; --- Обновление ошибки D ---
+    tst     r2                /; Проверяем знак D
+    bge     1f
+
+    /; --- Ветка D < 0: D += 4*X + 6 ---
+    mov     r0, r5            /; r5 = X
+    asl     r5
+    asl     r5                /; r5 = 4*X
+    add     r5, r2
+    add     $6, r2            /; D += 4*X + 6
+    br      2f
+
+1:  /; --- Ветка D >= 0: D += 4*(X - Y) + 10, Y-- ---
+    mov     r0, r5            /; r5 = X
+    sub     r1, r5            /; r5 = X - Y
+    asl     r5
+    asl     r5                /; r5 = 4*(X - Y)
+    add     r5, r2
+    add     $10, r2           /; D += 4*(X - Y) + 10
+
+    dec     r1                /; Y--
+
+2:
+    inc     r0                /; X++
+    br      CircleLoop
+
+CircleExit:
+    mov     (sp)+, r5
+    rts     pc
+
+/; ============================================================================
+/; Plot8Points — Отрисовка 8 точек по симметрии
+/; ============================================================================
+Plot8Points:
+    mov     r0, -(sp)         /; (sp)   = Y (после 2-го push)
+    mov     r1, -(sp)         /; 2(sp)  = X
+
+    /; --- Октант 1: (Xc + X, Yc + Y) ---
+    mov     xc, r0
+    add     2(sp), r0
+    mov     yc, r1
+    add     (sp), r1
+    jsr     pc, PutPixel
+
+    /; --- Октант 2: (Xc - X, Yc + Y) ---
+    mov     xc, r0
+    sub     2(sp), r0
+    mov     yc, r1
+    add     (sp), r1
+    jsr     pc, PutPixel
+
+    /; --- Октант 3: (Xc + X, Yc - Y) ---
+    mov     xc, r0
+    add     2(sp), r0
+    mov     yc, r1
+    sub     (sp), r1
+    jsr     pc, PutPixel
+
+    /; --- Октант 4: (Xc - X, Yc - Y) ---
+    mov     xc, r0
+    sub     2(sp), r0
+    mov     yc, r1
+    sub     (sp), r1
+    jsr     pc, PutPixel
+
+    /; --- Меняем местами X и Y для оставшихся 4 октантов ---
+
+    /; --- Октант 5: (Xc + Y, Yc + X) ---
+    mov     xc, r0
+    add     (sp), r0
+    mov     yc, r1
+    add     2(sp), r1
+    jsr     pc, PutPixel
+
+    /; --- Октант 6: (Xc - Y, Yc + X) ---
+    mov     xc, r0
+    sub     (sp), r0
+    mov     yc, r1
+    add     2(sp), r1
+    jsr     pc, PutPixel
+
+    /; --- Октант 7: (Xc + Y, Yc - X) ---
+    mov     xc, r0
+    add     (sp), r0
+    mov     yc, r1
+    sub     2(sp), r1
+    jsr     pc, PutPixel
+
+    /; --- Октант 8: (Xc - Y, Yc - X) ---
+    mov     xc, r0
+    sub     (sp), r0
+    mov     yc, r1
+    sub     2(sp), r1
+    jsr     pc, PutPixel
+
+    mov     (sp)+, r1
+    mov     (sp)+, r0
+    rts     pc
+
+/;r0 - x, r1 - y
+PutPixel: 
+    mov r0, -(sp)   
+    mul $80, r1
+    /;деление координаты x на 8
+    asr r0
+    asr r0
+    asr r0
+
+    add r1, r0
+    add offsetVPPU, r0
+    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
+    blt 1f
+    sub $054540, r0 /; 154540 - 100000 = 54540
+1:
+    mov  r0,  @r4
+
+    /;вычисление маски пикселя
+    mov (sp), r0
+    bic $0b1111111111111000, r0 ;/ В r0 номер точки в октете
+    /; Подготовка маски для вывода пикселя
+    mov     $1, r3
+    ash     r0, r3
+
+    movb r3, @$0177024
+
+    tst (sp)+
+    rts pc
+
 
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:	  .word	0         /адрес верхней видеостроки пользовательского экрана
@@ -991,6 +1172,9 @@ x0:   .word 0
 y0:   .word 0
 x1:   .word 0
 y1:   .word 0
+
+xc:   .word 0
+yc:   .word 0
 
 FntTable: .word 0117430
 

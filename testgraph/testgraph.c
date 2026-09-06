@@ -25,7 +25,7 @@ void main()
                                       
     // ---- Рисуем сетку с шагом 10 ----
     // Вертикальные линии (x = 0, 10, 20, ..., 640)
- /*
+/*
     for (int x = 0; x < WIDTH; x += 10) {
         fillRect(x, 0, x, HEIGHT - 1, 7);
     }
@@ -34,7 +34,8 @@ void main()
         fillRect(0, y, WIDTH - 1, y, 7);
     }
     // ---------------------------------
-*/ 
+*/
+ 
 line(10, 10, 600, 200, 7);
 line(350, 200, 0, 0, 6);
 
@@ -65,6 +66,9 @@ line(500, 250, 200, 40, 4);
     putText1("Text!\nbla bla bla", 100, 150, 5);
 
     button(60, 68, 92, 83);
+
+    circle(WIDTH / 2, HEIGHT / 2, 20, 1);
+    circle(WIDTH / 2, HEIGHT / 2, 25, 3);
 
     waitAnyKey();
     printTop(1, "              ");
