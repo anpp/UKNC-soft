@@ -51,6 +51,7 @@ PxlAddr: .word 0
 PxlMask: .word 0
 PxClr:   .word 0
 PxShift: .word 0
+char:    .word 0    /;адрес char для putCharPPU
 PixelX:  .word -1
 PixelY:  .word -1
 Radius:  .word 0
@@ -58,8 +59,6 @@ Radius:  .word 0
 received_color: .word   -1
 offsetV:	.word	0	/адрес верхней видеостроки пользовательского экрана
 
-char:  .byte 0
-.even
 
 running_proc:	.word 0   /слово флагов для запуска подпрограмм в ПП
 /*
@@ -315,13 +314,18 @@ _putChar:
     mov     8(sp), PxClr
     mov     6(sp), r1 
     mov     4(sp), r0
-    movb    2(sp), char
 
     jsr  pc, CalcAddress    
 
     mov PixelX, r0
     bic $0b1111111111111000, r0  /; В r0 номер точки в октете
     mov r0, PxShift              /;номер точки в октете для PutCharPPU
+
+    clr   r1
+    bisb  2(sp), r1        /; в r1 char в младшем байте
+    mul   $11, r1
+    add   FntTable, r1     /; r1 = адрес символа в ПЗУ
+    mov   r1, char
 
     bis $0200, running_proc
 1:
@@ -415,18 +419,18 @@ begin:
     /Основной цикл
 MainPPU:
     mov $RunProcPPU, @r4
-    mov @r5, BitsProcPPU
+    mov @r5, -(sp)       /;вершина стека - битовая карта процессов
 
     bmi 100f              /BitsProcPPU
      
-    asr BitsProcPPU           /Проверка на PutPixel
+    asr (sp)              /Проверка на PutPixel
     bcc 2f
     jmp PutPixelPPU
 end_putpixel:
     mov $RunProcPPU, @r4
     bic $01, @r5          /PutPixel выполнена
 2:
-    asr BitsProcPPU          /Проверка на GetPixel
+    asr (sp)              /Проверка на GetPixel
     bcc 3f
     jmp GetPixelPPU
 end_getpixel:
@@ -434,7 +438,7 @@ end_getpixel:
     bic $02, @r5          /GetPixel выполнена
 
 3: 
-    asr BitsProcPPU          /Проверка на ClearScreen
+    asr (sp)             /Проверка на ClearScreen
     bcc 4f
     jsr pc, ClearScreenPPU
 
@@ -442,7 +446,7 @@ end_getpixel:
     bic $04, @r5           /ClearScreen выполнена
                          
 4:
-    asr BitsProcPPU          /Проверка на PrintTopBottom
+    asr (sp)              /Проверка на PrintTopBottom
     bcc 5f
     jsr pc, PrintTopBottomPPU
 
@@ -450,7 +454,7 @@ end_getpixel:
     bic $010, @r5
                          /PrintTopBottom выполнена
 5:
-    asr BitsProcPPU          /Проверка на InvertScreen
+    asr (sp)             /Проверка на InvertScreen
     bcc 6f
     jsr pc, InvertScreenPPU
 
@@ -458,7 +462,7 @@ end_getpixel:
     bic $020, @r5         /InvertScreen выполнена
 
 6:
-    asr BitsProcPPU          /Проверка на LinePPU
+    asr (sp)             /Проверка на LinePPU
     bcc 7f
     jmp LinePPU
 end_line:
@@ -466,7 +470,7 @@ end_line:
     bic $040, @r5         /LinePPU выполнена
 
 7:
-    asr BitsProcPPU          /Проверка на FillRectPPU
+    asr (sp)              /Проверка на FillRectPPU
     bcc 8f
     jmp FillRectPPU
 end_fillrect:
@@ -474,23 +478,25 @@ end_fillrect:
     bic $0100, @r5         /FillRectPPU выполнена
 
 8:
-    asr BitsProcPPU          /Проверка на PutCharPPU
+    asr (sp)               /Проверка на PutCharPPU
     bcc 9f
     jmp PutCharPPU
 end_putchar:
     mov $RunProcPPU, @r4
     bic $0200, @r5         /PutCharPPU выполнена
 9:
-    asr BitsProcPPU          /Проверка на CirclePPU
+    asr (sp)               /Проверка на CirclePPU
     bcc 10f
     jmp CirclePPU
 end_circle:
     mov $RunProcPPU, @r4
     bic $0400, @r5         /CirclePPU выполнена
 
-10:  
+10: 
+    tst (sp)+ 
     jmp MainPPU
 100:    
+    tst (sp)+ 
     rts  pc
 
 ClearScreenPPU:
@@ -956,9 +962,6 @@ FillRectExit:
 PutCharPPU:  
     mov   r5, -(sp)
 
-    mov   $CharPPU, @r4
-    mov   @r5, r1          /; char
-
     mov   $PxlAddress, @r4
     mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
 
@@ -966,16 +969,16 @@ PutCharPPU:
     inc   (r4)             /; color
     mov   @r5, @$0177016
 
-    mov $PxShiftPPU, @r4
-    mov @r5, r5           /; r5 = величина сдвига (0..7)
+    mov   $CharPPU, @r4
+    mov   @r5, r1          /; адрес char'а
 
-    mul   $11, r1
-    add   FntTable, r1     /; r1 = адрес символа в ПЗУ
+    dec   (r4)             /; shift
+    mov   @r5, r5           /; r5 = величина сдвига (0..7)
+
     mov   $11, r2
-
 1:   
-    movb  (r1)+, r3        /; Считываем 1 байт строки шрифта
-    bic   $0177400, r3     /; Очищаем старший байт r3 (0x00FF & r3)
+    clr   r3
+    bisb  (r1)+, r3        /; Считываем 1 байт строки шрифта
     ash   r5, r3           /; Сдвигаем 16-битное слово r3 влево на r5 бит
 
     /; --- Запись первого (левого) байта ---
@@ -1165,7 +1168,6 @@ PutPixel:
 
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:	  .word	0         /адрес верхней видеостроки пользовательского экрана
-BitsProcPPU:      .word 0         /битовая карта процессов
 
 r12: .word 0
 r11: .word 0
