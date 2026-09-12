@@ -62,28 +62,22 @@ void main()
     clearScreen();
 
     float a = 40.0f;
-    float stepx = 12.0;
-    float y, y2, x2;
+    float y;
     
     int centerX = WIDTH / 2;
     int centerY = HEIGHT / 2;
 
 
-    for (float x = -(WIDTH / 2); x < (WIDTH / 2); x += stepx)
+    for (float x = -(WIDTH / 2); x < (WIDTH / 2); x += 2.0)
     {
         y = a * fsin(x / a);
         //y = x / 2.0f - a;
-        x2 = x + stepx;
-        y2 = a * fsin(x2 / a);
 
         int screenX = (int)(centerX + x);
         int screenY = (int)(centerY - y);
-        int screenX2 = (int)(centerX + x2);
-        int screenY2 = (int)(centerY - y2);
 
-        if (screenX >= 0 && screenX2 < WIDTH && screenY >= 0 && screenY2 < HEIGHT)
-            line(screenX, screenY, screenX2, screenY2, 7); 
-            //putPixel(screenX, screenY, 7);
+        if (screenX >= 0 && screenX < WIDTH && screenY >= 0 && screenY < HEIGHT)
+            putPixel(screenX, screenY, 7); 
     }
     waitAnyKey();
     finishGraph();    
