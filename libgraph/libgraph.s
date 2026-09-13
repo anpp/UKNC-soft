@@ -211,21 +211,27 @@ CalcAddress:
 
 
 _putPixel:    
+1:
+    bit $1, running_proc
+    bne 1b
+
     mov     6(sp), PxClr
     mov     2(sp), r0
     mov     4(sp), r1   
     jsr  pc, CalcAddress
 
     bis $1, running_proc
-3:
-    bit $1, running_proc
-    bne 3b
 
     rts  pc
 
 
 
 _getPixel:
+/; пока выполняется putPixel ждём
+1:
+    bit $1, running_proc
+    bne 1b
+
     mov     6(sp), PxClr
     mov     2(sp), r0
     mov     4(sp), r1 
@@ -240,9 +246,9 @@ _getPixel:
     mov r0, PxShift
 
     bis $2, running_proc
-3:
+2:
     tst received_color
-    bmi 3b
+    bmi 2b
     mov received_color, r0
     mov $-1, received_color
     
@@ -256,6 +262,11 @@ PixelX1:  .word 0
 PixelY1:  .word 0
 
 _line:
+/;если подпрограмма еще выполняется - ждём
+1:
+    bit $040, running_proc
+    bne 1b
+
     mov     10(sp), LineColor
 
     mov     2(sp), r0
@@ -283,9 +294,6 @@ _line:
     jsr  pc, CalcAddress    
 
     bis $040, running_proc
-1:
-    bit $040, running_proc
-    bne 1b
 
     rts  pc
 

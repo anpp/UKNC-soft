@@ -1,8 +1,16 @@
 #include "../libgraph/libgraph.h"
 #include "../libkeyb/libkeyb.h"
+#include "../libmouse/libmouse.h"
 
 #define WIDTH   640
 #define HEIGHT  264
+
+
+void OnClickEvent(unsigned x, unsigned y)
+{
+  putPixel(x - 1, y - 1, 7);
+}
+
 
 void button(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2)
 {
@@ -17,12 +25,15 @@ void button(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2)
 
 void main()
 {
+    initMouse();
     initKeyb();
     initGraph();
     clearScreen();
 
+    setOnClick(OnClickEvent);
+
     printTop(1, "TEST GRAPH LIB");
-                                      
+/*                                      
     // ---- Рисуем сетку с шагом 10 ----
     // Вертикальные линии (x = 0, 10, 20, ..., 640)
 
@@ -34,7 +45,7 @@ void main()
         fillRect(0, y, WIDTH - 1, y, 7);
     }
     // ---------------------------------
-
+*/
  
 line(10, 10, 600, 200, 7);
 line(350, 200, 0, 0, 6);
@@ -76,4 +87,5 @@ line(500, 250, 200, 40, 4);
 
     finishGraph();    
     finishKeyb();    
+    finishMouse();
 }

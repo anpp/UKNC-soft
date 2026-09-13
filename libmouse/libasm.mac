@@ -1,0 +1,820 @@
+.Title LIBASM
+.mcall, .ttyin, .print
+
+.macro  mput    adrmp
+    jsr r2, mput$
+    .word   adrmp
+.endm
+
+;CPU
+rsk2 = 176674
+rdk2 = rsk2+2
+
+;PPU
+rsk1 = 177076
+rdk1 = 177072
+
+.PSECT	.DATA.
+
+ErrMsg:     .asciz / No memory! /
+ErrPutMsg:  .asciz / Error moving! /
+AllocMsg:	.asciz / Allocating memory... /
+FreeMsg:	.asciz / Free memory... /
+.even
+
+mp:
+            .byte   0
+command:    .byte   01
+            .word   32
+addrPP:     .word   0
+WORD3:      .word   <pp.end - pp.beg> / 2
+WORDS:      .word   <pp.end - pp.beg> / 2
+.even
+
+;структура для отправки данных во время работы (координат и тп)
+mp1:
+             .byte   0
+command1:    .byte   20
+             .word   32
+addrPP1:     .word   0
+addrCP1:     .word   0
+WORDS1:      .word   0
+.even
+
+OnClick:    .word   0
+
+CoordMouse:
+MX: .word   0
+MY: .word   0
+
+Pxl:
+PixelX:  .word 0
+PixelY:  .word 0
+PxClr:   .word 0
+
+received_color: .word -1
+
+OldInt460:	.word	0
+
+running_proc:	.word 0
+
+.GLOBL  ClearScreen
+.GLOBL  WaitKey
+.GLOBL  MouseLoad
+.GLOBL  MouseUnload
+.GLOBL  GetMouseXY
+.GLOBL  PutPixel
+.GLOBL  GetPixel
+.GLOBL  SetOnClick
+
+
+.PSECT	.PROG.
+
+;Подпрограмма перемещения в К2 адреса МП
+;=============================================================================
+mput$: 
+    call    5$      ;Подождем готовности К2
+1$:
+    call    4$      ;Вытолкнем в К2 первые 2 байта адреса
+    cmp     r2, #2$ ;Байты завершения переданы ?
+    beq     3$      ;..да - перейдем к проверке ответа
+    clrb    @-(r2)  ;Очистим байт ответа
+    jsr     r2, 1$  ;Передадим 2 байта завершения 377
+    .word   -1      ;Байты завершения
+2$:
+    tstb    @(r2)+  ;Проверим ответ
+3$:
+    rts     r2          ;Выйдем в основную программу (или на 2$)
+4$:
+    mov     pc, -(sp)   ;Обеспечим повторный вход
+    movb    (r2)+, @#rdk2   ;Передача байта в К2
+5$:
+    tstb    @#rsk2  ;Ожидание готовности К2
+    bpl     5$
+    return 
+;=============================================================================
+
+
+
+
+;=============================================================================
+Int460:
+    mov    r2, -(sp)
+
+    mov @#176662, r2
+    cmp	r2, #376	;проверка регистра приемника канала 1 на кодовый байт
+    bne	99$
+
+    tst     OnClick
+    beq     99$
+
+    mov    r1, -(sp)
+    mov    r0, -(sp)
+
+    call    GetMouseXY
+    mov     r1, -(sp)   ;координата y
+    mov     r0, -(sp)   ;координата x
+    call   @OnClick
+    add     #4, sp
+
+    mov    (sp)+, r0
+    mov    (sp)+, r1
+99$:
+    mov    (sp)+, r2
+    rti
+
+
+
+;=============================================================================================
+MouseLoad:
+$$MouseLoad:
+
+    bis #100, @#176660      ;Разрешение прерывания 460
+    mtps	#200
+    mov	@#460, OldInt460
+    mov	#Int460, @#460
+    mtps	#0
+
+    .print	#AllocMsg
+    mput	mp
+    bne	error
+
+    movb	#20, command
+    mov	#pp.beg, WORD3
+    mput	mp
+    bne	errorput
+
+    ;.print	#ExecMsg
+    movb	#30, command
+    mput	mp
+
+    return
+error: 
+    .print	#ErrMsg
+    return
+errorput: 
+    .print #ErrPutMsg
+    return
+
+
+;=============================================================================================
+MouseUnload:
+$$MouseUnload:
+
+    mtps	#200
+    bic #200, @#176660      ;Запрет прерывания 460
+    mov	OldInt460, @#460
+    mtps	#0
+
+    ; Выполнение программы MouseFinish в ПП, которая устанавливает флаг finished
+    movb     #30,    command1
+    mov     addrPP, r0
+    add     #<MouseFinish - pp.beg>, r0
+    mov     r0, addrPP1
+    mput    mp1
+
+    .print  #FreeMsg
+    movb    #2, command
+    mov     #<pp.end - pp.beg> / 2, WORD3
+    mov     #<pp.end - pp.beg> / 2, WORDS
+    mput    mp
+
+    return
+
+
+;=============================================================================================
+GetMouseXY:
+$$GetMouseXY:
+    mov addrPP, r0
+    add #<MouseOldX - pp.beg>, r0  ;В r0 адрес координат в PPU
+
+    movb    #10, command1
+    mov    r0, addrPP1
+    mov     #CoordMouse, addrCP1
+    mov     #2., WORDS1
+    mput    mp1
+
+    mov     MX, r0
+    mov     MY, r1
+
+    return
+
+
+;=============================================================================================
+PutPixel:
+$$PutPixel:
+    mov     2(sp), PixelX
+    mov     4(sp), PixelY
+    mov     6(sp), PxClr
+    ; запуск подпрограммы в ПП PutPixelPPU
+    ;mov     addrPP, r0
+    ;add     #<PutPixelPPU - pp.beg>, r0
+    ;movb    #30, command1
+    ;mov     r0, addrPP1
+    ;mput    mp1
+
+;11$:
+;    tst running_proc
+;    bne 11$
+
+    mov #1, running_proc
+1$:
+    bit #1, running_proc
+    bne 1$
+    return
+
+;=============================================================================================
+GetPixel:
+$$GetPixel:
+    mov     2(sp), PixelX
+    mov     4(sp), PixelY
+
+
+    ; Выполнение программы GetPixelPPU в ПП, которая запишет цвет в received_color
+    ;movb     #30,    command1
+    ;mov     addrPP, r0
+    ;add     #<GetPixelPPU - pp.beg>, r0
+    ;mov     r0, addrPP1
+    ;mput    mp1
+
+;11$:
+;    tst running_proc
+;    bne 11$
+
+    mov #2, running_proc
+
+;2$:
+;    bit #1, running_proc
+;    bne 2$
+
+1$:
+    tst received_color
+    bmi 1$
+    mov received_color, r0
+    mov #-1, received_color
+    
+    return
+
+
+;=============================================================================================
+ClearScreen:
+$$ClearScreen:
+    ; запуск подпрограммы в ПП ClearScreenPPU
+    mov     addrPP, r0
+    add     #<ClearScreenPPU - pp.beg>, r0
+
+    movb    #30, command1
+    mov     r0, addrPP1
+    mput    mp1
+
+    return
+
+
+;=============================================================================================
+WaitKey:
+$$WaitKey:
+    .ttyin
+    return
+
+
+SetOnClick:
+$$SetOnClick:
+    jsr r5, CSV$
+
+    mov 4(r5), OnClick
+
+    jmp CRET$
+
+;=============================================================================================
+pp.beg:
+    ; Настройка таблицы адресов
+    mov	pc, r1
+    add	#TAddr - .,r1
+    mov	pc, r0
+L:
+    tst	(r1)		;Есть ли еще адреса?
+
+    beq	begin		;0 - уже нет
+    add	r0, (r1)+	;Скорректировать адрес
+    br	L 		;до конца таблицы
+
+begin:
+    mtps	#200
+    mov	@#100, intTimer
+    ;mov	TIProcAdr, @#100
+    mtps	#0
+
+    ; формирование таблицы видеострок
+    ;call @#110266
+
+   
+    ;mov @#23150, r5
+    ;call @#111632
+
+
+    mov	@#22664, VStrings
+    dec	VStrings
+    mov	@#22666, BytesInString
+
+    mov	@#2476, r0
+    mov	@r0, offsetV
+    mov	@r0, OldOffsetV
+
+    mov	#177010, R4
+    call	XorMouse
+     
+    return
+
+
+;=============================================================================
+PullCPU:
+
+    bitb    #20, @#rsk1 ;готовность источника канала 1 PPU
+    beq PullCPU
+    mov    2(sp), @#rdk1    ;посылка байта для вызывания прерывания 460 в CPU
+
+    return
+
+
+;=============================================================================
+ParseMouse:
+    ;mtps	#200
+
+    mov	@#2476, r0
+    mov	@r0, offsetV
+
+    cmp	@R0, #154540 ; список 220 видеострок для области отображения меню УСТАНОВКА
+    bge	exit
+
+    mov	@#177400, r0
+    ;	проверки, что координаты и рулон не менялись
+    ;bit	#^B1111111011111110, R0
+    ;bne	go
+    ;cmp	offsetV, OldOffsetV
+    ;beq	exit
+
+go:
+
+   ; [YYYYYYYLXXXXXXXR] signed 7-bit
+    mov	MouseRL, R3		; R3 - old RL buttons
+    clr	R2			; R2 - RL buttons
+                          ; X and RMB
+    movb	R0, R1
+    asr	R1
+    rol	R2
+    add	R1, MouseX
+        ; Y and LMB
+    swab	R0
+    movb	R0, R1
+    asr	R1
+    rol	R2
+    sub	R1, MouseY		; Y is inverted
+    
+    ;проверка на клик левой кнопкой, пока в лоб
+    bic #2., r2
+    bic #2., r3
+    cmp r3, r2
+    blos 111$ ; меньше или равно, кнопка или не нажата или не отжималась
+    mov     #376, -(sp)
+    call	PullCPU
+    add #2, sp
+111$:
+
+    mov	R2, MouseRL
+    mov	#177010, R4
+    mov	BytesInString, R2
+
+    ;	умножение на 8 - 80 байт на 8 = 640 пикселей
+    asl	R2
+    asl	R2
+    asl	R2
+    dec	R2
+
+    tst	MouseX
+    bge	52$
+    clr	MouseX
+    br	54$
+52$:	cmp	MouseX, R2
+    ble	54$
+    mov	R2, MouseX
+54$:	tst	MouseY
+    bge	56$
+    clr	MouseY
+    br	58$
+56$:	cmp	MouseY, VStrings
+    ble	58$
+    mov	VStrings, MouseY
+58$:
+
+    mov	#8., HeightForDraw
+    call	XorMouse
+    
+    ;мышь стерта, пока не нарисована новая, проверка на завершение работы
+    tst	finishing
+    beq	99$
+
+    mtps	#200
+    mov	intTimer, @#100
+    mtps	#0
+    br exit
+
+99$:
+    mov	MouseX, MouseOldX
+    mov	MouseY, MouseOldY
+    mov	offsetV, OldOffsetV
+    call	XorMouse
+
+    mov	VStrings, r0
+    inc	r0
+    sub	MouseOldY, r0
+    cmp	r0, #8.
+    ble	9$
+    mov	#8., r0
+9$:
+    mov	r0, HeightForDraw
+
+exit:
+    ;mtps	#0
+    return
+;=============================================================================
+
+
+;=============================================================================
+MouseFinish:
+    mov #1, finishing
+    return
+
+
+
+;=============================================================================
+TimerInt:
+
+    ;mov	@#177010, -(sp)
+    ;mov	r0, -(sp)
+    ;mov	r1, -(sp)
+    ;mov	r2, -(sp)
+    ;mov	r3, -(sp)
+    ;mov	r4, -(sp)
+    ;mov	r5, -(sp)
+    
+    ;call	ParseMouse
+
+;mtps	#200
+
+    mov #running_proc / 2, @#177010
+    mov #177014, r0
+
+    bit #1, (r0)
+    beq 2$
+    call PutPixelPPU
+
+    mov #running_proc / 2, @#177010
+    mov #177014, r0
+
+    bic #1, (r0)
+2$:
+    mov #running_proc / 2, @#177010
+    mov #177014, r0
+
+    bit #2, (r0)
+    beq 3$
+    call GetPixelPPU
+
+    mov #running_proc / 2, @#177010
+    mov #177014, r0
+
+    bic #2, (r0)
+3$:    
+
+;mtps	#0
+
+    ;mov	(sp)+, r5
+    ;mov	(sp)+, r4
+    ;mov	(sp)+, r3
+    ;mov	(sp)+, r2
+    ;mov	(sp)+, r1
+    ;mov	(sp)+, r0
+    ;mov	(sp)+, @#177010
+    jmp TimerInt
+    jmp	@intTimer
+;=============================================================================
+
+finishing:  .word   0   ;флаг завершения, устанавливается из CPU вызовом MouseFinish
+
+intTimer:	.word	0
+
+MouseX:		.word	320.
+MouseY:		.word	140.
+MouseRL:	.word	0
+
+MouseOldX:	.word	320.
+MouseOldY:	.word	140.
+
+CharsInString:  .word   0	;Кол-во символов в строке (22656 + 4)       
+VStrings:	.word	0	;Число отображаемых видеострок (22656 + 6)
+BytesInString:	.word	0	;Длина видеостроки в байтах (22656 + 10)
+offsetV:	.word	0	;адрес верхней видеостроки пользовательского экрана
+OldOffsetV:	.word	0	;адрес верхней видеостроки пользовательского экрана (предыдущий)
+HeightForDraw:	.word	8.
+OldHeightForDraw:	.word	8. ; проверка на бит нулевого плана
+
+
+
+TAddr: ; Таблица адресов
+TIProcAdr:      TimerInt - L
+BuffAdr:        BUFF - L
+adrProc:        ParseMouse - L
+adrMouseSpr:    MouSpr - L
+0
+
+
+BUFF: 
+    .byte 	1.
+    .ASCIZ	/       /
+.even
+
+HDraw:	.word	0
+
+;=============================================================================
+ClearScreenPPU:
+    mov	r0, -(sp)
+    mov	r1, -(sp)
+    mov	r2, -(sp)
+    mov	r3, -(sp)
+
+    mov	#177010, r0 ; регистр адреса ВОЗУ в ПП
+    mov	#177012, r1 ; 0 план
+    mov	#177014, r2 ; 1, 2 планы
+    mov	#100000, (r0)
+    mov	#80. *286., r3
+1$:
+    mov    #0, (r1)
+    clr     (r2)
+    inc	    (r0)
+    sob	    r3, 1$
+
+    mov	(sp)+, r3
+    mov	(sp)+, r2
+    mov	(sp)+, r1
+    mov	(sp)+, r0
+
+call TimerInt
+    return
+
+
+;=============================================================================
+PutPixelPPU:
+
+    mov #PixelX / 2, @#177010
+    mov @#177014, r0
+
+    inc @#177010    ; Y
+    mov @#177014, r1
+
+    ;mul BytesInString, r1
+    mul #80., r1
+
+    mov r0, r2
+    bic #^B1111111111111000, r2 ; В r2 номер точки в октете
+    ;деление координаты x на 8
+    ash #-3., r0
+
+    add r1, r0
+    add offsetV, r0
+    cmp r0, #154540 ; список 220 видеострок для области отображения меню УСТАНОВКА
+    blt 1$
+    sub #54540, r0 ; 154540 - 100000 = 54540
+
+1$:
+    ; Подготовка маски для вывода пикселя
+    mov     #1., r3
+    ash     r2, r3
+
+    inc @#177010    ; color
+    mov @#177014, r2
+
+    bic #^B1111111111111000, r2
+
+    ; Запись пикселя (r0 - адрес, r2 - цвет, r3 - маска пикселя в октете)
+    mov r0, @#177010
+    mov r2, @#177016
+    movb r3, @#177024
+
+    return
+
+
+ ;=============================================================================
+GetPixelPPU:
+    ;mov	r0, -(sp)
+    ;mov	r1, -(sp)
+    ;mov	r2, -(sp)
+
+    mov #PixelX / 2, @#177010
+    mov @#177014, r0
+
+    inc @#177010    ; Y
+    mov @#177014, r1
+
+    ;mul BytesInString, r1
+    mul #80., r1
+
+    mov r0, r2
+    bic #^B1111111111111000, r2 ; В r2 номер точки в октете
+    ;деление координаты x на 8
+    ash #-3., r0
+
+    add r1, r0
+    add offsetV, r0
+    cmp r0, #154540 ; список 220 видеострок для области отображения меню УСТАНОВКА
+    blt 1$
+    sub #54540, r0 ; 154540 - 100000 = 54540
+
+1$:
+    mov r0, @#177010
+    tst @#177024    ; чтение регистров цвета фона
+
+    ; r2 = номер точки (0..7)
+    asl r2
+    asl r2               ; r2 = n * 4
+
+    neg r2
+    mov @#177020, r1    ; старшее слово
+    mov @#177022, r0    ; старшее слово
+    ashc r2, r0         ; сдвиг 32 бит регистров r0:r1
+
+    bic #^B1111111111111000, r1
+
+    ; цвет в CPU
+    mov #received_color / 2, @#177010
+    mov r1, @#177014
+    
+
+;mov r1, r0
+;	mov	BuffAdr,xxx
+;        CALL ITA  ; Преобразование R0 в строку
+;	emt	52
+;xxx:	.word	0	
+
+    ;mov	(sp)+, r2
+    ;mov	(sp)+, r1
+    ;mov	(sp)+, r0
+
+    return
+
+
+
+ITA:
+        mov BuffAdr, r1
+        add #7., r1
+
+;.......
+        mov     #6., r3
+1$:
+        MOVB    #'0, -(R1)
+        sob     r3, 1$
+        add #7., r1
+
+        mov r0, r3
+AL:
+        MOV     #0, R2
+
+       DIV     #10., R2         ; ......... R2 .. 10
+       ADD     #'0, R3        ; ............. ....... . ASCII
+       MOVB     R3, -(R1)        ; ........ ASCII-...... . .....
+        MOV     R2, R3          ; ..... .....
+        TST   R2              ; ........., ......... ..
+        BNE     AL        ; .... R2 != 0, ..........
+
+        RTS     PC              ; .......
+
+
+;=============================================================================
+XorMouse:
+return
+    mov HeightForDraw, HDraw
+    ; R4 was set earlier
+    mov #177012, R5
+
+    mov MouseOldY, R1
+    mul BytesInString, R1
+    mov MouseOldX, R0
+    mov R0, R3				; preshifted sprite addition
+    bic #^B1111111111111000, R3		; 8-pix
+    ash #4., R3				; * 16 bytes (sprite size)
+    asr R0
+    asr R0
+    asr R0
+    add R1, R0
+    add OldOffsetV, R0			; R0 = mouse vaddr
+    cmp R0, #154540 ; список 220 видеострок для области отображения меню УСТАНОВКА
+    blt 1$
+    sub #54540, R0 ; 154540 - 100000 = 54540
+      
+1$:  
+    mov R0, (R4)
+    mov adrMouseSpr, R0
+    add R3, R0				; adjust to preshifted sprite
+    mov BytesInString, R1			; vaddr addition
+    dec r1
+    
+    tst HDraw
+    beq ex
+    mov HDraw, r3
+cicle:
+    mov (R0)+, R2
+    xor R2, (R5)
+    inc (R4)
+    swab    R2
+    xor R2, (R5)
+    add R1, (R4)
+    
+    ;	Расскоментировать, чтоб не было визуально видно переход курсора на границе рулона
+    ;cmp	(R4), #154540 ; список 220 видеострок для области отображения меню УСТАНОВКА
+        ;blt	. + 6
+    ;sub	#54540, (R4) ; 154540 - 100000 = 54540
+
+    sob r3, cicle
+    ;dec HDraw
+    ;bne cicle
+
+ex:
+    return
+;=============================================================================
+
+MouSpr:	;0
+    .word	^B0000000000000001
+    .word	^B0000000000000011
+    .word	^B0000000000000111
+    .word	^B0000000000001111
+    .word	^B0000000000011111
+    .word	^B0000000000111111
+    .word	^B0000000001111111
+    .word	^B0000000000001111
+    ;1
+    .word	^B0000000000000010
+    .word	^B0000000000000110
+    .word	^B0000000000001110
+    .word	^B0000000000011110
+    .word	^B0000000000111110
+    .word	^B0000000001111110
+    .word	^B0000000011111110
+    .word	^B0000000000011110
+    ;2
+    .word	^B0000000000000100
+    .word	^B0000000000001100
+    .word	^B0000000000011100
+    .word	^B0000000000111100
+    .word	^B0000000001111100
+    .word	^B0000000011111100
+    .word	^B0000000111111100
+    .word	^B0000000000111100
+    ;3
+    .word	^B0000000000001000
+    .word	^B0000000000011000
+    .word	^B0000000000111000
+    .word	^B0000000001111000
+    .word	^B0000000011111000
+    .word	^B0000000111111000
+    .word	^B0000001111111000
+    .word	^B0000000001111000
+    ;4
+    .word	^B0000000000010000
+    .word	^B0000000000110000
+    .word	^B0000000001110000
+    .word	^B0000000011110000
+    .word	^B0000000111110000
+    .word	^B0000001111110000
+    .word	^B0000011111110000
+    .word	^B0000000011110000
+    ;5
+    .word	^B0000000000100000
+    .word	^B0000000001100000
+    .word	^B0000000011100000
+    .word	^B0000000111100000
+    .word	^B0000001111100000
+    .word	^B0000011111100000
+    .word	^B0000111111100000
+    .word	^B0000000111100000
+    ;6
+    .word	^B0000000001000000
+    .word	^B0000000011000000
+    .word	^B0000000111000000
+    .word	^B0000001111000000
+    .word	^B0000011111000000
+    .word	^B0000111111000000
+    .word	^B0001111111000000
+    .word	^B0000001111000000
+    ;7
+    .word	^B0000000010000000
+    .word	^B0000000110000000
+    .word	^B0000001110000000
+    .word	^B0000011110000000
+    .word	^B0000111110000000
+    .word	^B0001111110000000
+    .word	^B0011111110000000
+    .word	^B0000011110000000
+
+pp.end:
+;=============================================================================================
+
+ .end
