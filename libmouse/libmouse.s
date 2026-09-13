@@ -1,5 +1,14 @@
 .globl _initMouse, _finishMouse, _setOnClick
 
+base_addr = .
+
+entry = 01000
+crt0size = 016
+
+offset_size = base_addr - (entry + crt0size)
+
+GlobCoordMouse = (CoordMouse - offset_size)
+
 .text
 
 /CPU
@@ -92,8 +101,8 @@ Int460:
     /jsr     pc, _GetMouseXY
     /mov     r1, -(sp)   /;координата y
     /mov     r0, -(sp)   /;координата x
-mov $50, -(sp)
-mov $30, -(sp)
+    mov     MY, -(sp)
+    mov     MX, -(sp)
     jsr     pc, @OnClickEvent
     add     $4, sp
 
@@ -166,17 +175,19 @@ _finishMouse:
 
 /;=============================================================================================
 _GetMouseXY:
-    mov addrPP, r0
-    add $(MouseOldX - pp.beg), r0  /;В r0 адрес координат в PPU
+    mov   addrPP, r0
+    add   $(MouseOldX - pp.beg), r0  /;В r0 адрес координат в PPU
+    movb  $010, command1
+    mov   r0, addrPP1
+    mov   $GlobCoordMouse, addrCP1 /; вот проблема - $CoordMouse это смещение в текущем .o...
+    mov   $2, WORDS1
+    mput  mp1
+                                                                                  	
+    mov   MX, r0
+    mov   MY, r1
 
-    movb    $10, command1
-    mov    r0, addrPP1
-    mov     $CoordMouse, addrCP1
-    mov     $2, WORDS1
-    mput    mp1
-
-    mov     MX, r0
-    mov     MY, r1
+    /mov     $30, r0
+    /mov     $50, r1
 
     rts     pc
 
@@ -266,6 +277,16 @@ go:
     bic $2, r3
     cmp r3, r2
     blos 111f /; меньше или равно, кнопка или не нажата или не отжималась
+
+    mov	$0177010, r4
+    mov	$0177014, r5
+    mov $CoordMouse, (r4)
+    clc
+    ror (r4)
+    mov MouseX, @r5
+    inc (r4)    
+    mov MouseY, @r5
+
     mov     $0376, -(sp)
     jsr pc, PullCPU
     add $2, sp
