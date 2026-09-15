@@ -1,6 +1,7 @@
 #include "../libgraph/libgraph.h"
 #include "../libkeyb/libkeyb.h"
 #include "../libmouse/libmouse.h"
+#include "random.h"
 
 #define WIDTH   640
 #define HEIGHT  264
@@ -81,6 +82,15 @@ line(500, 250, 200, 40, 4);
     circle(WIDTH / 2, HEIGHT / 2, 0, 2);
     circle(WIDTH / 2, HEIGHT / 2, 20, 1);
     circle(WIDTH / 2, HEIGHT / 2, 25, 3);
+
+
+    //random_init(50);
+    for (int x = 0; x < 6000; x ++) 
+    { 
+        int r = random_range(2, 50);
+        circle(random_range(r, WIDTH - r), random_range(r, HEIGHT - r), r, random_range(1, 7));
+    }
+    
 
     waitAnyKey();
     printTop(1, "              ");

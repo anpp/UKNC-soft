@@ -537,7 +537,8 @@ PutPixelPPU:
     mov $PxlAddress, @r4
     mov @r5, r0          /В r0 готовый адрес из ЦП
 
-    inc (r4)
+/;    inc (r4)
+    inc @r4
     mov @r5, r3          /в r3 маска пикселя
 
     inc (r4)    / color
