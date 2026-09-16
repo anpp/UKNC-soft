@@ -350,14 +350,6 @@ _putChar:
 
     rts  pc
 
-.macro CorrectAddressPutText
-    inc     r3
-    cmp     r3, r4
-    blt     2000f                      /; [0100000..0154540) -> Норма
-    sub     r5, r3           /; Overflow (>= 0154540)    
-2000:
-    mov     r3, PxlAddr
-.endm
 
 .macro putTextInPPU
     bis $0200, running_proc
@@ -401,10 +393,7 @@ _putText:
 
     /;переменные в регистрах для скорости
     /;mov   $11, r2
-    mov   PxlAddr, r3
-    mov   $0154540, r4
-    mov   $054540, r5
-    mov   FntTable, -(sp)
+    mov   FntTable, r3
 
 1:
     clr  r1
@@ -413,15 +402,14 @@ _putText:
 
     /;mul   r2, r1
     mul11
-    add   @sp, r1     /; r1 = адрес символа в ПЗУ
+    add   r3, r1     /; r1 = адрес символа в ПЗУ
     mov r1, char 
 
     putTextInPPU    
-    CorrectAddressPutText
+    inc PxlAddr
 
     br   1b
 3:
-    tst (sp)+
 
     mov (sp)+, r5
     mov (sp)+, r4
@@ -749,13 +737,6 @@ FinishGraphPPU:
 2000:
 .endm
 
-.macro CorrectAddressLineUp
-    cmp     r3, $0154540
-    blt     1000f                      /; [0100000..0154540) -> Норма
-    sub     $054540, r3           /; Overflow (>= 0154540)
-1000:
-.endm
-
 LinePPU:
     /;цвет
     mov $LineColorPPU, @r4
@@ -847,7 +828,6 @@ stepay1:
     bic     $0177770, (sp)  /; В (sp) номер точки в октете
     bne     333f           /; добавлять адрес не нужно    
     inc     r3
-    CorrectAddressLineUp
 333:
     /;вычисление маски пикселя
     add     2(sp), (sp)    /;в 2(sp) - адрес таблицы масок, в (sp) - номер точки в октете
@@ -883,7 +863,6 @@ DrawYMajor:
     bic     $0177770, (sp)  /; В (sp) номер точки в октете
     bne     44f           /; добавлять адрес не нужно
     inc     r3
-    CorrectAddressLineUp
 44:  
     /;вычисление маски пикселя
     add     2(sp), (sp)    /;в 2(sp) - адрес таблицы масок, в (sp) - номер точки в октете
@@ -1034,7 +1013,6 @@ DrawMiddle:
 
     mov     4(sp), r3              /; восстанавливаем верх колонки
     inc     r3                    /; шаг вправо (+1 байт)
-    CorrectAddressFillRect
     mov     r3, 4(sp)              /; сохраняем новый верх
     sob     r0, 2b                /; цикл по колонкам (r0)
 
@@ -1095,11 +1073,6 @@ PutCharPPU:
     /; --- Запись второго (правого) байта ---
     swab  r3               /; Меняем байты местами (старший байт -> в младший)
     inc   @r4
-    cmp   @r4, $0154540
-    blt   20f
-    sub   $054540, @r4
-20:
-
     bisb  r3, @(sp)         /; Накладываем правую часть пикселей
 
     /; --- Переход на следующую строку ---
