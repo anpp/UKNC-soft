@@ -1075,13 +1075,11 @@ PutCharPPU:
     mov   $PxlAddress, @r4
     mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
 
-    inc   @r4               /;shift
-    mov   @r5, -(sp)
-
     mov   $CharPPU, @r4
     mov   @r5, r1          /; адрес char'а
 
-    mov    (sp)+, r5       /; r5 = величина сдвига (0..7)
+    dec   @r4              /;shift
+    mov   @r5, r5          /; r5 = величина сдвига (0..7)
 
     mov   $0177024, -(sp)
     mov   $11, r2
