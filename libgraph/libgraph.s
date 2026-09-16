@@ -1,6 +1,6 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
-.globl _putChar, _circle
+.globl _putChar, _putText, _circle
 .globl _runPPU
 
 base_addr = .
@@ -71,6 +71,7 @@ running_proc:	.word 0   /слово флагов для запуска подп�
 0100 - FillRectPPU
 0200 - PutCharPPU
 0400 - CirclePPU
+01000 - SetTextColorPPU
 .
 .
 .
@@ -318,10 +319,17 @@ _fillRect:
     rts  pc
 
 
+
 _putChar:
     mov     8(sp), PxClr
     mov     6(sp), r1 
     mov     4(sp), r0
+
+/;  setTextColor
+    bis $01000, running_proc
+11:
+    bit $01000, running_proc
+    bne 11b
 
     jsr  pc, CalcAddress    
 
@@ -341,6 +349,76 @@ _putChar:
     bne 1b
 
     rts  pc
+
+.macro CorrectAddressPutText
+    inc     r3
+    cmp     r3, r4
+    blt     2000f                      /; [0100000..0154540) -> Норма
+    sub     r5, r3           /; Overflow (>= 0154540)    
+2000:
+    mov     r3, PxlAddr
+.endm
+
+.macro putTextInPPU
+    bis $0200, running_proc
+1000:
+    bit $0200, running_proc
+    bne 1000b
+.endm
+
+_putText:
+    mov     8(sp), PxClr
+    mov     6(sp), r1 
+    mov     4(sp), r0
+
+/;  setTextColor
+    bis $01000, running_proc
+11:
+    bit $01000, running_proc
+    bne 11b
+
+    jsr  pc, CalcAddress    
+
+    mov PixelX, r0
+    bic $0b1111111111111000, r0  /; В r0 номер точки в октете
+    mov r0, PxShift              /;номер точки в октете для PutCharPPU
+    
+    mov   2(sp), r0              /;r0 - адрес первого символа строки
+
+    mov  r2, -(sp)
+    mov  r3, -(sp)
+    mov  r4, -(sp)
+    mov  r5, -(sp)
+
+    /;переменные в регистрах для скорости
+    mov   $11, r2
+    mov   PxlAddr, r3
+    mov   $0154540, r4
+    mov   $054540, r5
+    mov   FntTable, -(sp)
+
+1:
+    clr  r1
+    bisb (r0)+, r1
+    beq  3f
+
+    mul   r2, r1
+    add   @sp, r1     /; r1 = адрес символа в ПЗУ
+    mov r1, char 
+
+    putTextInPPU    
+    CorrectAddressPutText
+
+    br   1b
+3:
+    tst (sp)+
+
+    mov (sp)+, r5
+    mov (sp)+, r4
+    mov (sp)+, r3
+    mov (sp)+, r2
+    rts  pc
+
 
 _circle:
     mov     8(sp), PxClr
@@ -499,8 +577,15 @@ end_putchar:
 end_circle:
     mov $RunProcPPU, @r4
     bic $0400, @r5         /CirclePPU выполнена
-
-10: 
+10:
+    asr (sp)               /Проверка на SetTextColorPPU
+    bcc 11f
+    jmp SetTextColorPPU
+end_settextcolor:
+    mov $RunProcPPU, @r4
+    bic $01000, @r5         /SetTextColorPPU выполнена
+ 
+11:
     tst (sp)+ 
     jmp MainPPU
 100:    
@@ -967,6 +1052,12 @@ FillRectExit:
 
 
 
+/;=========================SetTextColorPPU==============================================================
+SetTextColorPPU:
+    mov   $PxlColorPPU, @r4
+    mov   @r5, @$0177016
+    jmp   end_settextcolor
+
 /;=========================PutCharPPU==============================================================
 PutCharPPU:  
     mov   r5, -(sp)
@@ -974,16 +1065,15 @@ PutCharPPU:
     mov   $PxlAddress, @r4
     mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
 
-    inc   (r4)             /; маска
-    inc   (r4)             /; color
-    mov   @r5, @$0177016
+    inc   @r4               /;shift
+    mov   @r5, -(sp)
 
     mov   $CharPPU, @r4
     mov   @r5, r1          /; адрес char'а
 
-    dec   (r4)             /; shift
-    mov   @r5, r5           /; r5 = величина сдвига (0..7)
+    mov    (sp)+, r5       /; r5 = величина сдвига (0..7)
 
+    mov   $0177024, -(sp)
     mov   $11, r2
 1:   
     clr   r3
@@ -992,7 +1082,7 @@ PutCharPPU:
 
     /; --- Запись первого (левого) байта ---
     mov   r0, @r4          
-    bisb  r3, @$0177024    /; Накладываем левую часть пикселей
+    bisb  r3, @(sp)         /; Накладываем левую часть пикселей
 
     /; --- Запись второго (правого) байта ---
     swab  r3               /; Меняем байты местами (старший байт -> в младший)
@@ -1002,7 +1092,7 @@ PutCharPPU:
     sub   $054540, @r4
 20:
 
-    bisb  r3, @$0177024    /; Накладываем правую часть пикселей
+    bisb  r3, @(sp)         /; Накладываем правую часть пикселей
 
     /; --- Переход на следующую строку ---
     add   $80, r0          /; Смещение на строку вниз (+80 байт)
@@ -1012,6 +1102,7 @@ PutCharPPU:
 10:
     sob   r2, 1b
 
+    tst   (sp)+
     mov   (sp)+, r5
     jmp   end_putchar
 
