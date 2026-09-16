@@ -366,6 +366,15 @@ _putChar:
     bne 1000b
 .endm
 
+.macro mul11
+    mov     r1, r2
+    asl     r1
+    asl     r1
+    add     r2, r1
+    asl     r1
+    add     r2, r1
+.endm
+
 _putText:
     mov     8(sp), PxClr
     mov     6(sp), r1 
@@ -391,7 +400,7 @@ _putText:
     mov  r5, -(sp)
 
     /;переменные в регистрах для скорости
-    mov   $11, r2
+    /;mov   $11, r2
     mov   PxlAddr, r3
     mov   $0154540, r4
     mov   $054540, r5
@@ -402,7 +411,8 @@ _putText:
     bisb (r0)+, r1
     beq  3f
 
-    mul   r2, r1
+    /;mul   r2, r1
+    mul11
     add   @sp, r1     /; r1 = адрес символа в ПЗУ
     mov r1, char 
 
