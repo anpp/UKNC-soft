@@ -26,6 +26,7 @@ LineColorPPU = (LineColor - offset_size) >> 1
 CharPPU = (char - offset_size) >> 1
 XPPU = (PixelX - offset_size) >> 1
 RadiusPPU = (Radius - offset_size) >> 1
+CharAddressesPPU = (CharAddresses - offset_size) >> 1
 
 mp:
             .byte   0
@@ -36,7 +37,7 @@ WORD3:      .word   pplen
 WORDS:      .word   pplen
 .even
 
-/структура для отправки данных во время работы (координат и тп)
+/;структура для отправки данных во время работы (координат и тп)
 mp1:
              .byte   0
 command1:    .byte   020
@@ -46,7 +47,7 @@ addrCP1:     .word   0
 WORDS1:      .word   0
 .even
 
-Pxl:      /(порядок не менять)
+Pxl:      /;(порядок не менять)
 PxlAddr: .word 0
 PxlMask: .word 0
 PxClr:   .word 0
@@ -57,10 +58,11 @@ PixelY:  .word -1
 Radius:  .word 0
 
 received_color: .word   -1
-offsetV:	.word	0	/адрес верхней видеостроки пользовательского экрана
+offsetV:	.word	0	/;адрес верхней видеостроки пользовательского экрана
 
+CharAddresses:  .fill 80, 2, 0  /; Буфер для адресов символов для PutTextPPU
 
-running_proc:	.word 0   /слово флагов для запуска подпрограмм в ПП
+running_proc:	.word 0   /;слово флагов для запуска подпрограмм в ПП
 /*
 01  - PutPixelPPU
 02  - GetPixelPPU
@@ -72,6 +74,7 @@ running_proc:	.word 0   /слово флагов для запуска подп�
 0200 - PutCharPPU
 0400 - CirclePPU
 01000 - SetTextColorPPU
+02000 - PutTextPPU
 .
 .
 .
@@ -320,16 +323,26 @@ _fillRect:
 
 
 
+.macro setTextColor
+    bis $01000, running_proc
+11:
+    bit $01000, running_proc
+    bne 11b
+.endm
+
+.macro putCharInPPU
+    bis $0200, running_proc
+1000:
+    bit $0200, running_proc
+    bne 1000b
+.endm
+
 _putChar:
     mov     8(sp), PxClr
     mov     6(sp), r1 
     mov     4(sp), r0
 
-/;  setTextColor
-    bis $01000, running_proc
-11:
-    bit $01000, running_proc
-    bne 11b
+    setTextColor /;макрос
 
     jsr  pc, CalcAddress    
 
@@ -343,20 +356,10 @@ _putChar:
     add   FntTable, r1     /; r1 = адрес символа в ПЗУ
     mov   r1, char
 
-    bis $0200, running_proc
-1:
-    bit $0200, running_proc
-    bne 1b
+    putCharInPPU
 
     rts  pc
 
-
-.macro putTextInPPU
-    bis $0200, running_proc
-1000:
-    bit $0200, running_proc
-    bne 1000b
-.endm
 
 .macro mul11
     mov     r1, r2
@@ -372,46 +375,42 @@ _putText:
     mov     6(sp), r1 
     mov     4(sp), r0
 
-/;  setTextColor
-    bis $01000, running_proc
-11:
-    bit $01000, running_proc
-    bne 11b
+    setTextColor /;макрос
 
     jsr  pc, CalcAddress    
 
     mov PixelX, r0
     bic $0b1111111111111000, r0  /; В r0 номер точки в октете
-    mov r0, PxShift              /;номер точки в октете для PutCharPPU
+    mov r0, PxShift              /;номер точки в октете для PutTextPPU
     
     mov   2(sp), r0              /;r0 - адрес первого символа строки
 
     mov  r2, -(sp)
     mov  r3, -(sp)
     mov  r4, -(sp)
-    mov  r5, -(sp)
 
     /;переменные в регистрах для скорости
-    /;mov   $11, r2
     mov   FntTable, r3
-
+    mov   $CharAddresses, r4
 1:
     clr  r1
     bisb (r0)+, r1
     beq  3f
 
-    /;mul   r2, r1
     mul11
     add   r3, r1     /; r1 = адрес символа в ПЗУ
-    mov r1, char 
-
-    putTextInPPU    
-    inc PxlAddr
+    mov r1, (r4)+
 
     br   1b
 3:
+    clr (r4)        /;последний	адрес - 0 - признак конца
 
-    mov (sp)+, r5
+/; запуск PutTextPPU
+    bis $02000, running_proc
+1000:
+    bit $02000, running_proc
+    bne 1000b
+
     mov (sp)+, r4
     mov (sp)+, r3
     mov (sp)+, r2
@@ -581,9 +580,16 @@ end_circle:
     jmp SetTextColorPPU
 end_settextcolor:
     mov $RunProcPPU, @r4
-    bic $01000, @r5         /SetTextColorPPU выполнена
- 
+    bic $01000, @r5         /SetTextColorPPU выполнена 
 11:
+    asr (sp)               /Проверка на PutTextPPU
+    bcc 12f
+    jmp PutTextPPU
+end_puttext:
+    mov $RunProcPPU, @r4
+    bic $02000, @r5         /PutTextPPU выполнена 
+
+12:
     tst (sp)+ 
     jmp MainPPU
 100:    
@@ -1088,6 +1094,60 @@ PutCharPPU:
     jmp   end_putchar
 
 
+/;=========================PutTextPPU==============================================================
+PutTextPPU:  
+    mov   r5, -(sp)
+
+    mov   $PxlAddress, @r4
+    mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
+
+    mov   $PxShiftPPU, @r4  /;shift
+    mov   @r5, shftmp       /; shftmp = величина сдвига (0..7)
+
+    mov   $0177024, r5
+
+    mov   $CharAddressesPPU, -(sp)
+11: 
+    mov   (sp), @r4   
+    mov   @$0177014, r1
+    beq   100f            /;нулевой адрес - признак конца строки
+
+    mov   r0, -(sp)
+    mov   $11, r2
+1:   
+    clr   r3
+    bisb  (r1)+, r3        /; Считываем 1 байт строки шрифта
+    ash   shftmp, r3       /; Сдвигаем 16-битное слово r3 влево на shftmp бит
+
+    /; --- Запись первого (левого) байта ---
+    mov   r0, @r4
+    bisb  r3, @r5    /; Накладываем левую часть пикселей
+
+    /; --- Запись второго (правого) байта ---
+    swab  r3               /; Меняем байты местами (старший байт -> в младший)
+    inc   @r4
+    bisb  r3, @r5    /; Накладываем правую часть пикселей
+
+    /; --- Переход на следующую строку ---
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   10f
+    sub   $054540, r0
+10:
+    sob   r2, 1b
+    
+    mov   (sp)+, r0
+    inc   r0               /;адрес в ВОЗУ для следующего символа
+
+    inc   (sp)
+
+    br    11b
+100:
+    tst   (sp)+
+    mov   (sp)+, r5
+    jmp   end_puttext
+
+
 /;=========================CirclePPU==============================================================
 CirclePPU:
     mov   r5, -(sp)
@@ -1261,6 +1321,8 @@ y1:   .word 0
 xc:   .word 0
 yc:   .word 0
 
+shftmp: .word 0     ;/сдвиг в PutTextPPU
+
 FntTable: .word 0117430
 
 MaskTable: .byte 01, 02, 04, 010, 020, 040, 0100, 0200
@@ -1280,7 +1342,7 @@ TRightMaskTable: .word RightMaskTable - LT
 .word 0
 
 str_buff:         .byte 0
-str_buffer:       .fill 40, 1, 0  / Буфер для строки
+str_buffer:       .fill 40, 1, 0  /; Буфер для строки
 .even
 
 

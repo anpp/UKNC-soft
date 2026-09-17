@@ -24,12 +24,13 @@ void rect(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsi
     fillRect(x1, y2, x2, y2, color);
 }
 
-
+/*
 void putText2(const char *str, unsigned int x, unsigned int y, unsigned int color) 
 {
     for (; *str; x += 8)
         putChar(*str++, x, y, color);
 }
+*/
 
 //putText с обработкой переносов
 void putText1(const char *str, unsigned int x, unsigned int y, unsigned int color) 

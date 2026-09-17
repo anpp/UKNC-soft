@@ -267,9 +267,6 @@ void main()
     putText(sprites[ALIEN10][ctype][0].lines[1], (WIDTH / 2) - 90, y + 10, 7);
     putText("= 10 points", (WIDTH / 2), y + 5, 7);
 
-
-
-
     waitAnyKey();
     printTop(1, "              ");
 
