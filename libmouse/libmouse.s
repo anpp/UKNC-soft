@@ -210,6 +210,10 @@ LT:
     br   LT          /;до конца таблицы
 
 begin:
+    mov	$0177010, r4
+    mov	$0177014, r5
+    jsr pc, PaintMouse
+
     mtps	$0200
     mov	@$0100, intTimer
     mov	TIProcAdr, @$0100
@@ -222,9 +226,6 @@ begin:
     mov	@$02476, r0
     mov	@r0, offsetV
     mov	@r0, OldOffsetV
-
-    mov	$0177010, r4
-    jsr pc, XorMouse
 
     rts   pc
 
@@ -317,9 +318,7 @@ go:
     ble	58f
     mov	VStrings, MouseY
 58:
-
-    mov	$8, HeightForDraw
-    jsr   pc, XorMouse
+    jsr pc, RestoreBackground
     
     /;мышь стерта, пока не нарисована новая, проверка на завершение работы
     tst	finished
@@ -334,16 +333,7 @@ go:
     mov	MouseX, MouseOldX
     mov	MouseY, MouseOldY
     mov	offsetV, OldOffsetV
-    jsr pc, XorMouse
-
-    mov	VStrings, r0
-    inc	r0
-    sub	MouseOldY, r0
-    cmp	r0, $8
-    ble	9f
-    mov	$8, r0
-9:
-    mov	r0, HeightForDraw
+    jsr pc, PaintMouse
 
 exit:
     /;mtps  $0
@@ -366,7 +356,6 @@ FinishMousePPU:
 
 /=============================================================================
 TimerInt:
-
     mov @$0177010, -(sp)
     mov r0, -(sp)
     mov r1, -(sp)
@@ -374,9 +363,8 @@ TimerInt:
     mov r3, -(sp)
     mov r4, -(sp)
     mov r5, -(sp)
-    
+        
     jsr pc, ParseMouse
-
 
     mov (sp)+, r5
     mov (sp)+, r4
@@ -405,35 +393,27 @@ VStrings:       .word   0	/;Число отображаемых видеостр
 BytesInString:  .word   0	/;Длина видеостроки в байтах (22656 + 10)
 offsetV:        .word   0	/;адрес верхней видеостроки пользовательского экрана
 OldOffsetV:     .word   0	/;адрес верхней видеостроки пользовательского экрана (предыдущий)
-HeightForDraw:  .word   8
-OldHeightForDraw: .word 8 /; проверка на бит нулевого плана
 
-
+currVRAM:       .word   0
 
 TAddr: /; Таблица адресов
 TIProcAdr:      .word TimerInt - LT
 adrProc:        .word ParseMouse - LT
 adrMouseSpr:    .word MouSpr - LT
+adrBkgr:        .word Bkgr - LT
 .word 0
-
-
-HDraw:   .word 0
 
 
 
 /=============================================================================
-XorMouse:
+PaintMouse:
     mov r5, -(sp)
-    mov HeightForDraw, HDraw
-    /; R4 was set earlier
-    mov $0177012, r5
 
     mov MouseOldY, r1
     mul BytesInString, r1
     mov MouseOldX, r0
-    mov r0, r3				/; preshifted sprite addition
-    bic $0b1111111111111000, r3		/; 8-pix
-    ash $4, r3				/; * 16 bytes (sprite size)
+    mov r0, r5
+    bic $0b1111111111111000, r5		/; r5 = величина сдвига (0..7)
     asr r0
     asr r0
     asr r0
@@ -442,111 +422,114 @@ XorMouse:
     cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
     blt 1f
     sub $054540, r0 /; 154540 - 100000 = 54540
-      
-1:  
-    mov r0, (r4)
-    mov adrMouseSpr, r0
-    add r3, r0				/; adjust to preshifted sprite
-    mov BytesInString, r1		/; vaddr addition
-    dec r1
-    
-    tst HDraw
-    beq ex
-    mov HDraw, r3
-cicle:
-    mov (r0)+, r2
-    xor r2, (r5)
-    inc (r4)
-    swab    r2
-    xor r2, (r5)
-    add r1, (r4)
-    
-    /;	Расскоментировать, чтоб не было визуально видно переход курсора на границе рулона
-    /;cmp	(R4), #154540 ; список 220 видеострок для области отображения меню УСТАНОВКА
-    /    ;blt	. + 6
-    /;sub	#54540, (R4) ; 154540 - 100000 = 54540
+1:
+    mov   r0, currVRAM
 
-    sob r3, cicle
-    /;dec HDraw
-    /;bne cicle
+    jsr pc, SaveBackground
+    mov adrMouseSpr, r1
 
-ex:
-    mov (sp)+, r5
+    mov   $9, r2
+2:   
+    clr   r3
+    bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
+    ash   r5, r3           /; Сдвигаем 16-битное слово r3 влево на r5 бит
+
+    /; --- Запись первого (левого) байта ---
+    mov   r0, @r4          
+    bisb  r3, @$0177012         /; Накладываем левую часть пикселей
+    bisb  r3, @$0177014
+    swab  @$0177014
+    bisb  r3, @$0177014
+
+    /; --- Запись второго (правого) байта ---
+    swab  r3               /; Меняем байты местами (старший байт -> в младший)
+    inc   @r4
+    bisb  r3, @$0177012         /; Накладываем правую часть пикселей
+    bisb  r3, @$0177014
+    swab  @$0177014
+    bisb  r3, @$0177014
+
+
+    /; --- Переход на следующую строку ---
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   10f
+    sub   $054540, r0
+10:
+    sob   r2, 2b
+
+    mov   (sp)+, r5
     rts pc
 /=============================================================================
 
-MouSpr:	/;0
-    .word	0b0000000000000001
-    .word	0b0000000000000011
-    .word	0b0000000000000111
-    .word	0b0000000000001111
-    .word	0b0000000000011111
-    .word	0b0000000000111111
-    .word	0b0000000001111111
-    .word	0b0000000000001111
-    /;1
-    .word	0b0000000000000010
-    .word	0b0000000000000110
-    .word	0b0000000000001110
-    .word	0b0000000000011110
-    .word	0b0000000000111110
-    .word	0b0000000001111110
-    .word	0b0000000011111110
-    .word	0b0000000000011110
-    /;2
-    .word	0b0000000000000100
-    .word	0b0000000000001100
-    .word	0b0000000000011100
-    .word	0b0000000000111100
-    .word	0b0000000001111100
-    .word	0b0000000011111100
-    .word	0b0000000111111100
-    .word	0b0000000000111100
-    /;3
-    .word	0b0000000000001000
-    .word	0b0000000000011000
-    .word	0b0000000000111000
-    .word	0b0000000001111000
-    .word	0b0000000011111000
-    .word	0b0000000111111000
-    .word	0b0000001111111000
-    .word	0b0000000001111000
-    /;4
-    .word	0b0000000000010000
-    .word	0b0000000000110000
-    .word	0b0000000001110000
-    .word	0b0000000011110000
-    .word	0b0000000111110000
-    .word	0b0000001111110000
-    .word	0b0000011111110000
-    .word	0b0000000011110000
-    /;5
-    .word	0b0000000000100000
-    .word	0b0000000001100000
-    .word	0b0000000011100000
-    .word	0b0000000111100000
-    .word	0b0000001111100000
-    .word	0b0000011111100000
-    .word	0b0000111111100000
-    .word	0b0000000111100000
-    /;6
-    .word	0b0000000001000000
-    .word	0b0000000011000000
-    .word	0b0000000111000000
-    .word	0b0000001111000000
-    .word	0b0000011111000000
-    .word	0b0000111111000000
-    .word	0b0001111111000000
-    .word	0b0000001111000000
-    /;7
-    .word	0b0000000010000000
-    .word	0b0000000110000000
-    .word	0b0000001110000000
-    .word	0b0000011110000000
-    .word	0b0000111110000000
-    .word	0b0001111110000000
-    .word	0b0011111110000000
-    .word	0b0000011110000000
+
+/=============================================================================
+SaveBackground:
+/;r0 - адрес ВОЗУ
+    mov r0, -(sp)
+
+    mov adrBkgr, r1
+    mov $9, r2
+1:
+    mov  r0, @r4
+    mov  @$0177014, (r1)+
+    mov  @$0177012, (r1)+
+    inc  @r4
+    mov  @$0177014, (r1)+
+    mov  @$0177012, (r1)+
+
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   10f
+    sub   $054540, r0
+10:
+    sob r2, 1b
+
+    mov (sp)+, r0
+    rts pc
+/=============================================================================
+
+
+/=============================================================================
+RestoreBackground: 
+/;    mov $0177010, r4
+    mov currVRAM, r0
+
+    mov adrBkgr, r1
+    mov $9, r2
+1:
+    mov  r0, @r4
+    mov  (r1)+, @$0177014
+    mov  (r1)+, @$0177012    
+    inc  @r4
+    mov  (r1)+, @$0177014
+    mov  (r1)+, @$0177012    
+
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   10f
+    sub   $054540, r0
+10:
+    sob r2, 1b
+
+    rts pc
+/=============================================================================
+
+
+MouSpr:
+    .byte  0b00000001
+    .byte  0b00000011
+    .byte  0b00000111
+    .byte  0b00001111
+    .byte  0b00011111
+    .byte  0b00111111
+    .byte  0b01111111
+    .byte  0b00001111
+    .byte  0b00001111
+    .byte  0b00001111
+
+
+Bkgr: .fill 40, 2, 0
 
 pp.end:
 /=============================================================================================
