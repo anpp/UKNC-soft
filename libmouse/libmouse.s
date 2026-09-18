@@ -30,7 +30,7 @@ WORD3:      .word   pplen
 WORDS:      .word   pplen
 .even
 
-/структура для отправки данных во время работы (координат и тп)
+/;структура для отправки данных во время работы (координат и тп)
 mp1:
              .byte   0
 command1:    .byte   020
@@ -98,9 +98,6 @@ Int460:
     mov  r4, -(sp)    
     mov  r5, -(sp)
     
-    /jsr     pc, _GetMouseXY
-    /mov     r1, -(sp)   /;координата y
-    /mov     r0, -(sp)   /;координата x
     mov     MY, -(sp)
     mov     MX, -(sp)
     jsr     pc, @OnClickEvent
@@ -175,19 +172,16 @@ _finishMouse:
 
 /;=============================================================================================
 _GetMouseXY:
-    mov   addrPP, r0
-    add   $(MouseOldX - pp.beg), r0  /;В r0 адрес координат в PPU
-    movb  $010, command1
-    mov   r0, addrPP1
-    mov   $GlobCoordMouse, addrCP1 /; вот проблема - $CoordMouse это смещение в текущем .o...
-    mov   $2, WORDS1
-    mput  mp1
+    /;mov   addrPP, r0
+    /;add   $(MouseOldX - pp.beg), r0  /;В r0 адрес координат в PPU
+    /;movb  $010, command1
+    /;mov   r0, addrPP1
+    /;mov   $GlobCoordMouse, addrCP1 /; вот проблема - $CoordMouse это смещение в текущем .o...
+    /;mov   $2, WORDS1
+    /;mput  mp1
                                                                                   	
     mov   MX, r0
     mov   MY, r1
-
-    /mov     $30, r0
-    /mov     $50, r1
 
     rts     pc
 
@@ -212,12 +206,6 @@ LT:
 begin:
     mov	$0177010, r4
     mov	$0177014, r5
-    jsr pc, PaintMouse
-
-    mtps	$0200
-    mov	@$0100, intTimer
-    mov	TIProcAdr, @$0100
-    mtps	$0
 
     mov	@$022664, VStrings
     dec	VStrings
@@ -226,6 +214,14 @@ begin:
     mov	@$02476, r0
     mov	@r0, offsetV
     mov	@r0, OldOffsetV
+    
+    jsr pc, calcCurrVRAM
+    jsr pc, PaintMouse
+
+    mtps	$0200
+    mov	@$0100, intTimer
+    mov	TIProcAdr, @$0100
+    mtps	$0
 
     rts   pc
 
@@ -239,9 +235,35 @@ PullCPU:
     rts    pc
 
 
+calcCurrVRAM:
+/;  вычисление VRAM
+    mov r5, -(sp)
+    mov MouseOldY, r1
+    mul BytesInString, r1
+    mov MouseOldX, r0
+    mov r0, r5
+    bic $0b1111111111111000, r5		/; r5 = величина сдвига (0..7)
+    mov r5, shift
+    asr r0
+    asr r0
+    asr r0
+    add r1, r0
+    add OldOffsetV, r0			/; R0 = mouse vaddr
+    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
+    blt 1f
+    sub $054540, r0 /; 154540 - 100000 = 54540
+1:
+    mov   r0, currVRAM
+
+    mov (sp)+, r5
+    rts pc
+
 /=============================================================================
 ParseMouse:
-    /;mtps	#200
+    /;mtps $0200
+
+    mov	$0177010, r4
+    mov	$0177014, r5
 
     mov	@$02476, r0
     mov	@r0, offsetV
@@ -279,13 +301,11 @@ go:
     cmp r3, r2
     blos 111f /; меньше или равно, кнопка или не нажата или не отжималась
 
-    mov	$0177010, r4
-    mov	$0177014, r5
-    mov $CoordMouse, (r4)
+    mov $CoordMouse, @r4
     clc
-    ror (r4)
+    ror @r4
     mov MouseX, @r5
-    inc (r4)    
+    inc @r4    
     mov MouseY, @r5
 
     mov     $0376, -(sp)
@@ -294,7 +314,6 @@ go:
 111:
 
     mov	r2, MouseRL
-    mov	$0177010, r4
     mov	BytesInString, r2
 
     /;	умножение на 8 - 80 байт на 8 = 640 пикселей
@@ -318,6 +337,7 @@ go:
     ble	58f
     mov	VStrings, MouseY
 58:
+
     jsr pc, RestoreBackground
     
     /;мышь стерта, пока не нарисована новая, проверка на завершение работы
@@ -333,11 +353,13 @@ go:
     mov	MouseX, MouseOldX
     mov	MouseY, MouseOldY
     mov	offsetV, OldOffsetV
+
+    jsr pc, calcCurrVRAM
     jsr pc, PaintMouse
 
 exit:
     /;mtps  $0
-    rts  pc
+    jmp  end_parsemouse
 /=============================================================================
 
 
@@ -364,9 +386,10 @@ TimerInt:
     mov r2, -(sp)
     mov r3, -(sp)
     mov r4, -(sp)
-    mov r5, -(sp)
-        
-    jsr pc, ParseMouse
+    mov r5, -(sp)  
+      
+    jmp ParseMouse
+end_parsemouse:
 
     mov (sp)+, r5
     mov (sp)+, r4
@@ -408,82 +431,52 @@ adrMouseSprEdging:    .word MouSprEdging - LT
 adrBkgr:        .word Bkgr - LT
 .word 0
 
+.even
+shift: .word 0
 
+/-----------------------------------------------------------------------------
+.macro  paint_sprite adr_spr
+    mov   \adr_spr, r1
+    mov   $9, r2
+1\@:   
+    clr   r3
+    bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
+    ash   shift, r3        /; Сдвигаем 16-битное слово r3 влево на shift бит
+
+    mov   r0, @r4
+    movb r3, @$0177024
+    inc @r4
+    swab r3
+    movb r3, @$0177024
+
+    /; --- Переход на следующую строку ---
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   2\@f
+    sub   $054540, r0
+2\@:
+    sob   r2, 1\@b
+.endm
 
 /=============================================================================
 PaintMouse:
-    mov r5, -(sp)
-    mov @$0177016, -(sp)
+/;  r0 - VRAM
+    /;mov r5, -(sp)
+    mov @$0177016, -(sp)    
 
-    mov $7, @$0177016
+    jmp SaveBackground
+end_savebkg:
 
-    mov MouseOldY, r1
-    mul BytesInString, r1
-    mov MouseOldX, r0
-    mov r0, r5
-    bic $0b1111111111111000, r5		/; r5 = величина сдвига (0..7)
-    asr r0
-    asr r0
-    asr r0
-    add r1, r0
-    add OldOffsetV, r0			/; R0 = mouse vaddr
-    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 1f
-    sub $054540, r0 /; 154540 - 100000 = 54540
-1:
-    mov   r0, currVRAM
-
-    jsr pc, SaveBackground
-    mov adrMouseSpr, r1
-
-    mov   $9, r2
-2:   
-    clr   r3
-    bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
-    ash   r5, r3           /; Сдвигаем 16-битное слово r3 влево на r5 бит
-
-    mov   r0, @r4
-    movb r3, @$0177024
-    inc @r4
-    swab r3
-    movb r3, @$0177024
-
-    /; --- Переход на следующую строку ---
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   10f
-    sub   $054540, r0
-10:
-    sob   r2, 2b
-
+    mov   $7, @$0177016
+    paint_sprite adrMouseSpr              /;макрос рисования спрайта
 /;====================ОКАНТОВКА===================================
-    mov currVRAM, r0
-    mov adrMouseSprEdging, r1
-    mov $0, @$0177016
-    mov   $9, r2
-3:   
-    clr   r3
-    bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
-    ash   r5, r3           /; Сдвигаем 16-битное слово r3 влево на r5 бит
-
-    mov   r0, @r4
-    movb r3, @$0177024
-    inc @r4
-    swab r3
-    movb r3, @$0177024
-
-    /; --- Переход на следующую строку ---
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   11f
-    sub   $054540, r0
-11:
-    sob   r2, 3b
+    mov   $0, @$0177016
+    mov   currVRAM, r0
+    paint_sprite adrMouseSprEdging
 /;====================ОКАНТОВКА===================================
-
 
     mov   (sp)+, @$0177016
-    mov   (sp)+, r5
+    /;mov   (sp)+, r5
     rts pc
 /=============================================================================
 
@@ -511,13 +504,12 @@ SaveBackground:
     sob r2, 1b
 
     mov (sp)+, r0
-    rts pc
+    jmp end_savebkg
 /=============================================================================
 
 
 /=============================================================================
 RestoreBackground: 
-/;    mov $0177010, r4
     mov currVRAM, r0
 
     mov adrBkgr, r1
@@ -551,7 +543,6 @@ MouSpr:
     .byte  0b11111110
     .byte  0b00011110
     .byte  0b00011110
-    .byte  0b00011110
 MouSprEdging:
     .byte  0b00000011
     .byte  0b00000101
@@ -562,11 +553,9 @@ MouSprEdging:
     .byte  0b11110001
     .byte  0b00010001
     .byte  0b00011111
-    .byte  0b00011111
 
 
-
-Bkgr: .fill 40, 2, 0
+Bkgr: .fill 38, 2, 0
 
 pp.end:
 /=============================================================================================

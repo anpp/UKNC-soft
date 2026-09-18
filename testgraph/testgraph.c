@@ -29,7 +29,7 @@ void main()
     initMouse();
     initKeyb();
     initGraph();
-    clearScreen();
+//    clearScreen();
 
     setOnClick(OnClickEvent);
 
@@ -97,5 +97,5 @@ line(500, 250, 200, 40, 4);
 
     finishGraph();    
     finishKeyb();    
-    finishMouse();
+    //finishMouse();
 }
