@@ -87,7 +87,7 @@ line(500, 250, 200, 40, 4);
     fillCircle(200, 240, 1, 6);  
 
 
-    random_init(50);
+    random_init(60);
     for (int x = 0; x < 300; x ++) 
     { 
         int r = random_range(2, 50);

@@ -1353,31 +1353,28 @@ FillCircle:
     clr     r0                /; r0 = X = 0
 
     /; D = 3 - 2*R
-    mov     $3, r2
+    mov     $3, r3
     mov     r1, r5
     asl     r5
-    sub     r5, r2
+    sub     r5, r3
 
 FillLoopCircle:
     cmp     r0, r1            /; Пока X <= Y
     bgt     FillCircleExit
 
     /; --- Рисуем 4 горизонтальные линии ---
-    mov     r2, -(sp)
     jmp     Draw4Lines
 end_Draw4Lines:
-    mov     (sp)+, r2
-
     /; --- Пересчет ошибки D ---
-    tst     r2
+    tst     r3
     bge     1f
 
     /; D < 0
     mov     r0, r5
     asl     r5
     asl     r5
-    add     r5, r2
-    add     $6, r2
+    add     r5, r3
+    add     $6, r3
     br      2f
 
 1:  /; D >= 0
@@ -1385,8 +1382,8 @@ end_Draw4Lines:
     sub     r1, r5
     asl     r5
     asl     r5
-    add     r5, r2
-    add     $10, r2
+    add     r5, r3
+    add     $10, r3
     dec     r1                /; Y--
 
 2:
@@ -1424,6 +1421,8 @@ Draw4Lines:
     sub     (sp), r2          /; r2 = Yc - Y
     jsr     pc, DrawHLine
 
+    cmp 2(sp), (sp)
+    beq    11f
     /; --- Линия 3: Y = Yc + X, X в диапазоне [Xc - Y .. Xc + Y] ---
     mov     xc, r0
     sub     (sp), r0          /; r0 = Xc - Y
@@ -1433,6 +1432,8 @@ Draw4Lines:
     add     2(sp), r2         /; r2 = Yc + X
     jsr     pc, DrawHLine
 
+    cmp 2(sp), (sp)
+    beq    11f
     /; --- Линия 4: Y = Yc - X, X в диапазоне [Xc - Y .. Xc + Y] ---
     mov     xc, r0
     sub     (sp), r0          /; r0 = Xc - Y
@@ -1442,6 +1443,7 @@ Draw4Lines:
     sub     2(sp), r2         /; r2 = Yc - X
     jsr     pc, DrawHLine
 
+11:
     mov     (sp)+, r1
     mov     (sp)+, r0
     jmp     end_Draw4Lines
@@ -1457,7 +1459,6 @@ Draw4Lines:
 /; ============================================================================
 DrawHLine:
     mov     r3, -(sp)
-    mov     r4, -(sp)
     mov     r5, -(sp)
 
     /; --- 1. Корректировка: гарантируем x_left <= x_right ---
@@ -1545,7 +1546,6 @@ LastByte:
 
 HLineDone:
     mov     (sp)+, r5
-    mov     (sp)+, r4
     mov     (sp)+, r3
     rts     pc
 
