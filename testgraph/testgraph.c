@@ -9,7 +9,9 @@
 
 void OnClickEvent(unsigned x, unsigned y)
 {
-  fillCircle(x - 1, y - 1, 1, 7);
+  hideMouse();
+  fillCircle(x - 1, y - 1, 2, 7);
+  showMouse();
 }
 
 
@@ -30,6 +32,8 @@ void main()
     initKeyb();
     initGraph();
     clearScreen();
+
+    showMouse(); //сперва экран очищается, потом рисуется мышь
 
     setOnClick(OnClickEvent);
 
@@ -97,7 +101,6 @@ line(500, 250, 200, 40, 4);
         circle(xx, yy, r, 0);
     }
     
-
     waitAnyKey();
     printTop(1, "              ");
 

@@ -1,21 +1,13 @@
-.globl _initMouse, _finishMouse, _setOnClick
+.globl _initMouse, _finishMouse, _setOnClick, _showMouse, _hideMouse
 
-base_addr = .
-
-entry = 01000
-crt0size = 016
-
-offset_size = base_addr - (entry + crt0size)
-
-GlobCoordMouse = (CoordMouse - offset_size)
 
 .text
 
-/CPU
+/;CPU
 rsk2 = 0176674
 rdk2 = 0176676
 
-/PPU
+/;PPU
 rsk1 = 0177076
 rdk1 = 0177072
 
@@ -54,7 +46,10 @@ OnClickEvent:  .word   0
 
 OldInt460:     .word   0
 
-/Подпрограмма перемещения в К2 адреса МП
+VisibleMouse:   .word   0
+finishShowHide: .word   1
+
+/;Подпрограмма перемещения в К2 адреса МП
 /=============================================================================
 pp_mput: 
     jsr pc, 5f      /Подождем готовности К2
@@ -143,6 +138,7 @@ _initMouse:
     mov  $0, r0
     rts  pc
 
+/;=============================================================================================
 _finishMouse:
     /; запуск подпрограммы в ПП FinishMousePPU
     mov  addrPP, r0
@@ -169,6 +165,23 @@ _finishMouse:
 
     rts   pc
 
+/;=============================================================================================
+_showMouse:
+    mov $1, VisibleMouse
+    br  1f
+_hideMouse:
+    mov $0, VisibleMouse
+    mov $100000, r0 /;задержка
+2:
+    nop
+    nop
+    sob r0, 2b
+
+1:
+    /;tst finishShowHide
+    /;beq  5b
+
+    rts pc
 
 /;=============================================================================================
 _GetMouseXY:
@@ -375,6 +388,22 @@ FinishMousePPU:
 
     rts  pc
 
+/=============================================================================
+ShowMousePPU:
+    mov  $VisibleMouse, r1
+    clc
+    ror  r1           /;в ro адрес VisibleMouse в ЦП
+    mov  r1, @$0177010
+    mov  @$0177014, VisibleMousePPU
+
+    /;mov $finishShowHide, r1
+    /;clc    
+    /;ror   r1
+    /;mov r0, @$0177010
+    /;mov $1, @$0177014    
+
+    rts  pc
+
 
 /=============================================================================
 TimerInt:
@@ -433,6 +462,7 @@ adrBkgr:        .word Bkgr - LT
 
 .even
 shift: .word 0
+VisibleMousePPU:  .word 0
 
 /-----------------------------------------------------------------------------
 .macro  paint_sprite adr_spr
@@ -461,11 +491,15 @@ shift: .word 0
 /=============================================================================
 PaintMouse:
 /;  r0 - VRAM
-    /;mov r5, -(sp)
     mov @$0177016, -(sp)    
 
     jmp SaveBackground
-end_savebkg:
+end_savebkg:    
+
+    jsr pc, ShowMousePPU
+
+    tst VisibleMousePPU
+    beq notpaint
 
     mov   $7, @$0177016
     paint_sprite adrMouseSpr              /;макрос рисования спрайта
@@ -475,8 +509,9 @@ end_savebkg:
     paint_sprite adrMouseSprEdging
 /;====================ОКАНТОВКА===================================
 
+notpaint:
+
     mov   (sp)+, @$0177016
-    /;mov   (sp)+, r5
     rts pc
 /=============================================================================
 
