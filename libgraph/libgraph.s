@@ -1,6 +1,6 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
-.globl _putChar, _putText, _circle
+.globl _putChar, _putText, _circle, _fillCircle
 .globl _runPPU
 
 base_addr = .
@@ -75,6 +75,7 @@ running_proc:	.word 0   /;слово флагов для запуска подп
 0400 - CirclePPU
 01000 - SetTextColorPPU
 02000 - PutTextPPU
+04000 - FillCirclePPU
 .
 .
 .
@@ -431,6 +432,20 @@ _circle:
     rts  pc
 
 
+_fillCircle:
+    mov     8(sp), PxClr
+    mov     6(sp), Radius 
+    mov     4(sp), PixelY
+    mov     2(sp), PixelX
+
+    bis $04000, running_proc
+1:
+    bit $04000, running_proc
+    bne 1b
+
+    rts  pc
+
+
 _printTop:
     mov   $0, top_or_bottom
     br    1f
@@ -588,8 +603,15 @@ end_settextcolor:
 end_puttext:
     mov $RunProcPPU, @r4
     bic $02000, @r5         /PutTextPPU выполнена 
-
 12:
+    asr (sp)               /Проверка на FillCirclePPU
+    bcc 13f
+    jmp FillCirclePPU
+end_fillcircle:
+    mov $RunProcPPU, @r4
+    bic $04000, @r5         /FillCirclePPU выполнена 
+
+13:
     tst (sp)+ 
     jmp MainPPU
 100:    
@@ -943,9 +965,7 @@ FillRectPPU:
     asr     r0                    /; r0 = byte_end (x1 >> 3)
 
     sub     x0, r0                /; r0 = CountX (количество шагов по колонкам)
-
     /; --- Проверка: всё в одной колонке или нет? ---
-    tst     r0
     bne     MultiColumn
 
 /; ============================================================================
@@ -998,7 +1018,6 @@ MultiColumn:
 
     mov     (sp), r3              /; восстанавливаем верхний адрес колонки
     inc     r3                    /; шаг вправо по X (+1 байт)
-    CorrectAddressFillRect
     mov     r3, (sp)              /; сохраняем новый верхний адрес
     dec     r0                    /; CountX--
     beq     DrawRightEdge         /; если средних колонок нет — сразу на правый край
@@ -1306,6 +1325,230 @@ PutPixel:
 
     tst (sp)+
     rts pc
+
+/;=========================FillCirclePPU==============================================================
+FillCirclePPU:
+/; ============================================================================
+/; FillCircle — Отрисовка закрашенного круга
+/; Вход:
+/;   xc, yc, radius — координаты центра и радиус
+/; Внешняя подпрограмма:
+/;   DrawHLine — закраска отрезка (r0 = x_left, r1 = x_right, r2 = y)
+/; ============================================================================
+
+FillCircle:
+    mov     r4, -(sp)
+    mov     r5, -(sp)
+
+    mov   $PxlColorPPU, @r4
+    mov   @r5, @$0177016
+
+    mov   $XPPU, @r4
+    mov   @r5, xc
+    inc   (r4)             /;y
+    mov   @r5, yc
+    inc   (r4)             /;radius
+    mov   @r5, r1          /; r1 = радиус
+
+    clr     r0                /; r0 = X = 0
+
+    /; D = 3 - 2*R
+    mov     $3, r2
+    mov     r1, r5
+    asl     r5
+    sub     r5, r2
+
+FillLoopCircle:
+    cmp     r0, r1            /; Пока X <= Y
+    bgt     FillCircleExit
+
+    /; --- Рисуем 4 горизонтальные линии ---
+    mov     r2, -(sp)
+    jmp     Draw4Lines
+end_Draw4Lines:
+    mov     (sp)+, r2
+
+    /; --- Пересчет ошибки D ---
+    tst     r2
+    bge     1f
+
+    /; D < 0
+    mov     r0, r5
+    asl     r5
+    asl     r5
+    add     r5, r2
+    add     $6, r2
+    br      2f
+
+1:  /; D >= 0
+    mov     r0, r5
+    sub     r1, r5
+    asl     r5
+    asl     r5
+    add     r5, r2
+    add     $10, r2
+    dec     r1                /; Y--
+
+2:
+    inc     r0                /; X++
+    br      FillLoopCircle
+
+FillCircleExit:
+    mov     (sp)+, r5
+    mov     (sp)+, r4
+    jmp     end_fillcircle
+
+
+/; ============================================================================
+/; Draw4Lines — Построение 4 сканирующих линий
+/; ============================================================================
+Draw4Lines:
+    mov     r0, -(sp)         /; (sp)  = X
+    mov     r1, -(sp)         /; 2(sp) = Y
+
+    /; --- Линия 1: Y = Yc + Y, X в диапазоне [Xc - X .. Xc + X] ---
+    mov     xc, r0
+    sub     2(sp), r0         /; r0 = Xc - X
+    mov     xc, r1
+    add     2(sp), r1         /; r1 = Xc + X
+    mov     yc, r2
+    add     (sp), r2          /; r2 = Yc + Y
+    jsr     pc, DrawHLine
+
+    /; --- Линия 2: Y = Yc - Y, X в диапазоне [Xc - X .. Xc + X] ---
+    mov     xc, r0
+    sub     2(sp), r0         /; r0 = Xc - X
+    mov     xc, r1
+    add     2(sp), r1         /; r1 = Xc + X
+    mov     yc, r2
+    sub     (sp), r2          /; r2 = Yc - Y
+    jsr     pc, DrawHLine
+
+    /; --- Линия 3: Y = Yc + X, X в диапазоне [Xc - Y .. Xc + Y] ---
+    mov     xc, r0
+    sub     (sp), r0          /; r0 = Xc - Y
+    mov     xc, r1
+    add     (sp), r1          /; r1 = Xc + Y
+    mov     yc, r2
+    add     2(sp), r2         /; r2 = Yc + X
+    jsr     pc, DrawHLine
+
+    /; --- Линия 4: Y = Yc - X, X в диапазоне [Xc - Y .. Xc + Y] ---
+    mov     xc, r0
+    sub     (sp), r0          /; r0 = Xc - Y
+    mov     xc, r1
+    add     (sp), r1          /; r1 = Xc + Y
+    mov     yc, r2
+    sub     2(sp), r2         /; r2 = Yc - X
+    jsr     pc, DrawHLine
+
+    mov     (sp)+, r1
+    mov     (sp)+, r0
+    jmp     end_Draw4Lines
+
+
+/; ============================================================================
+/; DrawHLine — Закраска горизонтального отрезка (1 bpp)
+/; Вход:
+/;   r0 = x_left
+/;   r1 = x_right
+/;   r2 = y
+/; Разрушаемые регистры: сохраняются на стек (r3, r4, r5)
+/; ============================================================================
+DrawHLine:
+    mov     r3, -(sp)
+    mov     r4, -(sp)
+    mov     r5, -(sp)
+
+    /; --- 1. Корректировка: гарантируем x_left <= x_right ---
+    cmp     r0, r1
+    ble     1f
+    mov     r0, r3            /; Swap r0, r1
+    mov     r1, r0
+    mov     r3, r1
+1:
+
+    mov r2, r3   /;r3 - Y
+    mul $80, r3
+    /; --- 3. Вычисление байтовых смещений и битовых индексов ---
+    /; X_left -> r4 = байт, r0 = бит
+    mov r0, r4
+    asr r4
+    asr r4
+    asr r4
+
+    bic     $0177770, r0      /; r0 = x_left % 8 (индекс бита 0..7)
+
+    /; X_right -> r5 = байт, r1 = бит
+    mov r1, r5
+    asr r5
+    asr r5
+    asr r5
+
+    bic     $0177770, r1      /; r1 = x_right % 8 (индекс бита 0..7)
+
+    add r4, r3
+    add offsetVPPU, r3
+    cmp r3, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
+    blt 2f
+    sub $054540, r3 /; 154540 - 100000 = 54540
+2:
+    /; r3 = адрес байта левого края в VRAM
+    mov     r3, @$0177010
+    sub     r4, r5            /; r5 = длина отрезка в байтах (0 = 1 байт)
+    bne     MultiByte
+
+    /; ========================================================================
+    /; Случай 1: Весь отрезок помещается в один байт (r5 == 0)
+    /; ========================================================================
+SingleByte:
+    add     TLeftMaskTable, r0
+    movb    (r0), r0          /; r0 = маска левой границы
+    add     TRightMaskTable, r1
+    movb    (r1), r1          /; r1 = маска правой границы
+
+    /; Итоговая маска = LeftMask AND RightMask
+    /; В PDP-11 AND делается через BIC: A AND B == A BIC (NOT B)
+    com     r1
+    bic     r1, r0            /; r0 = LeftMask & RightMask
+
+    movb    r0, @$0177024
+
+    br      HLineDone
+
+    /; ========================================================================
+    /; Случай 2: Отрезок пересекает несколько байт (r5 > 0)
+    /; ========================================================================
+MultiByte:
+    /; --- Левый край ---
+    add     TLeftMaskTable, r0
+    movb    (r0), r4          /; r4 = маска первого байта
+    mov     r3, @$0177010
+    movb    r4, @$0177024     /; Закрашиваем и переходим к следующему байту
+    inc     r3
+    dec     r5                /; Уменьшаем счетчик оставшихся байт
+    beq     LastByte          /; Если остался только последний байт
+
+    /; --- Промежуточные целые байты (скоростной цикл) ---    
+FillLoop:
+    mov     r3, @$0177010
+    movb    $0377, @$0177024      /; Заполняем по 8 пикселей за 1 слово команды
+    inc     r3
+    sob     r5, FillLoop      /; Цикл по r5
+
+    /; --- Правый край ---
+LastByte:
+    add     TRightMaskTable, r1
+    movb    (r1), r4          /; r4 = маска последнего байта
+    mov     r3, @$0177010
+    movb    r4, @$0177024          /; Закрашиваем правый край
+
+HLineDone:
+    mov     (sp)+, r5
+    mov     (sp)+, r4
+    mov     (sp)+, r3
+    rts     pc
+
 
 
 //====================ДАННЫЕ ПП======================================================

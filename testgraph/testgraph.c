@@ -29,7 +29,7 @@ void main()
     initMouse();
     initKeyb();
     initGraph();
-//    clearScreen();
+    clearScreen();
 
     setOnClick(OnClickEvent);
 
@@ -80,15 +80,18 @@ line(500, 250, 200, 40, 4);
     button(60, 68, 92, 83);
 
     circle(WIDTH / 2, HEIGHT / 2, 0, 2);
-    circle(WIDTH / 2, HEIGHT / 2, 20, 1);
-    circle(WIDTH / 2, HEIGHT / 2, 25, 3);
+    fillCircle(WIDTH / 2, HEIGHT / 2, 20, 1);
+    circle(WIDTH / 2, HEIGHT / 2, 21, 7);
+    circle(WIDTH / 2, HEIGHT / 2, 25, 3);  
+
+    fillCircle(200, 240, 1, 6);  
 
 
-    //random_init(50);
-    for (int x = 0; x < 30; x ++) 
+    random_init(50);
+    for (int x = 0; x < 300; x ++) 
     { 
         int r = random_range(2, 50);
-        circle(random_range(r, WIDTH - r), random_range(r, HEIGHT - r), r, random_range(1, 7));
+        fillCircle(random_range(r, WIDTH - r), random_range(r, HEIGHT - r), r, random_range(1, 7));
     }
     
 
@@ -97,5 +100,5 @@ line(500, 250, 200, 40, 4);
 
     finishGraph();    
     finishKeyb();    
-    //finishMouse();
+    finishMouse();
 }
