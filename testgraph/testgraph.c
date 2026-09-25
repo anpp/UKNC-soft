@@ -9,7 +9,7 @@
 
 void OnClickEvent(unsigned x, unsigned y)
 {
-  putPixel(x - 1, y - 1, 7);
+  fillCircle(x - 1, y - 1, 1, 7);
 }
 
 
@@ -88,10 +88,13 @@ line(500, 250, 200, 40, 4);
 
 
     random_init(60);
-    for (int x = 0; x < 300; x ++) 
+    for (int x = 0; x < 30; x ++) 
     { 
         int r = random_range(2, 50);
-        fillCircle(random_range(r, WIDTH - r), random_range(r, HEIGHT - r), r, random_range(1, 7));
+        int xx = random_range(r, WIDTH - r);
+        int yy = random_range(r, HEIGHT - r);
+        fillCircle(xx, yy, r, random_range(1, 7));
+        circle(xx, yy, r, 0);
     }
     
 

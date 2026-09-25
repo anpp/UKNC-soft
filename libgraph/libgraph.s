@@ -207,25 +207,23 @@ CalcAddress:
     mov PixelX, r0
     bic $0b1111111111111000, r0 ;/ В r0 номер точки в октете
     /; Подготовка маски для вывода пикселя
-    mov     $1, r1
-    ash     r0, r1
-    mov     r1, PxlMask
+    movb  MaskTable(r0), PxlMask
 
 22:
     rts  pc
 
 
 _putPixel:    
-1:
-    bit $1, running_proc
-    bne 1b
-
     mov     6(sp), PxClr
     mov     2(sp), r0
     mov     4(sp), r1   
     jsr  pc, CalcAddress
 
     bis $1, running_proc
+
+1:
+    bit $1, running_proc
+    bne 1b
 
     rts  pc
 
@@ -647,40 +645,38 @@ InvertScreenPPU:
 
 PutPixelPPU:    
     mov $PxlAddress, @r4
-    mov @r5, r0          /В r0 готовый адрес из ЦП
+    mov @r5, r0          /;В r0 готовый адрес из ЦП
 
-/;    inc (r4)
     inc @r4
-    mov @r5, r3          /в r3 маска пикселя
+    mov @r5, r1          /;в r1 маска пикселя
 
-    inc (r4)    / color
-    mov (r5), r2	
+    inc @r4    / color
+    mov @r5, @$0177016	
 
-    / Запись пикселя (r0 - адрес, r2 - цвет, r3 - маска пикселя в октете)
+    /; Запись пикселя (r0 - адрес, r1 - маска пикселя в октете)
     mov r0, @r4
-    mov r2, @$0177016
-    movb r3, @$0177024
+    movb r1, @$0177024
 
     jmp end_putpixel
 
 
 GetPixelPPU:
     mov $PxlAddress, @r4
-    mov @r5, r0          /В r0 готовый адрес из ЦП
+    mov @r5, r0          /;В r0 готовый адрес из ЦП
 
     mov $PxShiftPPU, @r4
-    mov @r5, r2          /в r2 число сдвигов вправо для @$0177024
+    mov @r5, r2          /;в r2 число сдвигов вправо для @$0177024
 
     mov r0, @r4
-    tst @$0177024    / чтение регистров цвета фона
+    tst @$0177024    /; чтение регистров цвета фона
     
-    mov @$0177020, r1    / младшее слово
-    mov @$0177022, r0    / старшее слово
-    ashc r2, r0         / сдвиг 32 бит регистров r0:r1
+    mov @$0177020, r1    /; младшее слово
+    mov @$0177022, r0    /; старшее слово
+    ashc r2, r0         /; сдвиг 32 бит регистров r0:r1
 
     bic $0b1111111111111000, r1
 
-    / цвет в CPU
+    /; цвет в CPU
     mov $RecColor, @r4
     mov r1, @r5
 
