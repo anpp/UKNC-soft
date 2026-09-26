@@ -1,7 +1,7 @@
 #ifndef LIB_GRAPH_H
 #define LIB_GRAPH_H
 
-extern void initGraph();
+extern bool initGraph();
 extern void finishGraph();
 extern void clearScreen();
 extern void putPixel(unsigned int x,unsigned int y, unsigned int color);

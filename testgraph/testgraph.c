@@ -28,9 +28,10 @@ void button(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2)
 
 void main()
 {
-    initMouse();    
-    initKeyb();
-    initGraph();
+    if(!initMouse()) return;
+    if(!initKeyb()) return;
+    if(!initGraph()) return;
+
     clearScreen();
 
     setOnClick(OnClickEvent);

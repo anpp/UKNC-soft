@@ -184,6 +184,29 @@ _setOnClick:
     mov  2(sp), OnClickEvent
     rts  pc
 
+
+/--------------------------------------------------------------------------------------
+.macro calcCurrVRAM
+/;  вычисление VRAM
+    mov MouseY, r1
+    mul BytesInString, r1
+    mov MouseX, r0
+    mov r0, r3
+    bic $0b1111111111111000, r3		/; r5 = величина сдвига (0..7)
+    mov r3, shift
+    asr r0
+    asr r0
+    asr r0
+    add r1, r0
+    add offsetV, r0			/; R0 = mouse vaddr
+    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
+    blt 1f
+    sub $054540, r0 /; 154540 - 100000 = 54540
+1:
+    mov   r0, currVRAM
+.endm
+
+
 /=============================================================================================
 pp.beg:
     /; сперва таблица адресов
@@ -207,8 +230,7 @@ begin:
     mov	@$02476, r0
     mov	@r0, offsetV
     
-    jsr pc, calcCurrVRAM
-    jsr pc, PaintMouse
+    calcCurrVRAM /;макрос
 
     mtps	$0200
     mov	@$0100, intTimer
@@ -227,41 +249,19 @@ PullCPU:
     rts    pc
 
 
-calcCurrVRAM:
-/;  вычисление VRAM
-    mov r5, -(sp)
-    mov MouseY, r1
-    mul BytesInString, r1
-    mov MouseX, r0
-    mov r0, r5
-    bic $0b1111111111111000, r5		/; r5 = величина сдвига (0..7)
-    mov r5, shift
-    asr r0
-    asr r0
-    asr r0
-    add r1, r0
-    add offsetV, r0			/; R0 = mouse vaddr
-    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 1f
-    sub $054540, r0 /; 154540 - 100000 = 54540
-1:
-    mov   r0, currVRAM
-
-    mov (sp)+, r5
-    rts pc
-
 /=============================================================================
 ParseMouse:
     /;mtps $0200
 
-    mov	$0177010, r4
-    mov	$0177014, r5
+    mov $0177010, r4
+    mov $0177014, r5
 
-    mov	@$02476, r0
-    mov	@r0, offsetV
+    /;каждый кадр это не нужно для нерезидента
+    /;mov  @$02476, r0
+    /;mov  @r0, offsetV
 
-    cmp	@r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    bge	exit
+    /;cmp @r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
+    /;bge exit
 
     mov	@$0177400, r0
     /;	проверки, что координаты и рулон не менялись
@@ -330,7 +330,8 @@ go:
     mov	VStrings, MouseY
 58:
 
-    jsr pc, RestoreBackground
+    jmp RestoreBackground
+end_restore:
     
     /;мышь стерта, пока не нарисована новая, проверка на завершение работы
     tst	finished
@@ -342,8 +343,9 @@ go:
     br exit
 
 99:
-    jsr pc, calcCurrVRAM
-    jsr pc, PaintMouse
+    calcCurrVRAM
+    jmp PaintMouse
+end_paintmouse:
 
 exit:
     /;mtps  $0
@@ -368,8 +370,8 @@ CheckShowMousePPU:
     mov  $VisibleMouse, r1
     clc
     ror  r1           /;в ro адрес VisibleMouse в ЦП
-    mov  r1, @$0177010
-    mov  @$0177014, VisibleMousePPU
+    mov  r1, @r4
+    mov  @r5, VisibleMousePPU
 
     jmp  end_checkshowmouse
 
@@ -385,6 +387,13 @@ TimerInt:
     mov r3, -(sp)
     mov r4, -(sp)
     mov r5, -(sp)  
+
+/;проверка на четность счетчика, рисуем раз в два кадра
+/    inc counter
+/    mov counter, r0
+/    clc
+/    ror r0
+/    bcs end_parsemouse
       
     jmp ParseMouse
 end_parsemouse:
@@ -401,6 +410,185 @@ end_parsemouse:
 
     jmp @intTimer
 /=============================================================================
+
+
+
+/-----------------------------------------------------------------------------
+paint_sprite_proc1:
+    mov   $7, r2
+
+    /; --- Переход на следующую строку ---
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   22f
+    sub   $054540, r0
+22:
+
+1:
+    clr   r3
+    bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
+    ash   shift, r3        /; Сдвигаем 16-битное слово r3 влево на shift бит
+
+    mov   r0, @r4
+    movb r3, @r5
+    inc @r4
+    swab r3
+    movb r3, @r5
+
+    /; --- Переход на следующую строку ---
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   2f
+    sub   $054540, r0
+2:
+    sob   r2, 1b
+    
+    jmp   end_paintsprite1
+
+/-----------------------------------------------------------------------------
+paint_sprite_proc2:
+    .rept 9
+    clr   r3
+    bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
+    ash   shift, r3        /; Сдвигаем 16-битное слово r3 влево на shift бит
+
+    mov   r0, @r4
+    movb r3, @r5
+    inc @r4
+    swab r3
+    movb r3, @r5
+
+    /; --- Переход на следующую строку ---
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   2f
+    sub   $054540, r0
+2:
+    .endr
+    
+    jmp   end_paintsprite2
+
+
+/=============================================================================
+PaintMouse:
+/;  r0 - VRAM
+    mov @$0177016, -(sp)    
+    mov r5, -(sp)
+
+
+    jmp SaveBackground
+end_savebkg:    
+
+    jmp CheckShowMousePPU              /;Проверка флага из ЦП - видимая ли мышь?
+end_checkshowmouse:
+/;    tst VisibleMousePPU              /;tst не нужен, флаги установлены в CheckShowMousePPU
+    beq     notpaint
+
+    mov $0177024, r5
+
+    mov   $7, @$0177016
+    mov   adrMouseSpr, r1
+    inc   r1
+    jmp   paint_sprite_proc1
+end_paintsprite1:
+/;====================ОКАНТОВКА===================================
+    mov   $0, @$0177016
+    mov   currVRAM, r0
+    mov   adrMouseSprEdging, r1
+    jmp   paint_sprite_proc2
+end_paintsprite2:
+/;====================ОКАНТОВКА===================================
+
+
+notpaint:
+    mov   (sp)+, r5
+    mov   (sp)+, @$0177016
+    jmp   end_paintmouse
+/=============================================================================
+
+
+/=============================================================================
+SaveBackground:
+/;r0 - адрес ВОЗУ
+    mov r0, -(sp)
+
+    mov $0177012, r3
+    mov adrBkgr, r1
+    .rept 9
+
+    mov  r0, @r4
+    mov  @r5, (r1)+
+    mov  @r3, (r1)+
+    inc  @r4
+    mov  @r5, (r1)+
+    mov  @r3, (r1)+
+
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   2f
+    sub   $054540, r0
+2:
+    .endr
+
+    mov (sp)+, r0
+    jmp end_savebkg
+/=============================================================================
+
+
+/=============================================================================
+RestoreBackground:
+    tst VisibleMousePPU
+    bne 1f
+    jmp notrestore
+1: 
+    mov currVRAM, r0
+    mov $0177012, r3
+    mov adrBkgr, r1
+    mov  $9, r2
+3:
+    mov  r0, @r4
+    mov  (r1)+, @r5
+    mov  (r1)+, @r3
+    inc  @r4
+    mov  (r1)+, @r5
+    mov  (r1)+, @r3
+
+    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   2f
+    sub   $054540, r0
+2:
+    sob   r2, 3b
+notrestore:
+    jmp end_restore
+/=============================================================================
+
+
+/;==============================ДАННЫЕ ПП=====================================
+MouSpr:
+    .byte  0b00000000
+    .byte  0b00000010
+    .byte  0b00000110
+    .byte  0b00001110
+    .byte  0b00011110
+    .byte  0b00111110
+    .byte  0b00001110
+    .byte  0b00001110
+    .byte  0b00000000
+MouSprEdging:
+    .byte  0b00000011
+    .byte  0b00000101
+    .byte  0b00001001
+    .byte  0b00010001
+    .byte  0b00100001
+    .byte  0b01000001
+    .byte  0b11110001
+    .byte  0b00010001
+    .byte  0b00011111
+
+
+Bkgr: .fill 38, 2, 0
+
 
 finished:  .word 0   /;флаг завершения, устанавливается из CPU вызовом MouseFinish
 
@@ -428,139 +616,9 @@ adrBkgr:        .word Bkgr - LT
 .even
 shift: .word 0
 VisibleMousePPU:  .word 0
+counter: .word 0 /;счетчик тактов
 
-
-
-/-----------------------------------------------------------------------------
-paint_sprite_proc:
-    .rept 9
-    clr   r3
-    bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
-    ash   shift, r3        /; Сдвигаем 16-битное слово r3 влево на shift бит
-
-    mov   r0, @r4
-    movb r3, @$0177024
-    inc @r4
-    swab r3
-    movb r3, @$0177024
-
-    /; --- Переход на следующую строку ---
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   1f
-    sub   $054540, r0
-1:
-    .endr
-    
-    rts   pc
-
-/=============================================================================
-PaintMouse:
-/;  r0 - VRAM
-    mov @$0177016, -(sp)    
-
-    jmp SaveBackground
-end_savebkg:    
-
-    jmp CheckShowMousePPU              /;Проверка флага из ЦП - видимая ли мышь?
-end_checkshowmouse:
-/;    tst VisibleMousePPU              /;tst не нужен, флаги установлены в CheckShowMousePPU
-    beq     notpaint
-
-    mov   $7, @$0177016
-    mov   adrMouseSpr, r1
-    jsr   pc, paint_sprite_proc
-/;====================ОКАНТОВКА===================================
-    mov   $0, @$0177016
-    mov   currVRAM, r0
-    mov   adrMouseSprEdging, r1
-    jsr   pc, paint_sprite_proc
-/;====================ОКАНТОВКА===================================
-
-notpaint:
-    mov   (sp)+, @$0177016
-    rts pc
-/=============================================================================
-
-
-/=============================================================================
-SaveBackground:
-/;r0 - адрес ВОЗУ
-    mov r0, -(sp)
-
-    mov adrBkgr, r1
-    mov $9, r2
-1:
-    mov  r0, @r4
-    mov  @$0177014, (r1)+
-    mov  @$0177012, (r1)+
-    inc  @r4
-    mov  @$0177014, (r1)+
-    mov  @$0177012, (r1)+
-
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   2f
-    sub   $054540, r0
-2:
-    sob r2, 1b
-
-    mov (sp)+, r0
-    jmp end_savebkg
-/=============================================================================
-
-
-/=============================================================================
-RestoreBackground:
-    tst VisibleMousePPU
-    bne 1f
-    jmp notrestore
-1: 
-    mov currVRAM, r0
-
-    mov adrBkgr, r1
-    .rept  9
-    mov  r0, @r4
-    mov  (r1)+, @$0177014
-    mov  (r1)+, @$0177012    
-    inc  @r4
-    mov  (r1)+, @$0177014
-    mov  (r1)+, @$0177012    
-
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   2f
-    sub   $054540, r0
-2:
-    .endr
-notrestore:
-    rts pc
-/=============================================================================
-
-
-MouSpr:
-    .byte  0b00000010
-    .byte  0b00000110
-    .byte  0b00001110
-    .byte  0b00011110
-    .byte  0b00111110
-    .byte  0b01111110
-    .byte  0b11111110
-    .byte  0b00011110
-    .byte  0b00011110
-MouSprEdging:
-    .byte  0b00000011
-    .byte  0b00000101
-    .byte  0b00001001
-    .byte  0b00010001
-    .byte  0b00100001
-    .byte  0b01000001
-    .byte  0b11110001
-    .byte  0b00010001
-    .byte  0b00011111
-
-
-Bkgr: .fill 38, 2, 0
+.even
 
 pp.end:
 /=============================================================================================

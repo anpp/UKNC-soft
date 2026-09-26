@@ -134,9 +134,11 @@ _initGraph:
     movb  $030, command
     mput  mp
     
+    mov  $1, r0
     rts  pc
 
 1:
+    mov  $0, r0
     rts  pc
 
 _finishGraph:
