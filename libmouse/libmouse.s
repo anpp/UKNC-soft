@@ -438,11 +438,11 @@ adrBkgr:        .word Bkgr - LT
 shift: .word 0
 VisibleMousePPU:  .word 0
 
+
+
 /-----------------------------------------------------------------------------
-.macro  paint_sprite adr_spr
-    mov   \adr_spr, r1
-    mov   $9, r2
-1\@:   
+paint_sprite_proc:
+    .rept 9
     clr   r3
     bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
     ash   shift, r3        /; Сдвигаем 16-битное слово r3 влево на shift бит
@@ -456,11 +456,12 @@ VisibleMousePPU:  .word 0
     /; --- Переход на следующую строку ---
     add   $80, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
-    blt   2\@f
+    blt   1f
     sub   $054540, r0
-2\@:
-    sob   r2, 1\@b
-.endm
+1:
+    .endr
+    
+    rts   pc
 
 /=============================================================================
 PaintMouse:
@@ -473,18 +474,19 @@ end_savebkg:
     jmp CheckShowMousePPU              /;Проверка флага из ЦП - видимая ли мышь?
 end_checkshowmouse:
 /;    tst VisibleMousePPU              /;tst не нужен, флаги установлены в CheckShowMousePPU
-    beq notpaint
+    beq     notpaint
 
     mov   $7, @$0177016
-    paint_sprite adrMouseSpr            /;макрос рисования спрайта
+    mov   adrMouseSpr, r1
+    jsr   pc, paint_sprite_proc
 /;====================ОКАНТОВКА===================================
     mov   $0, @$0177016
     mov   currVRAM, r0
-    paint_sprite adrMouseSprEdging
+    mov   adrMouseSprEdging, r1
+    jsr   pc, paint_sprite_proc
 /;====================ОКАНТОВКА===================================
 
 notpaint:
-
     mov   (sp)+, @$0177016
     rts pc
 /=============================================================================
@@ -507,9 +509,9 @@ SaveBackground:
 
     add   $80, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
-    blt   10f
+    blt   2f
     sub   $054540, r0
-10:
+2:
     sob r2, 1b
 
     mov (sp)+, r0
@@ -520,13 +522,13 @@ SaveBackground:
 /=============================================================================
 RestoreBackground:
     tst VisibleMousePPU
-    beq notrestore
- 
+    bne 1f
+    jmp notrestore
+1: 
     mov currVRAM, r0
 
     mov adrBkgr, r1
-    mov $9, r2
-1:
+    .rept  9
     mov  r0, @r4
     mov  (r1)+, @$0177014
     mov  (r1)+, @$0177012    
@@ -536,10 +538,10 @@ RestoreBackground:
 
     add   $80, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
-    blt   10f
+    blt   2f
     sub   $054540, r0
-10:
-    sob r2, 1b
+2:
+    .endr
 notrestore:
     rts pc
 /=============================================================================
