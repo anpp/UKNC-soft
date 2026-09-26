@@ -10,7 +10,7 @@
 void OnClickEvent(unsigned x, unsigned y)
 {
   hideMouse();
-  fillCircle(x - 1, y - 1, 2, 7);
+  fillCircle(x, y, 2, 7);
   showMouse();
 }
 
@@ -28,12 +28,10 @@ void button(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2)
 
 void main()
 {
-    initMouse();
+    initMouse();    
     initKeyb();
     initGraph();
     clearScreen();
-
-    showMouse(); //сперва экран очищается, потом рисуется мышь
 
     setOnClick(OnClickEvent);
 
@@ -100,11 +98,14 @@ line(500, 250, 200, 40, 4);
         fillCircle(xx, yy, r, random_range(1, 7));
         circle(xx, yy, r, 0);
     }
+
+
+    showMouse(); //сперва экран отрисовывается, потом рисуется мышь
     
     waitAnyKey();
     printTop(1, "              ");
-
+    
     finishGraph();    
-    finishKeyb();    
     finishMouse();
+    finishKeyb();        
 }

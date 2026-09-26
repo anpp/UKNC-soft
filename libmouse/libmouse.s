@@ -1,4 +1,4 @@
-.globl _initMouse, _finishMouse, _setOnClick, _showMouse, _hideMouse
+.globl _initMouse, _finishMouse, _setOnClick, _showMouse, _hideMouse, _getMouseXY
 
 
 .text
@@ -20,16 +20,6 @@ command:    .byte   01
 addrPP:     .word   0
 WORD3:      .word   pplen
 WORDS:      .word   pplen
-.even
-
-/;структура для отправки данных во время работы (координат и тп)
-mp1:
-             .byte   0
-command1:    .byte   020
-             .word   032
-addrPP1:     .word   0
-addrCP1:     .word   0
-WORDS1:      .word   0
 .even
 
 .macro  mput  adrmp
@@ -168,30 +158,20 @@ _finishMouse:
 /;=============================================================================================
 _showMouse:
     mov $1, VisibleMouse
-    br  1f
+    br  2f
 _hideMouse:
     mov $0, VisibleMouse
-    mov $100000, r0 /;задержка
-2:
-    nop
-    nop
-    sob r0, 2b
 
+    mov $100, r0 /;задержка чтоб мышь успела скрыться (по факту и без неё работает)
 1:
-    /;tst finishShowHide
-    /;beq  5b
-
+    nop
+    nop
+    sob r0, 1b
+2:
     rts pc
 
 /;=============================================================================================
-_GetMouseXY:
-    /;mov   addrPP, r0
-    /;add   $(MouseOldX - pp.beg), r0  /;В r0 адрес координат в PPU
-    /;movb  $010, command1
-    /;mov   r0, addrPP1
-    /;mov   $GlobCoordMouse, addrCP1 /; вот проблема - $CoordMouse это смещение в текущем .o...
-    /;mov   $2, WORDS1
-    /;mput  mp1
+_getMouseXY:
                                                                                   	
     mov   MX, r0
     mov   MY, r1
@@ -389,20 +369,14 @@ FinishMousePPU:
     rts  pc
 
 /=============================================================================
-ShowMousePPU:
+CheckShowMousePPU:
     mov  $VisibleMouse, r1
     clc
     ror  r1           /;в ro адрес VisibleMouse в ЦП
     mov  r1, @$0177010
     mov  @$0177014, VisibleMousePPU
 
-    /;mov $finishShowHide, r1
-    /;clc    
-    /;ror   r1
-    /;mov r0, @$0177010
-    /;mov $1, @$0177014    
-
-    rts  pc
+    jmp  end_checkshowmouse
 
 
 /=============================================================================
@@ -496,13 +470,13 @@ PaintMouse:
     jmp SaveBackground
 end_savebkg:    
 
-    jsr pc, ShowMousePPU
-
-    tst VisibleMousePPU
+    jmp CheckShowMousePPU              /;Проверка флага из ЦП - видимая ли мышь?
+end_checkshowmouse:
+/;    tst VisibleMousePPU              /;tst не нужен, флаги установлены в CheckShowMousePPU
     beq notpaint
 
     mov   $7, @$0177016
-    paint_sprite adrMouseSpr              /;макрос рисования спрайта
+    paint_sprite adrMouseSpr            /;макрос рисования спрайта
 /;====================ОКАНТОВКА===================================
     mov   $0, @$0177016
     mov   currVRAM, r0
@@ -544,7 +518,10 @@ SaveBackground:
 
 
 /=============================================================================
-RestoreBackground: 
+RestoreBackground:
+    tst VisibleMousePPU
+    beq notrestore
+ 
     mov currVRAM, r0
 
     mov adrBkgr, r1
@@ -563,7 +540,7 @@ RestoreBackground:
     sub   $054540, r0
 10:
     sob r2, 1b
-
+notrestore:
     rts pc
 /=============================================================================
 
