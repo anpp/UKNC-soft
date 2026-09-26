@@ -206,7 +206,6 @@ begin:
 
     mov	@$02476, r0
     mov	@r0, offsetV
-    mov	@r0, OldOffsetV
     
     jsr pc, calcCurrVRAM
     jsr pc, PaintMouse
@@ -231,9 +230,9 @@ PullCPU:
 calcCurrVRAM:
 /;  вычисление VRAM
     mov r5, -(sp)
-    mov MouseOldY, r1
+    mov MouseY, r1
     mul BytesInString, r1
-    mov MouseOldX, r0
+    mov MouseX, r0
     mov r0, r5
     bic $0b1111111111111000, r5		/; r5 = величина сдвига (0..7)
     mov r5, shift
@@ -241,7 +240,7 @@ calcCurrVRAM:
     asr r0
     asr r0
     add r1, r0
-    add OldOffsetV, r0			/; R0 = mouse vaddr
+    add offsetV, r0			/; R0 = mouse vaddr
     cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
     blt 1f
     sub $054540, r0 /; 154540 - 100000 = 54540
@@ -343,10 +342,6 @@ go:
     br exit
 
 99:
-    mov	MouseX, MouseOldX
-    mov	MouseY, MouseOldY
-    mov	offsetV, OldOffsetV
-
     jsr pc, calcCurrVRAM
     jsr pc, PaintMouse
 
@@ -415,14 +410,10 @@ MouseX:     .word 320
 MouseY:     .word 140
 MouseRL:    .word 0
 
-MouseOldX:   .word 320
-MouseOldY:   .word 140
-
 CharsInString:  .word   0	/;Кол-во символов в строке (22656 + 4)       
 VStrings:       .word   0	/;Число отображаемых видеострок (22656 + 6)
 BytesInString:  .word   0	/;Длина видеостроки в байтах (22656 + 10)
 offsetV:        .word   0	/;адрес верхней видеостроки пользовательского экрана
-OldOffsetV:     .word   0	/;адрес верхней видеостроки пользовательского экрана (предыдущий)
 
 currVRAM:       .word   0
 
