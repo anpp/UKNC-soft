@@ -209,7 +209,7 @@ _setOnClick:
 
     mov MouseX, r0
     mov r0, r3
-    bic $0b1111111111111000, r3		/; r5 = величина сдвига (0..7)
+    bic $0b1111111111111000, r3		/; r3 = величина сдвига (0..7)
     mov r3, shift
     asr r0
     asr r0
@@ -430,7 +430,7 @@ end_parsemouse:
 
 
 /-----------------------------------------------------------------------------
-paint_sprite_proc1:
+.macro paint_sprite_macro1
     mov $80, r2
     /; --- Переход на следующую строку ---
     add   r2, r0          /; Смещение на строку вниз (+80 байт)
@@ -457,10 +457,10 @@ paint_sprite_proc1:
 2:
     .endr
     
-    jmp   end_paintsprite1
+    .endm
 
 /-----------------------------------------------------------------------------
-paint_sprite_proc2:
+.macro paint_sprite_macro2
     mov $80, r2
 
     .rept 9
@@ -482,7 +482,7 @@ paint_sprite_proc2:
 2:
     .endr
     
-    jmp   end_paintsprite2
+    .endm
 
 
 /=============================================================================
@@ -498,21 +498,20 @@ end_savebkg:
     jmp CheckShowMousePPU              /;Проверка флага из ЦП - видимая ли мышь?
 end_checkshowmouse:
 /;    tst VisibleMousePPU              /;tst не нужен, флаги установлены в CheckShowMousePPU
-    beq     notpaint
-
+    bne     paint
+    jmp     notpaint
+paint:
     mov $0177024, r5
 
     mov   $7, @$0177016
     mov   adrMouseSpr, r1
     inc   r1
-    jmp   paint_sprite_proc1
-end_paintsprite1:
+    paint_sprite_macro1
 /;====================ОКАНТОВКА===================================
     mov   $0, @$0177016
     mov   currVRAM, r0
     mov   adrMouseSprEdging, r1
-    jmp   paint_sprite_proc2
-end_paintsprite2:
+    paint_sprite_macro2
 /;====================ОКАНТОВКА===================================
 
 
