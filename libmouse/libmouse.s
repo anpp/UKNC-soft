@@ -104,11 +104,7 @@ Int460:
 
 
 _initMouse:
-    mtps  $0200
-    bis   $0100, @$0176660      /;Разрешение прерывания 0460    
-    mov   @$0460, OldInt460
-    mov   $Int460, @$0460
-    mtps  $0
+    jsr   pc, InitLineTable
 
     mput  mp
     bne	1f
@@ -120,6 +116,12 @@ _initMouse:
 
     movb  $030, command
     mput  mp
+
+    mtps  $0200
+    bis   $0100, @$0176660      /;Разрешение прерывания 0460    
+    mov   @$0460, OldInt460
+    mov   $Int460, @$0460
+    mtps  $0
     
     mov  $1, r0
     rts  pc
@@ -127,6 +129,18 @@ _initMouse:
 1:
     mov  $0, r0
     rts  pc
+
+
+InitLineTable:
+    clr     r0
+    clr     r1
+1:  mov     r0, LineTable(r1)
+    add     $80, r0                 /; +80 байт на строку
+    add     $2, r1
+    cmp     r1, $(286 * 2)
+    blt     1b
+    rts     pc
+
 
 /;=============================================================================================
 _finishMouse:
@@ -187,9 +201,12 @@ _setOnClick:
 
 /--------------------------------------------------------------------------------------
 .macro calcCurrVRAM
-/;  вычисление VRAM
-    mov MouseY, r1
-    mul BytesInString, r1
+    /; 1. Вычисление Y * 80 через таблицу
+    mov     MouseY, r1
+    asl     r1                      /; r1 = Y * 2 (индекс слова в таблице)
+    add     adrLineTable, r1
+    mov     @r1, r1       /; r1 = Y * 80
+
     mov MouseX, r0
     mov r0, r3
     bic $0b1111111111111000, r3		/; r5 = величина сдвига (0..7)
@@ -205,7 +222,6 @@ _setOnClick:
 1:
     mov   r0, currVRAM
 .endm
-
 
 /=============================================================================================
 pp.beg:
@@ -389,11 +405,11 @@ TimerInt:
     mov r5, -(sp)  
 
 /;проверка на четность счетчика, рисуем раз в два кадра
-/    inc counter
-/    mov counter, r0
-/    clc
-/    ror r0
-/    bcs end_parsemouse
+/;    inc counter
+/;    mov counter, r0
+/;    clc
+/;    ror r0
+/;    bcs end_parsemouse
       
     jmp ParseMouse
 end_parsemouse:
@@ -415,16 +431,14 @@ end_parsemouse:
 
 /-----------------------------------------------------------------------------
 paint_sprite_proc1:
-    mov   $7, r2
-
+    mov $80, r2
     /; --- Переход на следующую строку ---
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    add   r2, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
     blt   22f
     sub   $054540, r0
-22:
-
-1:
+22:    
+    .rept 7
     clr   r3
     bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
     ash   shift, r3        /; Сдвигаем 16-битное слово r3 влево на shift бит
@@ -436,17 +450,19 @@ paint_sprite_proc1:
     movb r3, @r5
 
     /; --- Переход на следующую строку ---
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    add   r2, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
     blt   2f
     sub   $054540, r0
 2:
-    sob   r2, 1b
+    .endr
     
     jmp   end_paintsprite1
 
 /-----------------------------------------------------------------------------
 paint_sprite_proc2:
+    mov $80, r2
+
     .rept 9
     clr   r3
     bisb  (r1)+, r3        /; Считываем 1 байт спрайта мыши
@@ -459,7 +475,7 @@ paint_sprite_proc2:
     movb r3, @r5
 
     /; --- Переход на следующую строку ---
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    add   r2, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
     blt   2f
     sub   $054540, r0
@@ -511,7 +527,8 @@ notpaint:
 SaveBackground:
 /;r0 - адрес ВОЗУ
     mov r0, -(sp)
-
+ 
+    mov $80, r2
     mov $0177012, r3
     mov adrBkgr, r1
     .rept 9
@@ -523,7 +540,7 @@ SaveBackground:
     mov  @r5, (r1)+
     mov  @r3, (r1)+
 
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    add   r2, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
     blt   2f
     sub   $054540, r0
@@ -544,8 +561,9 @@ RestoreBackground:
     mov currVRAM, r0
     mov $0177012, r3
     mov adrBkgr, r1
-    mov  $9, r2
-3:
+    mov  $80, r2
+
+    .rept 9
     mov  r0, @r4
     mov  (r1)+, @r5
     mov  (r1)+, @r3
@@ -553,12 +571,12 @@ RestoreBackground:
     mov  (r1)+, @r5
     mov  (r1)+, @r3
 
-    add   $80, r0          /; Смещение на строку вниз (+80 байт)
+    add   r2, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
     blt   2f
     sub   $054540, r0
 2:
-    sob   r2, 3b
+    .endr
 notrestore:
     jmp end_restore
 /=============================================================================
@@ -611,12 +629,15 @@ adrProc:        .word ParseMouse - LT
 adrMouseSpr:    .word MouSpr - LT
 adrMouseSprEdging:    .word MouSprEdging - LT
 adrBkgr:        .word Bkgr - LT
+adrLineTable:   .word LineTable - LT
 .word 0
 
 .even
 shift: .word 0
 VisibleMousePPU:  .word 0
 counter: .word 0 /;счетчик тактов
+
+LineTable:  .fill 286, 2, 0 ;/286 строк
 
 .even
 

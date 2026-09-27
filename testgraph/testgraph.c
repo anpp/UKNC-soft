@@ -40,7 +40,7 @@ void main()
                                       
     // ---- Рисуем сетку с шагом 10 ----
     // Вертикальные линии (x = 0, 10, 20, ..., 640)
-/*
+
     for (int x = 0; x < WIDTH; x += 10) {
         fillRect(x, 0, x, HEIGHT - 1, 7);
     }
@@ -49,7 +49,7 @@ void main()
         fillRect(0, y, WIDTH - 1, y, 7);
     }
     // ---------------------------------
-*/
+
  
 line(10, 10, 600, 200, 7);
 line(350, 200, 0, 0, 6);
@@ -91,7 +91,7 @@ line(500, 250, 200, 40, 4);
 
 
     random_init(60);
-    for (int x = 0; x < 30; x ++) 
+    for (int x = 0; x < 20; x ++) 
     { 
         int r = random_range(2, 50);
         int xx = random_range(r, WIDTH - r);

@@ -123,6 +123,8 @@ pp_mput:
 
 
 _initGraph:
+    jsr   pc, InitLineTable
+
     mput  mp
     bne	1f
 
@@ -140,6 +142,19 @@ _initGraph:
 1:
     mov  $0, r0
     rts  pc
+
+
+InitLineTable:
+    clr     r0
+    clr     r1
+1:  mov     r0, LineTable(r1)
+    add     $80, r0                 /; +80 байт на строку
+    add     $2, r1
+    cmp     r1, $(286 * 2)
+    blt     1b
+    rts     pc
+
+
 
 _finishGraph:
     bis $0100000, running_proc  /флаг завершения для ПП
@@ -191,7 +206,9 @@ CalcAddress:
     mov  r0, PixelX
     mov  r1, PixelY
 
-    mul $80, r1
+    asl     r1                      /; r1 = Y * 2 (индекс слова в таблице)
+    mov     LineTable(r1), r1       /; r1 = r1 * 80
+
     /деление координаты x на 8
     asr r0
     asr r0
@@ -1298,7 +1315,10 @@ Plot8Points:
 /;r0 - x, r1 - y
 PutPixel: 
     mov r0, -(sp)   
-    mul $80, r1
+    asl     r1                      /; r1 = Y * 2 (индекс слова в таблице)
+    add     TLineTable, r1
+    mov     @r1, r1       /; r1 = Y * 80
+
     /;деление координаты x на 8
     asr r0
     asr r0
@@ -1468,7 +1488,10 @@ DrawHLine:
 1:
 
     mov r2, r3   /;r3 - Y
-    mul $80, r3
+    asl     r3                      /; r3 = Y * 2 (индекс слова в таблице)
+    add     TLineTable, r3
+    mov     @r3, r3       /; r3 = Y * 80
+
     /; --- 3. Вычисление байтовых смещений и битовых индексов ---
     /; X_left -> r4 = байт, r0 = бит
     mov r0, r4
@@ -1581,10 +1604,14 @@ TAddr:  /; Таблица адресов
 TMaskTable:      .word MaskTable - LT
 TLeftMaskTable:  .word LeftMaskTable - LT
 TRightMaskTable: .word RightMaskTable - LT
+TLineTable:   .word LineTable - LT
 .word 0
 
 str_buff:         .byte 0
 str_buffer:       .fill 40, 1, 0  /; Буфер для строки
+
+LineTable:  .fill 286, 2, 0 ;/286 строк
+
 .even
 
 
