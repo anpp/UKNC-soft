@@ -287,19 +287,20 @@ PullCPU:
 
     mov $0177012, r3
     mov adrBkgr, r1
-    .rept 9
-
     mov  r0, @r4
+
+    .rept 9
+    
     mov  @r5, (r1)+
     mov  @r3, (r1)+
     inc  @r4
     mov  @r5, (r1)+
     mov  @r3, (r1)+
 
-    add   r2, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
+    add   r2, @r4          /; Смещение на строку вниз (+80 байт)
+    cmp   @r4, r3
     blo   2f
-    sub   $054540, r0
+    sub   $054540, @r4
 2:
     .endr
 
@@ -314,23 +315,22 @@ PullCPU:
     bne 1f
     jmp notrestore
 1: 
-    mov currVRAM, r0
+    mov currVRAM, @r4
     mov $0177012, r3
     mov adrBkgr, r1
-    mov  $80, r2
+    mov  $79, r2
 
     .rept 9
-    mov  r0, @r4
     mov  (r1)+, @r5
     mov  (r1)+, @r3
     inc  @r4
     mov  (r1)+, @r5
     mov  (r1)+, @r3
 
-    add   r2, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
+    add   r2, @r4          /; Смещение на строку вниз (+79 байт)
+    cmp   @r4, $0154540
     blo   2f
-    sub   $054540, r0
+    sub   $054540, @r4
 2:
     .endr
 notrestore:
@@ -340,26 +340,23 @@ notrestore:
 
 /-----------------------------------------------------------------------------
 .macro paint_sprite_macro1
-    /; --- Переход на следующую строку ---
-    add   r2, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   22f
-    sub   $054540, r0
-22:    
-    .rept 7
-    mov   (r1)+, r3
-
     mov   r0, @r4
-    movb  r3, @r5
+    add   r2, @r4
+    inc   @r4             /;для первого спрайта выводим со второго слова
+
+    .rept 7
+
+    movb (r1)+,@r5
     inc   @r4
-    swab  r3
-    movb  r3, @r5
+    movb (r1)+,@r5
+
                                                            	
     /; --- Переход на следующую строку ---
-    add   r2, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blo   2f
-    sub   $054540, r0
+    add   r2, @r4          /; Смещение на строку вниз (+79 байт)
+    /; для внутренней части мыши без проверок для скорости.
+    /;cmp   @r4, r3
+    /;blo   2f
+    /;sub   $054540, @r4
 2:
     .endr
     
@@ -367,20 +364,19 @@ notrestore:
 
 /-----------------------------------------------------------------------------
 .macro paint_sprite_macro2    
-    .rept 9
-    mov   (r1)+, r3
-
     mov   r0, @r4
-    movb  r3, @r5
+
+    .rept 9
+
+    movb (r1)+,@r5
     inc   @r4
-    swab  r3
-    movb  r3, @r5
+    movb (r1)+,@r5
 
     /; --- Переход на следующую строку ---
-    add   r2, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
+    add   r2, @r4          /; Смещение на строку вниз (+79 байт)
+    cmp   @r4, r3
     blo   2f
-    sub   $054540, r0
+    sub   $054540, @r4
 2:
     .endr
     
@@ -392,7 +388,8 @@ notrestore:
 /;  r0 - VRAM
     mov @$0177016, -(sp)    
 
-    mov $80, r2                      /;r2 используется в SaveBackground, paint_sprite_macro1, paint_sprite_macro2
+    mov $0154540, r3
+    mov $79, r2                      /;r2 используется в SaveBackground, paint_sprite_macro1, paint_sprite_macro2
     SaveBackground
 
     CheckShowMousePPU                 /;Проверка флага из ЦП - видимая ли мышь?
@@ -400,8 +397,8 @@ notrestore:
     bne     paint
     jmp     notpaint
 paint:
-    mov currVRAM, r0                /;SaveBackground испортил r0
     mov $0177024, r5
+    mov $0154540, r3                /;r3 испорчен в CheckShowMousePPU
     /;mov shift, r1                 /; в r1 смещение прешифта, вычислено ранее
 
     mov   $7, @$0177016
@@ -410,7 +407,6 @@ paint:
     paint_sprite_macro1
 /;====================ОКАНТОВКА===================================
     mov   $0, @$0177016
-    mov   currVRAM, r0
 /;  в r1 = адрес прешифта спрайта adrMouseSprEdging
     add   $128, r1                  /; 144 - 16 = 128 (после рисования пред. части r1 = конец спрайта - 2 байта)
     paint_sprite_macro2
@@ -478,25 +474,28 @@ go:
     add $2, sp
 111:
 
-    mov	r2, MouseRL
-    mov	$639, r2   /;максимальная координата x
+    mov     r2, MouseRL
+    mov     $639, r2            /; максмальная координата x
 
-    tst	MouseX
-    bge	52f
-    clr	MouseX
-    br	54f
-52:	cmp  MouseX, r2
-    ble	54f
-    mov	r2,  MouseX
-54:	tst  MouseY
-    bge	56f
-    clr	MouseY
-    br	58f
-56:	cmp  MouseY, VStrings
-    ble	58f
-    mov	VStrings, MouseY
+    /; --- Ограничение X [0 .. 639] ---
+    cmp     MouseX, r2
+    blos    54f                 /; 0 <= MouseX <= 639
+    bpl     52f                 /; Если разность > 0, значит MouseX > 639
+    clr     MouseX              /; Иначе MouseX < 0
+    br      54f
+52: 
+    mov     r2, MouseX
+
+54:
+    /; --- Ограничение Y [0 .. VStrings] ---
+    cmp     MouseY, VStrings
+    blos    58f                 /; 0 <= MouseY <= VStrings
+    bpl     56f                 /; Если разность > 0, значит MouseY > VStrings
+    clr     MouseY              /; Иначе MouseY < 0
+    br      58f
+56: mov     VStrings, MouseY
+
 58:
-
     RestoreBackground
     
     /;мышь стерта, пока не нарисована новая, проверка на завершение работы
