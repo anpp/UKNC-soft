@@ -266,7 +266,7 @@ PullCPU:
 
 
 /=============================================================================
-ParseMouse:
+.macro ParseMouse
     /;mtps $0200
 
     mov $0177010, r4
@@ -293,14 +293,14 @@ go:
     clr	r2			/; R2 - RL buttons
                           /; X and RMB
     movb    r0, r1
-    asr	r1
-    rol	r2
+    asr r1
+    rol r2
     add	r1, MouseX
         /; Y and LMB
     swab    r0
     movb    r0, R1
-    asr	r1
-    rol	r2
+    asr r1
+    rol r2
     sub	r1, MouseY		/; Y is inverted
     
     /;проверка на клик левой кнопкой, пока в лоб
@@ -365,7 +365,7 @@ end_paintmouse:
 
 exit:
     /;mtps  $0
-    jmp  end_parsemouse
+.endm
 /=============================================================================
 
 
@@ -382,14 +382,14 @@ FinishMousePPU:
     rts  pc
 
 /=============================================================================
-CheckShowMousePPU:
+.macro CheckShowMousePPU
     mov  $VisibleMouse, r1
     clc
     ror  r1           /;в ro адрес VisibleMouse в ЦП
     mov  r1, @r4
     mov  @r5, VisibleMousePPU
 
-    jmp  end_checkshowmouse
+.endm
 
 
 /=============================================================================
@@ -411,7 +411,8 @@ TimerInt:
 /;    ror r0
 /;    bcs end_parsemouse
       
-    jmp ParseMouse
+    ParseMouse
+
 end_parsemouse:
 
     mov (sp)+, r5
@@ -495,8 +496,7 @@ PaintMouse:
     jmp SaveBackground
 end_savebkg:    
 
-    jmp CheckShowMousePPU              /;Проверка флага из ЦП - видимая ли мышь?
-end_checkshowmouse:
+    CheckShowMousePPU                 /;Проверка флага из ЦП - видимая ли мышь?
 /;    tst VisibleMousePPU              /;tst не нужен, флаги установлены в CheckShowMousePPU
     bne     paint
     jmp     notpaint
@@ -624,7 +624,6 @@ currVRAM:       .word   0
 
 TAddr: /; Таблица адресов
 TIProcAdr:      .word TimerInt - LT
-adrProc:        .word ParseMouse - LT
 adrMouseSpr:    .word MouSpr - LT
 adrMouseSprEdging:    .word MouSprEdging - LT
 adrBkgr:        .word Bkgr - LT
