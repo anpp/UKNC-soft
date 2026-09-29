@@ -134,7 +134,8 @@ _initMouse:
 InitLineTable:
     clr     r0
     clr     r1
-1:  mov     r0, LineTable(r1)
+1:  
+    mov     r0, LineTable(r1)
     add     $80, r0                 /; +80 байт на строку
     add     $2, r1
     cmp     r1, $(286 * 2)
@@ -270,11 +271,18 @@ PullCPU:
 
 
 /=============================================================================
+.macro CheckShowMousePPU
+    mov  $VisibleMouse, r1
+    clc
+    ror  r1           /;в ro адрес VisibleMouse в ЦП
+    mov  r1, @r4
+    mov  @r5, VisibleMousePPU
+.endm
+
+
+/=============================================================================
 .macro SaveBackground
-/;r0 - адрес ВОЗУ
-    mov r0, -(sp)
- 
-    mov $80, r2
+/;r0 - адрес ВОЗУ 
     mov $0177012, r3
     mov adrBkgr, r1
     .rept 9
@@ -288,12 +296,10 @@ PullCPU:
 
     add   r2, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
-    blt   2f
+    blo   2f
     sub   $054540, r0
 2:
     .endr
-
-    mov (sp)+, r0
 .endm
 /=============================================================================
 
@@ -319,11 +325,94 @@ PullCPU:
 
     add   r2, r0          /; Смещение на строку вниз (+80 байт)
     cmp   r0, $0154540
-    blt   2f
+    blo   2f
     sub   $054540, r0
 2:
     .endr
 notrestore:
+.endm
+/=============================================================================
+
+
+/-----------------------------------------------------------------------------
+.macro paint_sprite_macro1
+    /; --- Переход на следующую строку ---
+    add   r2, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blt   22f
+    sub   $054540, r0
+22:    
+    .rept 7
+    mov   (r1)+, r3
+
+    mov   r0, @r4
+    movb  r3, @r5
+    inc   @r4
+    swab  r3
+    movb  r3, @r5
+                                                           	
+    /; --- Переход на следующую строку ---
+    add   r2, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blo   2f
+    sub   $054540, r0
+2:
+    .endr
+    
+.endm
+
+/-----------------------------------------------------------------------------
+.macro paint_sprite_macro2    
+    .rept 9
+    mov   (r1)+, r3
+
+    mov   r0, @r4
+    movb  r3, @r5
+    inc   @r4
+    swab  r3
+    movb  r3, @r5
+
+    /; --- Переход на следующую строку ---
+    add   r2, r0          /; Смещение на строку вниз (+80 байт)
+    cmp   r0, $0154540
+    blo   2f
+    sub   $054540, r0
+2:
+    .endr
+    
+.endm
+
+
+/=============================================================================
+.macro PaintMouse
+/;  r0 - VRAM
+    mov @$0177016, -(sp)    
+
+    mov $80, r2                      /;r2 используется в SaveBackground, paint_sprite_macro1, paint_sprite_macro2
+    SaveBackground
+
+    CheckShowMousePPU                 /;Проверка флага из ЦП - видимая ли мышь?
+/;    tst VisibleMousePPU              /;tst не нужен, флаги установлены в CheckShowMousePPU
+    bne     paint
+    jmp     notpaint
+paint:
+    mov currVRAM, r0                /;SaveBackground испортил r0
+    mov $0177024, r5
+    mov shift, r1
+
+    mov   $7, @$0177016
+    add   adrMouseSpr, r1
+    tst (r1)+                      /;r1 = r1 + 2
+    paint_sprite_macro1
+/;====================ОКАНТОВКА===================================
+    mov   $0, @$0177016
+    mov   currVRAM, r0
+/;  в r1 = адрес прешифта спрайта adrMouseSprEdging
+    add   $128, r1                  /; 144 - 16 = 128 (после рисования пред. части r1 = конец спрайта - 2 байта)
+    paint_sprite_macro2
+/;====================ОКАНТОВКА===================================
+notpaint:
+    mov   (sp)+, @$0177016
 .endm
 /=============================================================================
 
@@ -367,11 +456,11 @@ go:
     rol r2
     sub	r1, MouseY		/; Y is inverted
     
-    /;проверка на клик левой кнопкой, пока в лоб
-    bic $2, r2
-    bic $2, r3
-    cmp r3, r2
-    blos 111f /; меньше или равно, кнопка или не нажата или не отжималась
+/; Проверка на отжатие ЛКМ (1 -> 0)
+    bit     $1, r3              /; Проверяем старое состояние (LMB)
+    beq     111f                /; Если старая была 0
+    bit     $1, r2              /; Проверяем новое состояние (LMB)
+    bne     111f                /; Если новая 1
 
     mov $CoordMouse, @r4
     clc
@@ -386,13 +475,7 @@ go:
 111:
 
     mov	r2, MouseRL
-    mov	BytesInString, r2
-
-    /;	умножение на 8 - 80 байт на 8 = 640 пикселей
-    asl	R2
-    asl	R2
-    asl	R2
-    dec	R2
+    mov	$639, r2   /;максимальная координата x
 
     tst	MouseX
     bge	52f
@@ -419,13 +502,12 @@ go:
     mtps  $0200
     mov	intTimer, @$0100
     mtps   $0
-    br exit
+    jmp exit
 
 99:
     calcCurrVRAM
-    jmp PaintMouse
-end_paintmouse:
-
+    PaintMouse
+    mov $0177014, r5    /;r5 портится в PaintMouse
 exit:
     /;mtps  $0
 .endm
@@ -443,15 +525,6 @@ FinishMousePPU:
     mov $1, @$0177014    
 
     rts  pc
-
-/=============================================================================
-.macro CheckShowMousePPU
-    mov  $VisibleMouse, r1
-    clc
-    ror  r1           /;в ro адрес VisibleMouse в ЦП
-    mov  r1, @r4
-    mov  @r5, VisibleMousePPU
-.endm
 
 
 /=============================================================================
@@ -490,97 +563,6 @@ end_parsemouse:
     jmp @intTimer
 /=============================================================================
 
-
-
-/-----------------------------------------------------------------------------
-.macro paint_sprite_macro1
-    mov $80, r2
-    /; --- Переход на следующую строку ---
-    add   r2, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   22f
-    sub   $054540, r0
-22: 
-    add shift, r1
-   
-    .rept 7
-    mov   (r1)+, r3
-
-    mov   r0, @r4
-    movb  r3, @r5
-    inc   @r4
-    swab  r3
-    movb  r3, @r5
-
-    /; --- Переход на следующую строку ---
-    add   r2, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   2f
-    sub   $054540, r0
-2:
-    .endr
-    
-.endm
-
-/-----------------------------------------------------------------------------
-.macro paint_sprite_macro2
-    mov $80, r2
-
-    add shift, r1
-
-    .rept 9
-    mov   (r1)+, r3
-
-    mov   r0, @r4
-    movb  r3, @r5
-    inc   @r4
-    swab  r3
-    movb  r3, @r5
-
-    /; --- Переход на следующую строку ---
-    add   r2, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   2f
-    sub   $054540, r0
-2:
-    .endr
-    
-.endm
-
-
-/=============================================================================
-PaintMouse:
-/;  r0 - VRAM
-    mov @$0177016, -(sp)    
-    mov r5, -(sp)
-
-
-    SaveBackground
-end_savebkg:    
-
-    CheckShowMousePPU                 /;Проверка флага из ЦП - видимая ли мышь?
-/;    tst VisibleMousePPU              /;tst не нужен, флаги установлены в CheckShowMousePPU
-    bne     paint
-    jmp     notpaint
-paint:
-    mov $0177024, r5
-
-    mov   $7, @$0177016
-    mov   adrMouseSpr, r1
-    tst (r1)+                      /;r1 = r1 + 2
-    paint_sprite_macro1
-/;====================ОКАНТОВКА===================================
-    mov   $0, @$0177016
-    mov   currVRAM, r0
-    mov   adrMouseSprEdging, r1
-    paint_sprite_macro2
-/;====================ОКАНТОВКА===================================
-
-notpaint:
-    mov   (sp)+, r5
-    mov   (sp)+, @$0177016
-    jmp   end_paintmouse
-/=============================================================================
 
 
 
