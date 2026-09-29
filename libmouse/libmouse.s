@@ -203,23 +203,23 @@ _setOnClick:
 /--------------------------------------------------------------------------------------
 .macro calcCurrVRAM
     /; 1. Вычисление Y * 80 через таблицу
-    mov     MouseY, r1
-    asl     r1                      /; r1 = Y * 2 (индекс слова в таблице)
-    add     adrLineTable, r1
-    mov     @r1, r1       /; r1 = Y * 80
+    mov     MouseY, r2
+    asl     r2                      /; r2 = Y * 2 (индекс слова в таблице)
+    add     adrLineTable, r2
+    mov     @r2, r2       /; r1 = Y * 80
 
     mov MouseX, r0
-    mov r0, r3
-    bic $0b1111111111111000, r3		/; r3 = величина сдвига (0..7)
+    mov r0, r1
+    bic $0b1111111111111000, r1		/; r3 = величина сдвига (0..7)
 
-    asl r3
-    add adrShift18Table, r3
-    mov @r3, shift                      /;в shift предумноженное на 18 значение смещения прешифта спрайта
+    asl r1
+    add adrShift18Table, r1
+    mov @r1, r1                      /;в r1 предумноженное на 18 значение смещения прешифта спрайта (используется далее)
 
     asr r0
     asr r0
     asr r0
-    add r1, r0
+    add r2, r0
     add offsetV, r0			/; R0 = mouse vaddr
     cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
     blt 1f
@@ -272,10 +272,10 @@ PullCPU:
 
 /=============================================================================
 .macro CheckShowMousePPU
-    mov  $VisibleMouse, r1
+    mov  $VisibleMouse, r3
     clc
-    ror  r1           /;в ro адрес VisibleMouse в ЦП
-    mov  r1, @r4
+    ror  r3           /;в r3 адрес VisibleMouse в ЦП
+    mov  r3, @r4
     mov  @r5, VisibleMousePPU
 .endm
 
@@ -283,6 +283,8 @@ PullCPU:
 /=============================================================================
 .macro SaveBackground
 /;r0 - адрес ВОЗУ 
+    mov r1, -(sp)
+
     mov $0177012, r3
     mov adrBkgr, r1
     .rept 9
@@ -300,6 +302,8 @@ PullCPU:
     sub   $054540, r0
 2:
     .endr
+
+    mov (sp)+, r1
 .endm
 /=============================================================================
 
@@ -398,7 +402,7 @@ notrestore:
 paint:
     mov currVRAM, r0                /;SaveBackground испортил r0
     mov $0177024, r5
-    mov shift, r1
+    /;mov shift, r1                 /; в r1 смещение прешифта, вычислено ранее
 
     mov   $7, @$0177016
     add   adrMouseSpr, r1
@@ -762,7 +766,6 @@ adrShift18Table:   .word Shift18Table - LT
 .word 0
 
 .even
-shift: .word 0
 VisibleMousePPU:  .word 0
 counter: .word 0 /;счетчик тактов
 
