@@ -517,6 +517,17 @@ LT:
     br   LT          /;до конца таблицы
 
 begin:
+    mov  TLineTable, table_80mul1
+    mov  TLineTable, table_80mul2
+    mov  TLeftMaskTable, table_leftmask1
+    mov  TLeftMaskTable, table_leftmask2
+    mov  TLeftMaskTable, table_leftmask3
+    mov  TLeftMaskTable, table_leftmask4
+    mov  TRightMaskTable, table_rightmask1
+    mov  TRightMaskTable, table_rightmask2
+    mov  TRightMaskTable, table_rightmask3
+    mov  TRightMaskTable, table_rightmask4
+
     mov  @$02476, r0
     mov  @r0, offsetVPPU
 
@@ -987,11 +998,11 @@ FillRectPPU:
 /; ОДНА КОЛОНКА (CountX == 0)
 /; ============================================================================
 SingleColumn:
-    add     TLeftMaskTable, r2
-    movb    (r2), r2
+table_leftmask1 = . + 2
+    movb    0(r2), r2
 
-    add     TRightMaskTable, r5
-    movb    (r5), r5
+table_rightmask1 = . + 2
+    movb    0(r5), r5
 
     comb    r5                    /; Инвертируем RightMask: биты > bit_end становятся 1
     bicb    r5, r2
@@ -1017,8 +1028,8 @@ MultiColumn:
     mov     r3, -(sp)             /; (sp) = адрес верхнего пикселя колонки
 
     /; --- 1. ПЕРВАЯ КОЛОНКА (Левый край) ---
-    add     TLeftMaskTable, r2
-    movb    (r2), r2               /; r2 = LeftMask
+table_leftmask2 = . + 2
+    movb    0(r2), r2               /; r2 = LeftMask
     mov     r1, r5                /; r5 = копируем высоту для внутреннего цикла
 
     mov     $80, -(sp)
@@ -1064,8 +1075,9 @@ DrawMiddle:
 DrawRightEdge:
     tst     (sp)+                 /; снимаем сохранённый адрес колонки
     mov     (sp)+, r5             /; r5 = восстанавливаем bit_end
-    add     TRightMaskTable, r5
-    movb    (r5), r2/; r2 = RightMask
+
+table_rightmask2 = . + 2
+    movb    0(r5), r2             /; r2 = RightMask
 
     mov     $0177024, r5 
 
@@ -1316,8 +1328,8 @@ Plot8Points:
 PutPixel: 
     mov r0, -(sp)   
     asl     r1                      /; r1 = Y * 2 (индекс слова в таблице)
-    add     TLineTable, r1
-    mov     @r1, r1       /; r1 = Y * 80
+table_80mul1 = . + 2
+    mov     0(r1), r1       /; r1 = Y * 80
 
     /;деление координаты x на 8
     asr r0
@@ -1489,8 +1501,8 @@ DrawHLine:
 
     mov r2, r3   /;r3 - Y
     asl     r3                      /; r3 = Y * 2 (индекс слова в таблице)
-    add     TLineTable, r3
-    mov     @r3, r3       /; r3 = Y * 80
+table_80mul2 = . + 2
+    mov     0(r3), r3       /; r3 = Y * 80
 
     /; --- 3. Вычисление байтовых смещений и битовых индексов ---
     /; X_left -> r4 = байт, r0 = бит
@@ -1524,10 +1536,10 @@ DrawHLine:
     /; Случай 1: Весь отрезок помещается в один байт (r5 == 0)
     /; ========================================================================
 SingleByte:
-    add     TLeftMaskTable, r0
-    movb    (r0), r0          /; r0 = маска левой границы
-    add     TRightMaskTable, r1
-    movb    (r1), r1          /; r1 = маска правой границы
+table_leftmask3 = . + 2
+    movb    0(r0), r0          /; r0 = маска левой границы
+table_rightmask3 = . + 2
+    movb    0(r1), r1          /; r1 = маска правой границы
 
     /; Итоговая маска = LeftMask AND RightMask
     /; В PDP-11 AND делается через BIC: A AND B == A BIC (NOT B)
@@ -1543,8 +1555,8 @@ SingleByte:
     /; ========================================================================
 MultiByte:
     /; --- Левый край ---
-    add     TLeftMaskTable, r0
-    movb    (r0), r4          /; r4 = маска первого байта
+table_leftmask4 = . + 2
+    movb    0(r0), r4          /; r4 = маска первого байта
     mov     r3, @$0177010
     movb    r4, @$0177024     /; Закрашиваем и переходим к следующему байту
     inc     r3
@@ -1560,8 +1572,8 @@ FillLoop:
 
     /; --- Правый край ---
 LastByte:
-    add     TRightMaskTable, r1
-    movb    (r1), r4          /; r4 = маска последнего байта
+table_rightmask4 = . + 2
+    movb    0(r1), r4          /; r4 = маска последнего байта
     mov     r3, @$0177010
     movb    r4, @$0177024          /; Закрашиваем правый край
 
