@@ -10,7 +10,7 @@
 void OnClickEvent(unsigned x, unsigned y)
 {
   hideMouse();
-  fillCircle(x, y, 10, 7);
+  fillCircle(x, y, 20, 7);
   showMouse();
 }
 

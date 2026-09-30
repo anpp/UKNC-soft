@@ -200,6 +200,28 @@ _setOnClick:
     rts  pc
 
 
+/--------------------------------------------------------------------------------------
+.macro calcCurrVRAM
+/;  MouseY обрабатывается до макроса, результат в r2
+
+    mov MouseX, r0
+    mov r0, r1
+    bic $0b1111111111111000, r1     /; r3 = величина сдвига (0..7)
+
+    asr r0
+    asr r0
+    asr r0
+    add r2, r0
+    add offsetV, r0			/; R0 = mouse vaddr
+    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
+    blt 1f
+    sub $054540, r0 /; 154540 - 100000 = 54540
+1:
+    mov   r0, currVRAM
+
+.endm
+
+
 /=============================================================================================
 pp.beg:
     /; сперва таблица адресов
@@ -213,8 +235,10 @@ LT:
     br   LT          /;до конца таблицы
     
 begin:
-    mov adrLineTable, table_80mul
-    mov adrShift32Table, table_32mul
+    mov adrLineTable, table_80mul1
+    mov adrLineTable, table_80mul2
+    mov adrShift32Table, table_32mul1
+    mov adrShift32Table, table_32mul2
 
     mov	$0177010, r4
     mov	$0177014, r5
@@ -226,7 +250,15 @@ begin:
     mov	@$02476, r0
     mov	@r0, offsetV
     
-    jsr pc, calcCurrVRAM
+    /; Вычисление Y * 80 через таблицу
+    mov     MouseY, r2
+    asl     r2                  /; r2 = Y * 2 (индекс слова в таблице)
+table_80mul1 = . + 2
+    mov 0(r2),  r2              /; r2 = Y * 80
+    calcCurrVRAM
+    asl r1
+table_32mul1 = . + 2
+    mov 0(r1), r1              /;в r1 предумноженное на 32 значение смещения прешифта спрайта (используется далее)
 
     mtps	$0200
     mov	@$0100, intTimer
@@ -234,36 +266,6 @@ begin:
     mtps	$0
 
     rts   pc
-
-
-/--------------------------------------------------------------------------------------
-calcCurrVRAM:
-    /; 1. Вычисление Y * 80 через таблицу
-    mov     MouseY, r2
-    asl     r2                      /; r2 = Y * 2 (индекс слова в таблице)
-table_80mul = . + 2
-    mov 0(r2),  r2              /; r1 = Y * 80
-
-    mov MouseX, r0
-    mov r0, r1
-    bic $0b1111111111111000, r1     /; r3 = величина сдвига (0..7)
-
-    asl r1
-table_32mul = . + 2
-    mov 0(r1), r1                    /;в r1 предумноженное на 32 значение смещения прешифта спрайта (используется далее)
-
-    asr r0
-    asr r0
-    asr r0
-    add r2, r0
-    add offsetV, r0			/; R0 = mouse vaddr
-    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 1f
-    sub $054540, r0 /; 154540 - 100000 = 54540
-1:
-    mov   r0, currVRAM
-
-    rts pc
 
 
 
@@ -518,7 +520,16 @@ go:
     jmp exit
 
 99:
-    jsr pc, calcCurrVRAM
+    /; Вычисление Y * 80 через таблицу
+    mov     MouseY, r2
+    asl     r2                  /; r2 = Y * 2 (индекс слова в таблице)
+table_80mul2 = . + 2
+    mov 0(r2),  r2              /; r2 = Y * 80
+    calcCurrVRAM
+    asl r1
+table_32mul2 = . + 2
+    mov 0(r1), r1              /;в r1 предумноженное на 32 значение смещения прешифта спрайта (используется далее)
+
     PaintMouse
     mov $0177014, r5    /;r5 портится в PaintMouse
 exit:
