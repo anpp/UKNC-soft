@@ -287,7 +287,6 @@ PullCPU:
 .macro SaveBackground
 /;r0 - адрес ВОЗУ 
     mov r1, -(sp)
-    mov $0154540, -(sp)
 
     mov $0177012, r3
     mov adrBkgr, r1
@@ -302,13 +301,12 @@ PullCPU:
     mov  @r3, (r1)+
 
     add   r2, @r4          /; Смещение на строку вниз (+79 байт)
-    cmp   @r4, @sp
+    cmp   @r4, 2(sp)
     blo   2f
     sub   $054540, @r4
 2:
     .endr
 
-    tst (sp)+
     mov (sp)+, r1
 .endm
 /=============================================================================
@@ -320,7 +318,6 @@ PullCPU:
     bne 1f
     jmp notrestore
 1: 
-    mov $0154540, -(sp)
     mov currVRAM, @r4
     mov $0177012, r3
     mov adrBkgr, r1
@@ -339,7 +336,6 @@ PullCPU:
     sub   $054540, @r4
 2:
     .endr
-    tst (sp)+
 notrestore:
 .endm
 /=============================================================================
@@ -380,7 +376,7 @@ notrestore:
 
     /; --- Переход на следующую строку ---
     add   r2, @r4          /; Смещение на строку вниз (+79 байт)
-    cmp   @r4, r3
+    cmp   @r4, @sp
     blo   2f
     sub   $054540, @r4
 2:
@@ -397,8 +393,6 @@ notrestore:
 /=============================================================================
 .macro PaintMouse
 /;  r0 - VRAM
-    mov @$0177016, -(sp)    
-
     mov $79, r2                      /;r2 используется в SaveBackground, paint_sprite_macro1, paint_sprite_macro2
     SaveBackground
 
@@ -408,18 +402,17 @@ notrestore:
     jmp     notpaint
 paint:
     mov $0177024, r5
-    mov $0154540, r3                /;r3 испорчен в CheckShowMousePPU
+    mov $0177016, r3
     /; в r1 смещение прешифта, вычислено ранее
 
-    mov   $7, @$0177016
+    mov   $7, @r3
     add   adrMouseSpr, r1
     paint_sprite_macro1
 /;====================ОКАНТОВКА===================================
-    mov   $0, @$0177016
+    mov   $0, @r3
     paint_sprite_macro2
 /;====================ОКАНТОВКА===================================
 notpaint:
-    mov   (sp)+, @$0177016
 .endm
 /=============================================================================
 
@@ -503,6 +496,7 @@ go:
 56: mov     VStrings, MouseY
 
 58:
+    mov $0154540, -(sp)
     RestoreBackground
     
     /;мышь стерта, пока не нарисована новая, проверка на завершение работы
@@ -519,6 +513,7 @@ go:
     PaintMouse
     mov $0177014, r5    /;r5 портится в PaintMouse
 exit:
+    tst (sp)+
     /;mtps  $0
 .endm
 /=============================================================================
@@ -542,6 +537,7 @@ TimerInt:
     mov @$0177010, -(sp)
     mov @$0177020, -(sp)
     mov @$0177022, -(sp)
+    mov @$0177016, -(sp)    
     mov r0, -(sp)
     mov r1, -(sp)
     mov r2, -(sp)
@@ -566,6 +562,7 @@ end_parsemouse:
     mov (sp)+, r2
     mov (sp)+, r1
     mov (sp)+, r0
+    mov (sp)+, @$0177016
     mov (sp)+, @$0177022
     mov (sp)+, @$0177020
     mov (sp)+, @$0177010
