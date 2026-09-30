@@ -202,11 +202,18 @@ _setOnClick:
 
 /--------------------------------------------------------------------------------------
 .macro calcCurrVRAM
-/;  MouseY обрабатывается до макроса, результат в r2
+    /; Вычисление Y * 80 через таблицу
+    mov     MouseY, r2
+    asl     r2                  /; r2 = Y * 2 (индекс слова в таблице)
+table_80mul = . + 2
+    mov 0(r2),  r2              /; r2 = Y * 80
 
     mov MouseX, r0
     mov r0, r1
     bic $0b1111111111111000, r1     /; r3 = величина сдвига (0..7)
+    asl r1
+table_32mul = . + 2
+    mov 0(r1), r1              /;в r1 предумноженное на 32 значение смещения прешифта спрайта (используется далее)
 
     asr r0
     asr r0
@@ -235,10 +242,8 @@ LT:
     br   LT          /;до конца таблицы
     
 begin:
-    mov adrLineTable, table_80mul1
-    mov adrLineTable, table_80mul2
-    mov adrShift32Table, table_32mul1
-    mov adrShift32Table, table_32mul2
+    mov adrLineTable, table_80mul
+    mov adrShift32Table, table_32mul
 
     mov	$0177010, r4
     mov	$0177014, r5
@@ -250,16 +255,6 @@ begin:
     mov	@$02476, r0
     mov	@r0, offsetV
     
-    /; Вычисление Y * 80 через таблицу
-    mov     MouseY, r2
-    asl     r2                  /; r2 = Y * 2 (индекс слова в таблице)
-table_80mul1 = . + 2
-    mov 0(r2),  r2              /; r2 = Y * 80
-    calcCurrVRAM
-    asl r1
-table_32mul1 = . + 2
-    mov 0(r1), r1              /;в r1 предумноженное на 32 значение смещения прешифта спрайта (используется далее)
-
     mtps	$0200
     mov	@$0100, intTimer
     mov	TIProcAdr, @$0100
@@ -520,16 +515,7 @@ go:
     jmp exit
 
 99:
-    /; Вычисление Y * 80 через таблицу
-    mov     MouseY, r2
-    asl     r2                  /; r2 = Y * 2 (индекс слова в таблице)
-table_80mul2 = . + 2
-    mov 0(r2),  r2              /; r2 = Y * 80
     calcCurrVRAM
-    asl r1
-table_32mul2 = . + 2
-    mov 0(r1), r1              /;в r1 предумноженное на 32 значение смещения прешифта спрайта (используется далее)
-
     PaintMouse
     mov $0177014, r5    /;r5 портится в PaintMouse
 exit:
@@ -778,7 +764,7 @@ counter: .word 0 /;счетчик тактов
 
 LineTable:  .fill 286, 2, 0 ;/286 строк
 
-Shift32Table: .word   0, 32, 64, 96, 128, 160, 192, 224   /;таблица умножения на 32 байт (размер спрайта мыши и окатновки)
+Shift32Table: .word   0, 32, 64, 96, 128, 160, 192, 224   /;таблица умножения на 32 байт (размер спрайта мыши и окантовки)
 
 .even
 
