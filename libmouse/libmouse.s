@@ -251,7 +251,6 @@ begin:
     add adrMouseSpr, (r1)+
     sob r2, 1b
 
-
     mov adrLineTable, table_80mul
     mov adrShift32Table, table_32mul
 
