@@ -51,7 +51,7 @@ volatile bool pendingLeft = true;
 void drawButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2)
 {
     rect(x1, y1, x2, y2, COLOR_BLACK);
-    fillRect(x1 + 1, y1 + 1, x2 - 1, y2 - 1, COLOR_YELLOW);
+    fillRect(x1 + 1, y1 + 1, x2 - 1, y2 - 1, COLOR_CYAN);
     fillRect(x1 + 1, y1 + 1, x2 - 1, y1 + 2, COLOR_WHITE);
     fillRect(x1 + 1, y2 - 2, x2 - 1, y2 - 1, COLOR_MAGENTA);
     fillRect(x2 - 2, y1 + 2, x2 - 1, y2 - 1, COLOR_MAGENTA);
@@ -86,7 +86,7 @@ void drawCell(int cx, int cy)
         else 
         if (c->neighborMines > 0)
         {
-            char str[2] = { (char)('0' + c->neighborMines), '\0' };
+            char digit = (char)('0' + c->neighborMines);
             
             unsigned int color = COLOR_BLUE;
             if (c->neighborMines == 2) color = COLOR_GREEN;
@@ -95,7 +95,7 @@ void drawCell(int cx, int cy)
             else 
             if (c->neighborMines >= 4) color = COLOR_BLACK;
 
-            putText(str, x1 + 6, y1 + 3, color);
+            putChar(digit, x1 + 6, y1 + 3, color);
         }
     }
 }
