@@ -11,6 +11,8 @@ rdk2 = 0176676
 rsk1 = 0177076
 rdk1 = 0177072
 
+HEIGHT = 264
+
 pplen = (pp.end - pp.beg) >> 1
 
 mp:
@@ -138,7 +140,7 @@ InitLineTable:
     mov     r0, LineTable(r1)
     add     $80, r0                 /; +80 байт на строку
     add     $2, r1
-    cmp     r1, $(286 * 2)
+    cmp     r1, $(HEIGHT * 2)
     blt     1b
     rts     pc
 
@@ -210,10 +212,11 @@ table_80mul = . + 2
 
     mov MouseX, r0
     mov r0, r1
-    bic $0b1111111111110000, r1     /; r3 = величина сдвига (0..7)
-    ;/asl r1
+    bic $0b1111111111111000, r1     /; r3 = величина сдвига (0..7)
+    asl r1
+/;в r1 предумноженное на 32 значение смещения прешифта спрайта + адрес спрайта (используется далее)
 table_32mul = . + 2
-    mov 0(r1), r1              /;в r1 предумноженное на 32 значение смещения прешифта спрайта (используется далее)
+    mov 0(r1), r1 
 
     asr r0
     asr r0
@@ -242,15 +245,18 @@ LT:
     br   LT          /;до конца таблицы
     
 begin:
+    mov $8, r2
+    mov adrShift32Table, r1
+1:
+    add adrMouseSpr, (r1)+
+    sob r2, 1b
+
+
     mov adrLineTable, table_80mul
     mov adrShift32Table, table_32mul
 
     mov	$0177010, r4
     mov	$0177014, r5
-
-    mov	@$022664, VStrings
-    dec	VStrings
-    mov	@$022666, BytesInString
 
     mov	@$02476, r0
     mov	@r0, offsetV
@@ -403,10 +409,9 @@ notrestore:
 paint:
     mov $0177024, r5
     mov $0177016, r3
-    /; в r1 смещение прешифта, вычислено ранее
+    /; в r1 смещение прешифта + adrMouseSpr, вычислено ранее
 
     mov   $7, @r3
-    add   adrMouseSpr, r1
     paint_sprite_macro1
 /;====================ОКАНТОВКА===================================
     mov   $0, @r3
@@ -487,13 +492,13 @@ go:
     mov     r2, MouseX
 
 54:
-    /; --- Ограничение Y [0 .. VStrings] ---
-    cmp     MouseY, VStrings
-    blos    58f                 /; 0 <= MouseY <= VStrings
-    bpl     56f                 /; Если разность > 0, значит MouseY > VStrings
+    /; --- Ограничение Y [0 .. HEIGHT - 1] ---
+    cmp     MouseY, $HEIGHT - 1
+    blos    58f                 /; 0 <= MouseY <= HEIGHT - 1
+    bpl     56f                 /; Если разность > 0, значит MouseY > HEIGHT - 1
     clr     MouseY              /; Иначе MouseY < 0
     br      58f
-56: mov     VStrings, MouseY
+56: mov     $HEIGHT, MouseY
 
 58:
     mov $0154540, -(sp)
@@ -741,8 +746,7 @@ MouseY:     .word 140
 MouseRL:    .word 0
 
 CharsInString:  .word   0	/;Кол-во символов в строке (22656 + 4)       
-VStrings:       .word   0	/;Число отображаемых видеострок (22656 + 6)
-BytesInString:  .word   0	/;Длина видеостроки в байтах (22656 + 10)
+/;BytesInString:  .word   0	/;Длина видеостроки в байтах (22656 + 10)
 offsetV:        .word   0	/;адрес верхней видеостроки пользовательского экрана
 
 currVRAM:       .word   0
@@ -759,7 +763,7 @@ adrShift32Table:   .word Shift32Table - LT
 VisibleMousePPU:  .word 0
 counter: .word 0 /;счетчик тактов
 
-LineTable:  .fill 286, 2, 0 ;/286 строк
+LineTable:  .fill HEIGHT, 2, 0 ;/HEIGHT строк
 
 Shift32Table: .word   0, 32, 64, 96, 128, 160, 192, 224   /;таблица умножения на 32 байт (размер спрайта мыши и окантовки)
 
