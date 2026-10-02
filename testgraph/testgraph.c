@@ -91,7 +91,7 @@ line(500, 250, 200, 40, 4);
 
 
     random_init(60);
-    for (int x = 0; x < 30; x ++) 
+    for (int x = 0; x < 15; x ++) 
     { 
         int r = random_range(2, 50);
         int xx = random_range(r, WIDTH - r);
