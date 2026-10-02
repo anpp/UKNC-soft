@@ -15,10 +15,10 @@
 
 #define COLOR_BLACK   0
 #define COLOR_BLUE    1
-#define COLOR_GREEN   2
-#define COLOR_CYAN    3
-#define COLOR_RED     4
-#define COLOR_MAGENTA 5
+#define COLOR_RED     2
+#define COLOR_MAGENTA 3
+#define COLOR_GREEN   4
+#define COLOR_CYAN    5
 #define COLOR_YELLOW  6
 #define COLOR_WHITE   7
 
@@ -46,14 +46,15 @@ bool gameWon = false;
 volatile bool hasPendingClick = false;
 volatile unsigned int pendingX = 0;
 volatile unsigned int pendingY = 0;
+volatile bool pendingLeft = true;
 
 void drawButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2)
 {
     rect(x1, y1, x2, y2, COLOR_BLACK);
     fillRect(x1 + 1, y1 + 1, x2 - 1, y2 - 1, COLOR_YELLOW);
     fillRect(x1 + 1, y1 + 1, x2 - 1, y1 + 2, COLOR_WHITE);
-    fillRect(x1 + 1, y2 - 2, x2 - 1, y2 - 1, COLOR_CYAN);
-    fillRect(x2 - 2, y1 + 2, x2 - 1, y2 - 1, COLOR_CYAN);
+    fillRect(x1 + 1, y2 - 2, x2 - 1, y2 - 1, COLOR_MAGENTA);
+    fillRect(x2 - 2, y1 + 2, x2 - 1, y2 - 1, COLOR_MAGENTA);
     fillRect(x1 + 1, y1 + 1, x1 + 2, y2 - 1, COLOR_WHITE);
 }
 
@@ -74,7 +75,7 @@ void drawCell(int cx, int cy)
     } 
     else
     {
-        fillRect(x1, y1, x2, y2, COLOR_MAGENTA);
+        fillRect(x1, y1, x2, y2, COLOR_WHITE);
         rect(x1, y1, x2, y2, COLOR_BLACK);
 
         if (c->isMine)
@@ -89,7 +90,10 @@ void drawCell(int cx, int cy)
             
             unsigned int color = COLOR_BLUE;
             if (c->neighborMines == 2) color = COLOR_GREEN;
-            else if (c->neighborMines >= 3) color = COLOR_BLACK;
+            else 
+            if (c->neighborMines > 2) color = COLOR_RED;
+            else 
+            if (c->neighborMines >= 4) color = COLOR_BLACK;
 
             putText(str, x1 + 6, y1 + 3, color);
         }
@@ -241,14 +245,15 @@ void openCell(int startX, int startY)
 }
 
 // Легковесный обработчик: передает клик в главный цикл
-void OnClickEvent(unsigned x, unsigned y) 
+void OnClickEvent(unsigned x, unsigned y, bool isLeft) 
 {
     pendingX = x;
     pendingY = y;
+    pendingLeft = isLeft;
     hasPendingClick = true;
 }
 
-void processClick(unsigned x, unsigned y) 
+void processClick(unsigned x, unsigned y, bool isRight) 
 {
     if (gameOver) return;
 
@@ -260,7 +265,7 @@ void processClick(unsigned x, unsigned y)
 
     hideMouse();
 
-    if (isRightButtonClick()) 
+    if (isRight) 
     { 
         if (!board[cx][cy].isOpen) 
         {
@@ -287,7 +292,7 @@ void main()
     if (!initKeyb()) return;
     if (!initGraph()) return;
 
-    random_init(0x1337);
+    random_init(500);
 
     clearScreen();
     printTop(1, "MINESWEEPER");
@@ -305,7 +310,7 @@ void main()
         if (hasPendingClick) 
         {
             hasPendingClick = false;
-            processClick(pendingX, pendingY);
+            processClick(pendingX, pendingY, !pendingLeft);
         }
     }
 

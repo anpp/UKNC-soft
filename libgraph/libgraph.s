@@ -195,14 +195,7 @@ _invertScreen:
 
 /Вычисление адрес вы ВОЗУ для ПП по координатам в PixelX, PixelY, результат в PxlAddr
 CalcAddress:
-/;сравнение предыдущих и новых координат, если равны - адрес не вычисляется
-    cmp  r0, PixelX
-    bne  11f
-    cmp  r1, PixelY
-    bne  11f
-    br   22f
-11:
-    /;сохранение пред. координат
+    /;сохранение координат (может прочитать ПП)
     mov  r0, PixelX
     mov  r1, PixelY
 
@@ -228,7 +221,6 @@ CalcAddress:
     /; Подготовка маски для вывода пикселя
     movb  MaskTable(r0), PxlMask
 
-22:
     rts  pc
 
 

@@ -30,8 +30,9 @@ WORDS:      .word   pplen
 .endm
 
 CoordMouse:
-MX: .word   0
-MY: .word   0
+MX:  .word   0
+MY:  .word   0
+LMB: .word   0
 
 
 OnClickEvent:  .word   0
@@ -85,10 +86,11 @@ Int460:
     mov  r4, -(sp)    
     mov  r5, -(sp)
     
-    mov     MY, -(sp)
-    mov     MX, -(sp)
+    mov     LMB, -(sp)
+    mov     MY,  -(sp)
+    mov     MX,  -(sp)
     jsr     pc, @OnClickEvent
-    add     $4, sp
+    add     $6, sp
 
     mov  (sp)+, r5
     mov  (sp)+, r4
@@ -462,16 +464,29 @@ go:
     
 /; Проверка на отжатие ЛКМ (1 -> 0)
     bit     $1, r3              /; Проверяем старое состояние (LMB)
-    beq     111f                /; Если старая была 0
+    beq     112f                /; Если старая была 0
     bit     $1, r2              /; Проверяем новое состояние (LMB)
-    bne     111f                /; Если новая 1
+    bne     112f                /; Если новая 1 - проверка правой кнопки
+    mov     $1, label_mouse_button
+    br      sent_coord
+112:
+/; Проверка на отжатие ПКМ (1 -> 0)
+    bit     $2, r3
+    beq     111f
+    bit     $2, r2
+    bne     111f
+    mov     $0, label_mouse_button
 
+sent_coord:
     mov $CoordMouse, @r4
     clc
     ror @r4
     mov MouseX, @r5
     inc @r4    
     mov MouseY, @r5
+    inc @r4
+label_mouse_button = . + 2
+    mov $1, @r5
 
     mov     $0376, -(sp)
     jsr pc, PullCPU
