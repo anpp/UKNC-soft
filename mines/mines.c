@@ -218,6 +218,9 @@ void generateMines(int safeX, int safeY)
         
         // Не ставим мину в ячейку первого клика
         if (rx == safeX && ry == safeY) continue;
+// Исключаем саму клетку и ВСЕХ 8 её соседей
+        //if (abs(rx - safeX) <= 1 && abs(ry - safeY) <= 1)
+        //    continue;
 
         if (!Cell_isMine(&board[rx][ry]))
         {
@@ -352,16 +355,16 @@ void processMenuClick(unsigned x, unsigned y)
             }
             else if (i == 1)
             {
-                field_w = 18;
+                field_w = 20;
                 field_h = 12;
-                total_mines = 40;
+                total_mines = 37;
                 currentState = STATE_GAME;
             }
             else if (i == 2)
             {
                 field_w = 35;
                 field_h = 13;
-                total_mines = 99;
+                total_mines = 93;
                 currentState = STATE_GAME;
             }
             else if (i == 3)
