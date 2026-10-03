@@ -194,8 +194,10 @@ void checkWinCondition()
 
 void initGame()
 {
+    random_init(getFrameCount());
+
     offset_x = (SCREEN_W / 2) - (field_w * CELL_SIZE / 2);
-    offset_y = (SCREEN_H / 2) - (field_h * CELL_SIZE / 2);
+    offset_y = ((SCREEN_H + 30) / 2) - (field_h * CELL_SIZE / 2); //по вертикале оставляем свободное место наверху
     gameOver = false;
     gameWon = false;
 
@@ -355,9 +357,7 @@ void processMenuClick(unsigned x, unsigned y)
                 currentState = STATE_GAME;
             }
             else if (i == 3)
-            {
                 currentState = STATE_EXIT;
-            }
             break;
         }
     }
@@ -409,8 +409,6 @@ void main()
     if (!initKeyb()) return;
     if (!initGraph()) return;
 
-    random_init(500);
-
     setOnClick(OnClickEvent);
 
     while (currentState != STATE_EXIT)
@@ -458,6 +456,9 @@ void main()
     }
 
     printTop(1, "                                 ");
+
+    hideMouse();
+    resetScreen();
 
     finishGraph();
     finishMouse();

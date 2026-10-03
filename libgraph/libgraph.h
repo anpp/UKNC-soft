@@ -25,6 +25,8 @@ extern void putChar(char ch, unsigned int x, unsigned int y, unsigned int color,
 extern void putText(const char *str, unsigned int x, unsigned int y, unsigned int color);
 extern void circle(unsigned int x, unsigned int y, unsigned int r, unsigned int color);
 extern void fillCircle(unsigned int x, unsigned int y, unsigned int r, unsigned int color);
+extern void resetScreen();
+extern unsigned int getFrameCount();
 
 
 void rect(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color)

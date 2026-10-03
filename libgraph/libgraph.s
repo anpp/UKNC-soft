@@ -1,7 +1,7 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
-.globl _putChar, _putText, _circle, _fillCircle
-.globl _runPPU
+.globl _putChar, _putText, _circle, _fillCircle, _resetScreen
+.globl _runPPU, _getFrameCount
 
 base_addr = .
 
@@ -62,6 +62,11 @@ boldvalue: .word 0
 received_color: .word   -1
 offsetV:	.word	0	/;адрес верхней видеостроки пользовательского экрана
 
+SavePS:      .word 0
+FrameCount:  .word 0
+FrameIntOld: .word 0
+FramePSWOld: .word 0
+
 CharAddresses:  .fill 80, 2, 0  /; Буфер для адресов символов для PutTextPPU
 
 running_proc:	.word 0   /;слово флагов для запуска подпрограмм в ПП
@@ -78,6 +83,7 @@ running_proc:	.word 0   /;слово флагов для запуска подп
 01000 - SetTextColorPPU
 02000 - PutTextPPU
 04000 - FillCirclePPU
+010000 - ResetScreenPPU
 .
 .
 .
@@ -138,6 +144,15 @@ _initGraph:
     movb  $030, command
     mput  mp
     
+    /;перехват кадрового
+    mfps    SavePS
+    mtps    $0340
+    mov     @$0100, FrameIntOld
+    mov     @$0102, FramePSWOld
+    mov     $FrameInt, @$0100
+    mov     $0200, @$0102
+    mtps    SavePS
+
     mov  $1, r0
     rts  pc
 
@@ -159,6 +174,14 @@ InitLineTable:
 
 
 _finishGraph:
+
+    /;восстановление кадрового
+    mfps    SavePS
+    mtps    $0340
+    mov     FrameIntOld, @$0100
+    mov     FramePSWOld, @$0102
+    mtps    SavePS
+
     bis $0100000, running_proc  /флаг завершения для ПП
 
     / запуск подпрограммы в ПП FinishGraphPPU
@@ -475,6 +498,14 @@ _printBottom:
     rts  pc
 
 
+_resetScreen:
+    bis   $010000, running_proc
+1:
+    bit $010000, running_proc
+    bne 1b
+
+    rts pc
+
 _runPPU:
     mov  4(sp), r0
     clc
@@ -498,6 +529,21 @@ _runPPU:
 1:
 
     rts  pc
+
+_getFrameCount:
+    mov  FrameCount, r0
+    rts  pc
+
+
+/=============================================================================
+FrameInt:
+    mfps    -(sp)
+    inc     FrameCount
+    mtps    (sp)+    
+    jmp @FrameIntOld
+/=============================================================================
+
+
 
 /=============================================================================================
 pp.beg:
@@ -633,8 +679,14 @@ end_puttext:
 end_fillcircle:
     mov $RunProcPPU, @r4
     bic $04000, @r5         /FillCirclePPU выполнена 
-
 13:
+    asr (sp)               /;Проверка на ResetScreenPPU
+    bcc 14f
+    jsr pc, ResetScreenPPU
+    mov $RunProcPPU, @r4
+    bic $010000, @r5         /;ResetScreenPPU выполнена 
+
+14:
     tst (sp)+ 
     jmp MainPPU
 100:    
@@ -1594,7 +1646,10 @@ HLineDone:
     mov     (sp)+, r3
     rts     pc
 
-
+/;=========================ResetScreenPPU==============================================================
+ResetScreenPPU:
+    emt    040
+    rts    pc
 
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:	  .word	0         /адрес верхней видеостроки пользовательского экрана

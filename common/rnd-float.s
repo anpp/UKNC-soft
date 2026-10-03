@@ -1,7 +1,6 @@
 .text
 .globl  ___umodsi3, ___udivhi3
 
-
 ___divsi3:
 div:  clr  -(sp)        /; Тип операции - деление
   br  divmod
