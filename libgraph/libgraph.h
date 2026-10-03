@@ -1,6 +1,16 @@
 #ifndef LIB_GRAPH_H
 #define LIB_GRAPH_H
 
+#define COLOR_BLACK   0
+#define COLOR_BLUE    1
+#define COLOR_RED     2
+#define COLOR_MAGENTA 3
+#define COLOR_GREEN   4
+#define COLOR_CYAN    5
+#define COLOR_YELLOW  6
+#define COLOR_WHITE   7
+
+
 extern bool initGraph();
 extern void finishGraph();
 extern void clearScreen();

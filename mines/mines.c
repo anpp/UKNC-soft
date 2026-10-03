@@ -2,39 +2,21 @@
 #include "../libkeyb/libkeyb.h"
 #include "../libmouse/libmouse.h"
 #include "../common/random.h"
+#include "cell.h"
 
 #define SCREEN_W   640
 #define SCREEN_H   264
 
-#define FIELD_W    10
-#define FIELD_H    10
+#define FIELD_W    30
+#define FIELD_H    13
 #define CELL_SIZE  20
-#define OFFSET_X   220
-#define OFFSET_Y   32
-#define TOTAL_MINES 12
-
-#define COLOR_BLACK   0
-#define COLOR_BLUE    1
-#define COLOR_RED     2
-#define COLOR_MAGENTA 3
-#define COLOR_GREEN   4
-#define COLOR_CYAN    5
-#define COLOR_YELLOW  6
-#define COLOR_WHITE   7
+#define TOTAL_MINES 50
 
 
 typedef struct
 {
-    bool isMine;
-    bool isOpen;
-    bool isFlagged;
-    unsigned int neighborMines;
-} Cell;
-
-typedef struct
-{
-    int x;
-    int y;
+    unsigned char x;
+    unsigned char y;
 } Point;
 
 Point queue[FIELD_W * FIELD_H];
@@ -48,6 +30,8 @@ volatile unsigned int pendingX = 0;
 volatile unsigned int pendingY = 0;
 volatile bool pendingLeft = true;
 
+unsigned offset_x, offset_y; 
+
 void drawButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2)
 {
     rect(x1, y1, x2, y2, COLOR_BLACK);
@@ -60,17 +44,17 @@ void drawButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int 
 
 void drawCell(int cx, int cy)
 {
-    unsigned int x1 = OFFSET_X + cx * CELL_SIZE;
-    unsigned int y1 = OFFSET_Y + cy * CELL_SIZE;
+    unsigned int x1 = offset_x + cx * CELL_SIZE;
+    unsigned int y1 = offset_y + cy * CELL_SIZE;
     unsigned int x2 = x1 + CELL_SIZE;
     unsigned int y2 = y1 + CELL_SIZE;
 
     Cell *c = &board[cx][cy];
 
-    if (!c->isOpen)
+    if(!Cell_isOpen(c))
     {
         drawButton(x1, y1, x2, y2);
-        if (c->isFlagged)
+        if (Cell_isFlagged(c))
             putText("P", x1 + 6, y1 + 3, COLOR_RED);
     } 
     else
@@ -78,22 +62,22 @@ void drawCell(int cx, int cy)
         fillRect(x1, y1, x2, y2, COLOR_WHITE);
         rect(x1, y1, x2, y2, COLOR_BLACK);
 
-        if (c->isMine)
+        if (Cell_isMine(c))
         {
             fillCircle(x1 + CELL_SIZE / 2, y1 + CELL_SIZE / 2, 4, COLOR_BLACK);
             putPixel(x1 + CELL_SIZE / 2, y1 + CELL_SIZE / 2, COLOR_RED);
         }
         else 
-        if (c->neighborMines > 0)
+        if (Cell_getNeighborMines(c) > 0)
         {
-            char digit = (char)('0' + c->neighborMines);
+            char digit = (char)('0' + Cell_getNeighborMines(c));
             
             unsigned int color = COLOR_BLUE;
-            if (c->neighborMines == 2) color = COLOR_GREEN;
+            if (Cell_getNeighborMines(c) == 2) color = COLOR_GREEN;
             else 
-            if (c->neighborMines > 2) color = COLOR_RED;
+            if (Cell_getNeighborMines(c) > 2) color = COLOR_RED;
             else 
-            if (c->neighborMines >= 4) color = COLOR_BLACK;
+            if (Cell_getNeighborMines(c) >= 4) color = COLOR_BLACK;
 
             putChar(digit, x1 + 6, y1 + 3, color);
         }
@@ -114,7 +98,7 @@ void checkWinCondition()
     {
         for (int y = 0; y < FIELD_H; y++)
         {
-            if (!board[x][y].isOpen)
+            if (!Cell_isOpen(&board[x][y]))
                 closedOrFlaggedCount++;
         }
     }
@@ -128,18 +112,15 @@ void checkWinCondition()
 
 void initGame()
 {
+    offset_x = (SCREEN_W / 2) - (FIELD_W * (CELL_SIZE / 2));
+    offset_y = (SCREEN_H / 2) - (FIELD_H * (CELL_SIZE / 2));
     gameOver = false;
     gameWon = false;
 
     for (int x = 0; x < FIELD_W; x++)
     {
         for (int y = 0; y < FIELD_H; y++)
-        {
-            board[x][y].isMine = false;
-            board[x][y].isOpen = false;
-            board[x][y].isFlagged = false;
-            board[x][y].neighborMines = 0;
-        }
+            Cell_init(&board[x][y]);
     }
 
     int placed = 0;
@@ -147,9 +128,9 @@ void initGame()
     {
         int rx = random_range(0, FIELD_W - 1);
         int ry = random_range(0, FIELD_H - 1);
-        if (!board[rx][ry].isMine)
+        if (!Cell_isMine(&board[rx][ry]))
         {
-            board[rx][ry].isMine = true;
+            Cell_setMine(&board[rx][ry], true);
             placed++;
         }
     }
@@ -158,7 +139,7 @@ void initGame()
     {
         for (int y = 0; y < FIELD_H; y++)
         {
-            if (board[x][y].isMine) continue;
+            if (Cell_isMine(&board[x][y])) continue;
             
             unsigned int count = 0;
             for (int dx = -1; dx <= 1; dx++)
@@ -168,10 +149,10 @@ void initGame()
                     int nx = x + dx;
                     int ny = y + dy;
                     if (nx >= 0 && nx < FIELD_W && ny >= 0 && ny < FIELD_H)
-                      if (board[nx][ny].isMine) count++;
+                      if (Cell_isMine(&board[nx][ny])) count++;
                 }
             }
-            board[x][y].neighborMines = count;
+            Cell_setNeighborMines(&board[x][y], count);
         }
     }
 }
@@ -179,20 +160,20 @@ void initGame()
 void openCell(int startX, int startY)
 {
     if (startX < 0 || startX >= FIELD_W || startY < 0 || startY >= FIELD_H) return;
-    if (board[startX][startY].isOpen || board[startX][startY].isFlagged) return;
+    if (Cell_isOpen(&board[startX][startY]) || Cell_isFlagged(&board[startX][startY])) return;
 
-    if (board[startX][startY].isMine)
+    if (Cell_isMine(&board[startX][startY]))
     {
-        board[startX][startY].isOpen = true;
+        Cell_setOpen(&board[startX][startY], true);
         drawCell(startX, startY);
         gameOver = true;
         for (int i = 0; i < FIELD_W; i++)
         {
             for (int j = 0; j < FIELD_H; j++)
             {
-                if (board[i][j].isMine && !board[i][j].isOpen)
+                if (Cell_isMine(&board[i][j]) && !Cell_isOpen(&board[i][j]))
                 {
-                    board[i][j].isOpen = true;
+                    Cell_setOpen(&board[i][j], true);
                     drawCell(i, j);
                 }
             }
@@ -204,7 +185,7 @@ void openCell(int startX, int startY)
     int head = 0;
     int tail = 0;
 
-    board[startX][startY].isOpen = true;
+    Cell_setOpen(&board[startX][startY], true);
     drawCell(startX, startY);
 
     queue[tail].x = startX;
@@ -215,7 +196,7 @@ void openCell(int startX, int startY)
     {
         Point p = queue[head++];
 
-        if (board[p.x][p.y].neighborMines == 0)
+        if(Cell_getNeighborMines(&board[p.x][p.y]) == 0)
         {
             for (int dx = -1; dx <= 1; dx++)
             {
@@ -228,9 +209,9 @@ void openCell(int startX, int startY)
 
                     if (nx >= 0 && nx < FIELD_W && ny >= 0 && ny < FIELD_H)
                     {
-                        if (!board[nx][ny].isOpen && !board[nx][ny].isFlagged)
+                        if (!Cell_isOpen(&board[nx][ny]) && !Cell_isFlagged(&board[nx][ny]))
                         {
-                            board[nx][ny].isOpen = true;
+                            Cell_setOpen(&board[nx][ny], true);
                             drawCell(nx, ny);
 
                             queue[tail].x = nx;
@@ -257,9 +238,9 @@ void processClick(unsigned x, unsigned y, bool isRight)
 {
     if (gameOver) return;
 
-    if (x < OFFSET_X || y < OFFSET_Y) return;
-    int cx = (x - OFFSET_X) / CELL_SIZE;
-    int cy = (y - OFFSET_Y) / CELL_SIZE;
+    if (x < offset_x || y < offset_y) return;
+    int cx = (x - offset_x) / CELL_SIZE;
+    int cy = (y - offset_y) / CELL_SIZE;
 
     if (cx < 0 || cx >= FIELD_W || cy < 0 || cy >= FIELD_H) return;
 
@@ -267,15 +248,15 @@ void processClick(unsigned x, unsigned y, bool isRight)
 
     if (isRight) 
     { 
-        if (!board[cx][cy].isOpen) 
+        if(!Cell_isOpen(&board[cx][cy])) 
         {
-            board[cx][cy].isFlagged = !board[cx][cy].isFlagged;
+            Cell_toggleFlag(&board[cx][cy]);
             drawCell(cx, cy);
         }
     }
     else 
     {
-        if (!board[cx][cy].isFlagged) 
+        if(!Cell_isFlagged(&board[cx][cy])) 
         {
             openCell(cx, cy);
             if (!gameOver)
