@@ -44,7 +44,7 @@ void putText2(const char *str, unsigned int x, unsigned int y, unsigned int colo
 */
 
 //putText с обработкой переносов
-void putText1(const char *str, unsigned int x, unsigned int y, unsigned int color) 
+void putText1(const char *str, unsigned int x, unsigned int y, unsigned int color, unsigned int bold_value) 
 {
     for (unsigned int start_x = x; *str; str++) 
     {
@@ -54,7 +54,7 @@ void putText1(const char *str, unsigned int x, unsigned int y, unsigned int colo
             y += 11; 
             continue;
         }
-        putChar(*str, x, y, color, 0);
+        putChar(*str, x, y, color, bold_value);
         x += 8;
     }
 }

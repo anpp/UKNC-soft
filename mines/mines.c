@@ -7,15 +7,29 @@
 #define SCREEN_W   640
 #define SCREEN_H   264
 
-#define FIELD_W    20
-#define FIELD_H    10
 #define CELL_SIZE  18
-#define TOTAL_MINES 15
 
 #define HEADER_H 32
-#define MAX_FIELD_W  SCREEN_W / CELL_SIZE
-#define MAX_FIELD_H  (SCREEN_H - HEADER_H) / CELL_SIZE
+#define MAX_FIELD_W  (SCREEN_W / CELL_SIZE)
+#define MAX_FIELD_H  ((SCREEN_H - HEADER_H) / CELL_SIZE)
 
+#define MENU_BTN_W 160
+#define MENU_BTN_H 30
+#define MENU_BTN_STEP 34
+
+typedef enum
+{
+    STATE_MENU,
+    STATE_GAME,
+    STATE_EXIT
+} GameState;
+
+const char *menuLabels[] = {
+    "BEGINNER",
+    "AMATEUR",
+    "PROFESSIONAL",
+    "EXIT"
+};
 
 typedef struct
 {
@@ -23,10 +37,15 @@ typedef struct
     unsigned char y;
 } Point;
 
-Point queue[FIELD_W * FIELD_H];
-Cell board[FIELD_W][FIELD_H];
+int field_w = 9;
+int field_h = 9;
+int total_mines = 10;
+
+Point queue[MAX_FIELD_W * MAX_FIELD_H];
+Cell board[MAX_FIELD_W][MAX_FIELD_H];
 bool gameOver = false;
 bool gameWon = false;
+GameState currentState = STATE_MENU;
 
 // Глобальные переменные для передачи клика из обработчика в main
 volatile bool hasPendingClick = false;
@@ -36,6 +55,7 @@ volatile bool pendingLeft = true;
 
 unsigned offset_x, offset_y; 
 
+
 void drawButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2)
 {
     rect(x1, y1, x2, y2, COLOR_BLACK);
@@ -44,6 +64,56 @@ void drawButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int 
     fillRect(x1 + 1, y2 - 2, x2 - 1, y2 - 1, COLOR_MAGENTA);
     fillRect(x2 - 2, y1 + 2, x2 - 1, y2 - 1, COLOR_MAGENTA);
     fillRect(x1 + 1, y1 + 1, x1 + 2, y2 - 1, COLOR_WHITE);
+}
+
+void drawPressedButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2)
+{
+    rect(x1, y1, x2, y2, COLOR_BLACK);
+    fillRect(x1 + 1, y1 + 1, x2 - 1, y2 - 1, COLOR_CYAN);
+    fillRect(x1 + 1, y1 + 1, x2 - 1, y1 + 2, COLOR_MAGENTA);
+    fillRect(x1 + 1, y2 - 2, x2 - 1, y2 - 1, COLOR_WHITE);
+    fillRect(x2 - 2, y1 + 2, x2 - 1, y2 - 1, COLOR_WHITE);
+    fillRect(x1 + 1, y1 + 1, x1 + 2, y2 - 1, COLOR_MAGENTA);
+}
+
+void drawMenuButton(int index, bool pressed)
+{
+    unsigned int x1 = (SCREEN_W - MENU_BTN_W) / 2;
+    unsigned int y1 = (SCREEN_H - (4 * MENU_BTN_STEP)) / 2 + index * MENU_BTN_STEP;
+    unsigned int x2 = x1 + MENU_BTN_W;
+    unsigned int y2 = y1 + MENU_BTN_H;
+
+    if(pressed)
+      drawPressedButton(x1, y1, x2, y2);
+    else
+      drawButton(x1, y1, x2, y2);
+    
+    const char *label = menuLabels[index];
+    int textLen = 0;
+    while (label[textLen] != '\0') textLen++;
+    unsigned int textX = x1 + (MENU_BTN_W - textLen * 8) / 2;
+    unsigned int textY = y1 + (MENU_BTN_H - 8) / 2;
+    
+    if(pressed)
+    {
+      textX += 2;
+      textY += 2;
+    }    
+
+    putText1(label, textX, textY, COLOR_BLACK, 1);
+}
+
+void drawMenu()
+{
+    hideMouse();
+    clearScreen();
+    printTop(1, "MINESWEEPER - MAIN MENU");
+    
+    drawMenuButton(0, false);
+    drawMenuButton(1, false);
+    drawMenuButton(2, false);
+    drawMenuButton(3, false);
+    showMouse();
 }
 
 void drawCell(int cx, int cy)
@@ -98,23 +168,23 @@ void drawCell(int cx, int cy)
 
 void drawInitialBoard()
 {
-    for (int x = 0; x < FIELD_W; x++)
-      for (int y = 0; y < FIELD_H; y++)
+    for (int x = 0; x < field_w; x++)
+      for (int y = 0; y < field_h; y++)
         drawCell(x, y);
 }
 
 void checkWinCondition()
 {
     int closedOrFlaggedCount = 0;
-    for (int x = 0; x < FIELD_W; x++)
+    for (int x = 0; x < field_w; x++)
     {
-        for (int y = 0; y < FIELD_H; y++)
+        for (int y = 0; y < field_h; y++)
         {
             if (!Cell_isOpen(&board[x][y]))
                 closedOrFlaggedCount++;
         }
     }
-    if (closedOrFlaggedCount == TOTAL_MINES)
+    if (closedOrFlaggedCount == total_mines)
     {
         gameWon = true;
         gameOver = true;
@@ -124,22 +194,22 @@ void checkWinCondition()
 
 void initGame()
 {
-    offset_x = (SCREEN_W / 2) - (FIELD_W * (CELL_SIZE / 2));
-    offset_y = (SCREEN_H / 2) - (FIELD_H * (CELL_SIZE / 2));
+    offset_x = (SCREEN_W / 2) - (field_w * CELL_SIZE / 2);
+    offset_y = (SCREEN_H / 2) - (field_h * CELL_SIZE / 2);
     gameOver = false;
     gameWon = false;
 
-    for (int x = 0; x < FIELD_W; x++)
+    for (int x = 0; x < field_w; x++)
     {
-        for (int y = 0; y < FIELD_H; y++)
+        for (int y = 0; y < field_h; y++)
             Cell_init(&board[x][y]);
     }
 
     int placed = 0;
-    while (placed < TOTAL_MINES)
+    while (placed < total_mines)
     {
-        int rx = random_range(0, FIELD_W - 1);
-        int ry = random_range(0, FIELD_H - 1);
+        int rx = random_range(0, field_w - 1);
+        int ry = random_range(0, field_h - 1);
         if (!Cell_isMine(&board[rx][ry]))
         {
             Cell_setMine(&board[rx][ry], true);
@@ -147,9 +217,9 @@ void initGame()
         }
     }
 
-    for (int x = 0; x < FIELD_W; x++)
+    for (int x = 0; x < field_w; x++)
     {
-        for (int y = 0; y < FIELD_H; y++)
+        for (int y = 0; y < field_h; y++)
         {
             if (Cell_isMine(&board[x][y])) continue;
             
@@ -160,7 +230,7 @@ void initGame()
                 {
                     int nx = x + dx;
                     int ny = y + dy;
-                    if (nx >= 0 && nx < FIELD_W && ny >= 0 && ny < FIELD_H)
+                    if (nx >= 0 && nx < field_w && ny >= 0 && ny < field_h)
                       if (Cell_isMine(&board[nx][ny])) count++;
                 }
             }
@@ -171,7 +241,7 @@ void initGame()
 
 void openCell(int startX, int startY)
 {
-    if (startX < 0 || startX >= FIELD_W || startY < 0 || startY >= FIELD_H) return;
+    if (startX < 0 || startX >= field_w || startY < 0 || startY >= field_h) return;
     if (Cell_isOpen(&board[startX][startY]) || Cell_isFlagged(&board[startX][startY])) return;
 
     if (Cell_isMine(&board[startX][startY]))
@@ -179,9 +249,9 @@ void openCell(int startX, int startY)
         Cell_setOpen(&board[startX][startY], true);
         drawCell(startX, startY);
         gameOver = true;
-        for (int i = 0; i < FIELD_W; i++)
+        for (int i = 0; i < field_w; i++)
         {
-            for (int j = 0; j < FIELD_H; j++)
+            for (int j = 0; j < field_h; j++)
             {
                 if (Cell_isMine(&board[i][j]) && !Cell_isOpen(&board[i][j]))
                 {
@@ -219,7 +289,7 @@ void openCell(int startX, int startY)
                     int nx = p.x + dx;
                     int ny = p.y + dy;
 
-                    if (nx >= 0 && nx < FIELD_W && ny >= 0 && ny < FIELD_H)
+                    if (nx >= 0 && nx < field_w && ny >= 0 && ny < field_h)
                     {
                         if (!Cell_isOpen(&board[nx][ny]) && !Cell_isFlagged(&board[nx][ny]))
                         {
@@ -246,15 +316,69 @@ void OnClickEvent(unsigned x, unsigned y, bool isLeft)
     hasPendingClick = true;
 }
 
+void processMenuClick(unsigned x, unsigned y)
+{
+    unsigned int btnX1 = (SCREEN_W - MENU_BTN_W) / 2;
+    unsigned int btnX2 = btnX1 + MENU_BTN_W;
+
+    if (x < btnX1 || x > btnX2) return;
+
+    for (int i = 0; i < 4; i++)
+    {
+        unsigned int btnY1 = (SCREEN_H - (4 * MENU_BTN_STEP)) / 2 + i * MENU_BTN_STEP;
+        unsigned int btnY2 = btnY1 + MENU_BTN_H;
+
+        if (y >= btnY1 && y <= btnY2)
+        {
+            hideMouse();
+            drawMenuButton(i, true);
+            showMouse(); 
+            if (i == 0)
+            {
+                field_w = 9;
+                field_h = 9;
+                total_mines = 10;
+                currentState = STATE_GAME;
+            }
+            else if (i == 1)
+            {
+                field_w = 18;
+                field_h = 12;
+                total_mines = 40;
+                currentState = STATE_GAME;
+            }
+            else if (i == 2)
+            {
+                field_w = 35;
+                field_h = 13;
+                total_mines = 99;
+                currentState = STATE_GAME;
+            }
+            else if (i == 3)
+            {
+                currentState = STATE_EXIT;
+            }
+            break;
+        }
+    }
+}
+
 void processClick(unsigned x, unsigned y, bool isRight) 
 {
+    if (currentState == STATE_MENU)
+    {
+        if (!isRight)
+            processMenuClick(x, y);
+        return;
+    }
+
     if (gameOver) return;
 
     if (x < offset_x || y < offset_y) return;
     int cx = (x - offset_x) / CELL_SIZE;
     int cy = (y - offset_y) / CELL_SIZE;
 
-    if (cx < 0 || cx >= FIELD_W || cy < 0 || cy >= FIELD_H) return;
+    if (cx < 0 || cx >= field_w || cy < 0 || cy >= field_h) return;
 
     hideMouse();
 
@@ -287,27 +411,51 @@ void main()
 
     random_init(500);
 
-    clearScreen();
-    printTop(1, "MINESWEEPER");
-
-    initGame();
-
-    hideMouse();
-    drawInitialBoard();
-    showMouse();
-
     setOnClick(OnClickEvent);
 
-    while (!gameOver) 
+    while (currentState != STATE_EXIT)
     {
-        if (hasPendingClick) 
+        if (currentState == STATE_MENU)
         {
-            hasPendingClick = false;
-            processClick(pendingX, pendingY, !pendingLeft);
+            drawMenu();
+
+            while (currentState == STATE_MENU)
+            {
+                if (hasPendingClick)
+                {
+                    hasPendingClick = false;
+                    processClick(pendingX, pendingY, !pendingLeft);
+                }
+            }
+        }
+        else if (currentState == STATE_GAME)
+        {
+            hideMouse();
+            clearScreen();
+            printTop(1, "                                 ");
+            printTop(1, "MINESWEEPER");
+
+            initGame();
+
+            drawInitialBoard();
+            showMouse();
+
+            while (!gameOver && currentState == STATE_GAME)
+            {
+                if (hasPendingClick)
+                {
+                    hasPendingClick = false;
+                    processClick(pendingX, pendingY, !pendingLeft);
+                }
+            }
+
+            if (gameOver)
+            {
+                waitAnyKey();
+                currentState = STATE_MENU;
+            }
         }
     }
-
-    waitAnyKey();
 
     printTop(1, "                                 ");
 
