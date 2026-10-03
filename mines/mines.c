@@ -45,6 +45,7 @@ Point queue[MAX_FIELD_W * MAX_FIELD_H];
 Cell board[MAX_FIELD_W][MAX_FIELD_H];
 bool gameOver = false;
 bool gameWon = false;
+bool firstClick = true;
 GameState currentState = STATE_MENU;
 
 // Глобальные переменные для передачи клика из обработчика в main
@@ -168,6 +169,19 @@ void drawCell(int cx, int cy)
 
 void drawInitialBoard()
 {
+    gameOver = false;
+    gameWon = false;
+    firstClick = true;
+
+    offset_x = (SCREEN_W / 2) - (field_w * CELL_SIZE / 2);
+    offset_y = ((SCREEN_H + 30) / 2) - (field_h * CELL_SIZE / 2); //по вертикале оставляем свободное место наверху
+
+    for (int x = 0; x < field_w; x++)
+    {
+        for (int y = 0; y < field_h; y++)
+            Cell_init(&board[x][y]);
+    }
+
     for (int x = 0; x < field_w; x++)
       for (int y = 0; y < field_h; y++)
         drawCell(x, y);
@@ -192,26 +206,19 @@ void checkWinCondition()
     }
 }
 
-void initGame()
+void generateMines(int safeX, int safeY)
 {
     random_init(getFrameCount());
-
-    offset_x = (SCREEN_W / 2) - (field_w * CELL_SIZE / 2);
-    offset_y = ((SCREEN_H + 30) / 2) - (field_h * CELL_SIZE / 2); //по вертикале оставляем свободное место наверху
-    gameOver = false;
-    gameWon = false;
-
-    for (int x = 0; x < field_w; x++)
-    {
-        for (int y = 0; y < field_h; y++)
-            Cell_init(&board[x][y]);
-    }
 
     int placed = 0;
     while (placed < total_mines)
     {
         int rx = random_range(0, field_w - 1);
         int ry = random_range(0, field_h - 1);
+        
+        // Не ставим мину в ячейку первого клика
+        if (rx == safeX && ry == safeY) continue;
+
         if (!Cell_isMine(&board[rx][ry]))
         {
             Cell_setMine(&board[rx][ry], true);
@@ -219,6 +226,7 @@ void initGame()
         }
     }
 
+    // Расчет цифр-соседей
     for (int x = 0; x < field_w; x++)
     {
         for (int y = 0; y < field_h; y++)
@@ -233,7 +241,7 @@ void initGame()
                     int nx = x + dx;
                     int ny = y + dy;
                     if (nx >= 0 && nx < field_w && ny >= 0 && ny < field_h)
-                      if (Cell_isMine(&board[nx][ny])) count++;
+                        if (Cell_isMine(&board[nx][ny])) count++;
                 }
             }
             Cell_setNeighborMines(&board[x][y], count);
@@ -393,13 +401,19 @@ void processClick(unsigned x, unsigned y, bool isRight)
     else 
     {
         if(!Cell_isFlagged(&board[cx][cy])) 
-        {
+        {               
+            if (firstClick)
+            {
+                generateMines(cx, cy);
+                firstClick = false;
+            }
+
             openCell(cx, cy);
+
             if (!gameOver)
                 checkWinCondition();
         }
     }
-
     showMouse();
 }
 
@@ -432,8 +446,6 @@ void main()
             clearScreen();
             printTop(1, "                                 ");
             printTop(1, "MINESWEEPER");
-
-            initGame();
 
             drawInitialBoard();
             showMouse();
