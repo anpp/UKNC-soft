@@ -7,10 +7,14 @@
 #define SCREEN_W   640
 #define SCREEN_H   264
 
-#define FIELD_W    30
-#define FIELD_H    13
-#define CELL_SIZE  20
-#define TOTAL_MINES 50
+#define FIELD_W    20
+#define FIELD_H    10
+#define CELL_SIZE  18
+#define TOTAL_MINES 15
+
+#define HEADER_H 32
+#define MAX_FIELD_W  SCREEN_W / CELL_SIZE
+#define MAX_FIELD_H  (SCREEN_H - HEADER_H) / CELL_SIZE
 
 
 typedef struct
@@ -55,7 +59,7 @@ void drawCell(int cx, int cy)
     {
         drawButton(x1, y1, x2, y2);
         if (Cell_isFlagged(c))
-            putText("P", x1 + 6, y1 + 3, COLOR_RED);
+            putChar('P', x1 + 6, y1 + 4, COLOR_RED, 2);
     } 
     else
     {
@@ -73,13 +77,21 @@ void drawCell(int cx, int cy)
             char digit = (char)('0' + Cell_getNeighborMines(c));
             
             unsigned int color = COLOR_BLUE;
-            if (Cell_getNeighborMines(c) == 2) color = COLOR_GREEN;
-            else 
-            if (Cell_getNeighborMines(c) > 2) color = COLOR_RED;
-            else 
-            if (Cell_getNeighborMines(c) >= 4) color = COLOR_BLACK;
-
-            putChar(digit, x1 + 6, y1 + 3, color);
+            switch(Cell_getNeighborMines(c))
+            {
+            case 1: 
+                color = COLOR_BLUE;
+                break;
+            case 2: 
+                color = COLOR_GREEN;
+                break;
+            case 3: 
+                color = COLOR_RED;
+                break;
+            default:
+              color = COLOR_BLACK;
+            }
+            putChar(digit, x1 + 6, y1 + 4, color, 2);
         }
     }
 }

@@ -27,6 +27,7 @@ CharPPU = (char - offset_size) >> 1
 XPPU = (PixelX - offset_size) >> 1
 RadiusPPU = (Radius - offset_size) >> 1
 CharAddressesPPU = (CharAddresses - offset_size) >> 1
+boldvaluePPU = (boldvalue - offset_size) >> 1
 
 mp:
             .byte   0
@@ -56,6 +57,7 @@ char:    .word 0    /;адрес char для putCharPPU
 PixelX:  .word -1
 PixelY:  .word -1
 Radius:  .word 0
+boldvalue: .word 0
 
 received_color: .word   -1
 offsetV:	.word	0	/;адрес верхней видеостроки пользовательского экрана
@@ -348,9 +350,10 @@ _fillRect:
 .endm
 
 _putChar:
-    mov     8(sp), PxClr
-    mov     6(sp), r1 
-    mov     4(sp), r0
+    mov     10(sp), boldvalue
+    mov     8(sp),  PxClr
+    mov     6(sp),  r1 
+    mov     4(sp),  r0
 
     setTextColor /;макрос
 
@@ -1098,6 +1101,9 @@ PutCharPPU:
     mov   $PxlAddress, @r4
     mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
 
+    mov   $boldvaluePPU, @r4
+    mov   @r5, bold
+
     mov   $CharPPU, @r4
     mov   @r5, r1          /; адрес char'а
 
@@ -1111,6 +1117,20 @@ PutCharPPU:
     bisb  (r1)+, r3        /; Считываем 1 байт строки шрифта
     ash   r5, r3           /; Сдвигаем 16-битное слово r3 влево на r5 бит
 
+    tst bold
+    beq 12f
+/; --- Утолщение
+    mov   r2, -(sp)
+    mov   bold, r2
+11:
+    mov   r3, -(sp)        /; Сохраняем копию
+    clc
+    ror   (sp)             /; Сдвигаем копию на стеке на 1 бит вправо
+    bis   (sp)+, r3        /; Объединяем (r3 = r3 | (r3 >> 1))
+    sob   r2, 11b
+    mov   (sp)+, r2
+
+12:
     /; --- Запись первого (левого) байта ---
     mov   r0, @r4          
     movb  r3, @(sp)         /; Накладываем левую часть пикселей
@@ -1590,7 +1610,8 @@ y1:   .word 0
 xc:   .word 0
 yc:   .word 0
 
-shftmp: .word 0     ;/сдвиг в PutTextPPU
+shftmp: .word 0     /;сдвиг в PutTextPPU
+bold:   .word 0     /;величина утолщения символа
 
 FntTable: .word 0117430
 

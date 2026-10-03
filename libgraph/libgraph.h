@@ -21,7 +21,7 @@ extern void printBottom(unsigned position, char *buffer);
 extern void invertScreen();
 extern void line(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color);
 extern void fillRect(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color);
-extern void putChar(char ch, unsigned int x, unsigned int y, unsigned int color);
+extern void putChar(char ch, unsigned int x, unsigned int y, unsigned int color, unsigned int bold_value);
 extern void putText(const char *str, unsigned int x, unsigned int y, unsigned int color);
 extern void circle(unsigned int x, unsigned int y, unsigned int r, unsigned int color);
 extern void fillCircle(unsigned int x, unsigned int y, unsigned int r, unsigned int color);
@@ -54,7 +54,7 @@ void putText1(const char *str, unsigned int x, unsigned int y, unsigned int colo
             y += 11; 
             continue;
         }
-        putChar(*str, x, y, color);
+        putChar(*str, x, y, color, 0);
         x += 8;
     }
 }
