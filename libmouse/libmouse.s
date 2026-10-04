@@ -73,8 +73,8 @@ Int460:
     mov  r2, -(sp)
     
     mov  @$0176662, r2    
-    cmp	r2, $0376	/;проверка регистра приемника канала 1 на кодовый байт
-    bne	99f
+    cmp r2, $0376   /;проверка регистра приемника канала 1 на кодовый байт
+    bne 99f
 
     tst  OnClickEvent
     beq  99f              /;Если обработчик не установлен - выход
@@ -111,12 +111,12 @@ _initMouse:
     jsr   pc, InitLineTable
 
     mput  mp
-    bne	1f
+    bne 1f
 
     movb  $020, command
-    mov	$pp.beg, WORD3
-    mput	mp
-    bne	1f
+    mov $pp.beg, WORD3
+    mput    mp
+    bne 1f
 
     movb  $030, command
     mput  mp
@@ -191,7 +191,7 @@ _hideMouse:
 
 /;=============================================================================================
 _getMouseXY:
-                                                                                  	
+                                                                                    
     mov   MX, r0
     mov   MY, r1
 
@@ -224,7 +224,7 @@ table_32mul = . + 2
     asr r0
     asr r0
     add r2, r0
-    add offsetV, r0			/; R0 = mouse vaddr
+    add offsetV, r0         /; R0 = mouse vaddr
     cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
     blt 1f
     sub $054540, r0 /; 154540 - 100000 = 54540
@@ -256,16 +256,20 @@ begin:
     mov adrLineTable, table_80mul
     mov adrShift32Table, table_32mul
 
-    mov	$0177010, r4
-    mov	$0177014, r5
+    mov $0177010, r4
+    mov $0177014, r5
 
-    mov	@$02476, r0
-    mov	@r0, offsetV
+    mov @$02476, r0
+    mov @r0, offsetV
     
-    mtps	$0200
-    mov	@$0100, intTimer
-    mov	TIProcAdr, @$0100
-    mtps	$0
+    mtps    $0200
+    mov @$0100, intTimer
+    mov TIProcAdr, @$0100
+
+    mov @$04, OldInt4
+    mov TInt4, @$04
+
+    mtps    $0
 
     rts   pc
 
@@ -438,29 +442,29 @@ notpaint:
     /;cmp @r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
     /;bge exit
 
-    mov	@$0177400, r0
-    /;	проверки, что координаты и рулон не менялись
-    /;bit	#^B1111111011111110, R0
-    /;bne	go
-    /;cmp	offsetV, OldOffsetV
-    /;beq	exit
+    mov @$0177400, r0
+    /;  проверки, что координаты и рулон не менялись
+    /;bit   #^B1111111011111110, R0
+    /;bne   go
+    /;cmp   offsetV, OldOffsetV
+    /;beq   exit
 
 go:
 
    /; [YYYYYYYLXXXXXXXR] signed 7-bit
-    mov	MouseRL, r3		/; R3 - old RL buttons
-    clr	r2			/; R2 - RL buttons
+    mov MouseRL, r3     /; R3 - old RL buttons
+    clr r2          /; R2 - RL buttons
                           /; X and RMB
     movb    r0, r1
     asr r1
     rol r2
-    add	r1, MouseX
+    add r1, MouseX
         /; Y and LMB
     swab    r0
     movb    r0, R1
     asr r1
     rol r2
-    sub	r1, MouseY		/; Y is inverted
+    sub r1, MouseY      /; Y is inverted
     
 /; Проверка на отжатие ЛКМ (1 -> 0)
     bit     $1, r3              /; Проверяем старое состояние (LMB)
@@ -519,11 +523,12 @@ label_mouse_button = . + 2
     RestoreBackground
     
     /;мышь стерта, пока не нарисована новая, проверка на завершение работы
-    tst	finished
-    beq	99f
+    tst finished
+    beq 99f
 
     mtps  $0200
-    mov	intTimer, @$0100
+    mov intTimer, @$0100
+    mov OldInt4, @$04
     mtps   $0
     jmp exit
 
@@ -590,6 +595,9 @@ end_parsemouse:
 /=============================================================================
 
 
+Int4:
+    
+    rti
 
 
 /;==============================ДАННЫЕ ПП=====================================
@@ -754,19 +762,21 @@ Bkgr: .fill 38, 2, 0
 finished:  .word 0   /;флаг завершения, устанавливается из CPU вызовом MouseFinish
 
 intTimer:   .word 0
+OldInt4:    .word 0
 
 MouseX:     .word 320
 MouseY:     .word 140
 MouseRL:    .word 0
 
-CharsInString:  .word   0	/;Кол-во символов в строке (22656 + 4)       
-/;BytesInString:  .word   0	/;Длина видеостроки в байтах (22656 + 10)
-offsetV:        .word   0	/;адрес верхней видеостроки пользовательского экрана
+CharsInString:  .word   0   /;Кол-во символов в строке (22656 + 4)       
+/;BytesInString:  .word   0 /;Длина видеостроки в байтах (22656 + 10)
+offsetV:        .word   0   /;адрес верхней видеостроки пользовательского экрана
 
 currVRAM:       .word   0
 
 TAddr: /; Таблица адресов
 TIProcAdr:         .word TimerInt - LT
+TInt4:             .word Int4 - LT
 adrMouseSpr:       .word MouseSpr - LT
 adrBkgr:           .word Bkgr - LT
 adrLineTable:      .word LineTable - LT
