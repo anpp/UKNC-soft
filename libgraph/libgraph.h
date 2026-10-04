@@ -25,7 +25,6 @@ extern void putChar(char ch, int x, int y, unsigned int color, unsigned int bold
 extern void putText(const char *str, int x, int y, unsigned int color);
 extern void circle(int x, int y, int r, unsigned int color);
 extern void fillCircle(int x, int y, unsigned int r, unsigned int color);
-extern void resetScreen();
 extern unsigned int getFrameCount();
 
 
@@ -60,5 +59,22 @@ void putText1(const char *str, int x, int y, unsigned int color, unsigned int bo
         x += 8;
     }
 }
+
+void outK0(char *a)
+{
+    register char *regK0 = (char *)0177564;
+    while(*a != 0)
+    {
+        while((*regK0 & 0200)==0);
+        regK0[2]=(*a++);
+    }
+}
+
+
+void resetScreen()
+{
+    outK0("\033%!3\f");
+}
+
 
 #endif //LIB_GRAPH_H

@@ -1,6 +1,6 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
-.globl _putChar, _putText, _circle, _fillCircle, _resetScreen
+.globl _putChar, _putText, _circle, _fillCircle
 .globl _runPPU, _getFrameCount
 
 base_addr = .
@@ -60,7 +60,7 @@ Radius:  .word 0
 boldvalue: .word 0
 
 received_color: .word   -1
-offsetV:	.word	0	/;адрес верхней видеостроки пользовательского экрана
+offsetV:    .word   0   /;адрес верхней видеостроки пользовательского экрана
 
 SavePS:      .word 0
 FrameCount:  .word 0
@@ -69,7 +69,7 @@ FramePSWOld: .word 0
 
 CharAddresses:  .fill 80, 2, 0  /; Буфер для адресов символов для PutTextPPU
 
-running_proc:	.word 0   /;слово флагов для запуска подпрограмм в ПП
+running_proc:   .word 0   /;слово флагов для запуска подпрограмм в ПП
 /*
 01  - PutPixelPPU
 02  - GetPixelPPU
@@ -83,7 +83,6 @@ running_proc:	.word 0   /;слово флагов для запуска подп
 01000 - SetTextColorPPU
 02000 - PutTextPPU
 04000 - FillCirclePPU
-010000 - ResetScreenPPU
 .
 .
 .
@@ -134,12 +133,12 @@ _initGraph:
     jsr   pc, InitLineTable
 
     mput  mp
-    bne	1f
+    bne 1f
 
     movb  $020, command
-    mov	$pp.beg, WORD3
-    mput	mp
-    bne	1f
+    mov $pp.beg, WORD3
+    mput    mp
+    bne 1f
 
     movb  $030, command
     mput  mp
@@ -439,7 +438,7 @@ _putText:
 
     br   1b
 3:
-    clr (r4)        /;последний	адрес - 0 - признак конца
+    clr (r4)        /;последний адрес - 0 - признак конца
 
 /; запуск PutTextPPU
     bis $02000, running_proc
@@ -498,14 +497,6 @@ _printBottom:
     rts  pc
 
 
-_resetScreen:
-    bis   $010000, running_proc
-1:
-    bit $010000, running_proc
-    bne 1b
-
-    rts pc
-
 _runPPU:
     mov  4(sp), r0
     clc
@@ -514,12 +505,12 @@ _runPPU:
     mov  r0, WORDS1  /кол-во слов
     mov  r0, addrCP1 /кол-во слов
     mput  mp1
-    bne	1f
+    bne 1f
 
     movb  $020, command1  /копирование
-    mov	  2(sp), addrCP1
+    mov   2(sp), addrCP1
     mput  mp1
-    bne	1f
+    bne 1f
 
     movb  $030, command1 /запуск
     mput  mp1
@@ -571,6 +562,12 @@ begin:
 
     mov  @$02476, r0
     mov  @r0, offsetVPPU
+
+    mov  @$02470, mainScreenColor1
+    mov  @$02472, mainScreenColor2
+
+    mov  @$02462, modeScreen
+    mov  $0, @$02462            /;640 x 288
 
     mov $0177010, r4
     mov $0177014, r5
@@ -680,13 +677,7 @@ end_fillcircle:
     mov $RunProcPPU, @r4
     bic $04000, @r5         /FillCirclePPU выполнена 
 13:
-    asr (sp)               /;Проверка на ResetScreenPPU
-    bcc 14f
-    jsr pc, ResetScreenPPU
-    mov $RunProcPPU, @r4
-    bic $010000, @r5         /;ResetScreenPPU выполнена 
 
-14:
     tst (sp)+ 
     jmp MainPPU
 100:    
@@ -698,24 +689,37 @@ ClearScreenPPU:
     clr  (r1)+     /;очистка @$0177020
     clr  (r1)+     /;очистка @$0177022, r1 = $0177024
 
-    mov	 $0100000, @r4
-    mov	 $(80 * 286), r2
+    mov  $0100000, @r4
+    mov  $(80 * 286), r2
 1:
     clr  @r1
-    inc	 @r4
-    sob	 r2, 1b
+    inc  @r4
+    sob  r2, 1b
 
     rts  pc
 
 InvertScreenPPU:
-    mov  $0177012, r1       / 0 план
-    mov	 $0100000, @r4
-    mov	 $(80 * 286), r3
+    mov  $0177012, r1       /; 0 план
+    mov  $0100000, @r4
+    mov  $(80 * 286), r3
 1:
     com  @r1
     com  @r5         /;r5 = $0177014 (1, 2 планы)
-    inc	 @r4
-    sob	 r3, 1b
+    inc  @r4
+    sob  r3, 1b
+
+    rts  pc
+
+/;===========================FillScreenPPU================================
+/; r0 - color
+FillScreenPPU:
+    mov  $0100000, @r4
+    mov  $(80 * 286), r3
+    mov  r0, @$0177016
+1:  
+    movb $0377, @$0177024
+    inc  @r4
+    sob  r3, 1b
 
     rts  pc
 
@@ -727,8 +731,8 @@ PutPixelPPU:
     inc @r4
     mov @r5, r1          /;в r1 маска пикселя
 
-    inc @r4    / color
-    mov @r5, @$0177016	
+    inc @r4    /; color
+    mov @r5, @$0177016  
 
     /; Запись пикселя (r0 - адрес, r1 - маска пикселя в октете)
     mov r0, @r4
@@ -814,7 +818,11 @@ addr_for_emt:  .word 0
     rts  pc
 
 
-FinishGraphPPU: 
+FinishGraphPPU:
+    mov    mainScreenColor1, @$02470
+    mov    mainScreenColor2, @$02472
+    mov    modeScreen, @$02462
+ 
     mov $finished, r0
     clc
     ror r0
@@ -1646,13 +1654,12 @@ HLineDone:
     mov     (sp)+, r3
     rts     pc
 
-/;=========================ResetScreenPPU==============================================================
-ResetScreenPPU:
-    emt    040
-    rts    pc
 
 //====================ДАННЫЕ ПП======================================================
-offsetVPPU:	  .word	0         /адрес верхней видеостроки пользовательского экрана
+offsetVPPU:   .word 0         /;адрес верхней видеостроки пользовательского экрана
+mainScreenColor1: .word 0         /;регистр управления цветом для экрана пользователя 02470
+mainScreenColor2: .word 0         /;регистр управления цветом для экрана пользователя 02472
+modeScreen:       .word 0         /;видережим
 
 r12: .word 0
 r11: .word 0
