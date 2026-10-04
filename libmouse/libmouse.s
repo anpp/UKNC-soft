@@ -498,7 +498,7 @@ label_mouse_button = . + 2
 111:
 
     mov     r2, MouseRL
-    mov     $639, r2            /; максмальная координата x
+    mov     $631, r2            /; максмальная координата x
 
     /; --- Ограничение X [0 .. 639] ---
     cmp     MouseX, r2
@@ -507,7 +507,7 @@ label_mouse_button = . + 2
     clr     MouseX              /; Иначе MouseX < 0
     br      54f
 52: 
-    mov     $631, MouseX
+    mov     r2, MouseX
 
 54:
     /; --- Ограничение Y [0 .. HEIGHT - 1] ---
