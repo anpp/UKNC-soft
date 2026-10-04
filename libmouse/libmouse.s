@@ -507,7 +507,7 @@ label_mouse_button = . + 2
     clr     MouseX              /; Иначе MouseX < 0
     br      54f
 52: 
-    mov     r2, MouseX
+    mov     $631, MouseX
 
 54:
     /; --- Ограничение Y [0 .. HEIGHT - 1] ---
@@ -516,7 +516,7 @@ label_mouse_button = . + 2
     bpl     56f                 /; Если разность > 0, значит MouseY > HEIGHT - 1
     clr     MouseY              /; Иначе MouseY < 0
     br      58f
-56: mov     $HEIGHT, MouseY
+56: mov     $HEIGHT - 1, MouseY
 
 58:
     mov $0154540, -(sp)
