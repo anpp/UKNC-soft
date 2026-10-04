@@ -56,6 +56,13 @@ volatile bool pendingLeft = true;
 
 unsigned offset_x, offset_y; 
 
+void drawFlag(unsigned int x, unsigned int y)
+{
+    fillRect(x, y, x + 1, y + 8, COLOR_BLACK);
+    fillRect(x - 4, y + 8, x + 5, y + 8, COLOR_BLACK);
+    fillRect(x - 6, y, x, y + 3, COLOR_RED);
+}
+
 
 void drawButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2)
 {
@@ -130,7 +137,7 @@ void drawCell(int cx, int cy)
     {
         drawButton(x1, y1, x2, y2);
         if (Cell_isFlagged(c))
-            putChar('P', x1 + 6, y1 + 4, COLOR_RED, 2);
+            drawFlag(x1 + 9, y1 + 5);
     } 
     else
     {
