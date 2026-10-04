@@ -14,22 +14,22 @@
 extern bool initGraph();
 extern void finishGraph();
 extern void clearScreen();
-extern void putPixel(unsigned int x,unsigned int y, unsigned int color);
-extern unsigned int getPixel(unsigned int x, unsigned int y);
+extern void putPixel(int x, int y, unsigned int color);
+extern unsigned int getPixel(int x, int y);
 extern void printTop(unsigned position, const char *buffer);
 extern void printBottom(unsigned position, const char *buffer);
 extern void invertScreen();
-extern void line(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color);
-extern void fillRect(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color);
-extern void putChar(char ch, unsigned int x, unsigned int y, unsigned int color, unsigned int bold_value);
-extern void putText(const char *str, unsigned int x, unsigned int y, unsigned int color);
-extern void circle(unsigned int x, unsigned int y, unsigned int r, unsigned int color);
-extern void fillCircle(unsigned int x, unsigned int y, unsigned int r, unsigned int color);
+extern void line(int x1, int y1, int x2, int y2, unsigned int color);
+extern void fillRect(int x1, int y1, int x2, int y2, unsigned int color);
+extern void putChar(char ch, int x, int y, unsigned int color, unsigned int bold_value);
+extern void putText(const char *str, int x, int y, unsigned int color);
+extern void circle(int x, int y, int r, unsigned int color);
+extern void fillCircle(int x, int y, unsigned int r, unsigned int color);
 extern void resetScreen();
 extern unsigned int getFrameCount();
 
 
-void rect(unsigned int x1,unsigned int y1, unsigned int x2,unsigned int y2, unsigned int color)
+void rect(int x1, int y1, int x2, int y2, unsigned int color)
 {
     fillRect(x1, y1, x1, y2, color);
     fillRect(x1, y1, x2, y1, color);
@@ -46,7 +46,7 @@ void putText2(const char *str, unsigned int x, unsigned int y, unsigned int colo
 */
 
 //putText с обработкой переносов
-void putText1(const char *str, unsigned int x, unsigned int y, unsigned int color, unsigned int bold_value) 
+void putText1(const char *str, int x, int y, unsigned int color, unsigned int bold_value) 
 {
     for (unsigned int start_x = x; *str; str++) 
     {

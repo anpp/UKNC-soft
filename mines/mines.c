@@ -9,7 +9,7 @@
 
 #define CELL_SIZE  18
 
-#define HEADER_H 32
+#define HEADER_H 30
 #define MAX_FIELD_W  (SCREEN_W / CELL_SIZE)
 #define MAX_FIELD_H  ((SCREEN_H - HEADER_H) / CELL_SIZE)
 
@@ -54,13 +54,13 @@ char* emptystr = "                                 ";
 
 // Глобальные переменные для передачи клика из обработчика в main
 volatile bool hasPendingClick = false;
-volatile unsigned int pendingX = 0;
-volatile unsigned int pendingY = 0;
+volatile int pendingX = 0;
+volatile int pendingY = 0;
 volatile bool pendingLeft = true;
 
-unsigned offset_x, offset_y; 
+int offset_x, offset_y; 
 
-void drawFlag(unsigned int x, unsigned int y)
+void drawFlag(int x, int y)
 {
     fillRect(x, y, x + 1, y + 8, COLOR_BLACK);
     fillRect(x - 4, y + 8, x + 5, y + 8, COLOR_BLACK);
@@ -68,7 +68,7 @@ void drawFlag(unsigned int x, unsigned int y)
 }
 
 
-void drawButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2)
+void drawButton(int x1, int y1, int x2, int y2)
 {
     rect(x1, y1, x2, y2, COLOR_BLACK);
     fillRect(x1 + 1, y1 + 1, x2 - 1, y2 - 1, COLOR_CYAN);
@@ -78,7 +78,7 @@ void drawButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int 
     fillRect(x1 + 1, y1 + 1, x1 + 2, y2 - 1, COLOR_WHITE);
 }
 
-void drawPressedButton(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2)
+void drawPressedButton(int x1, int y1, int x2, int y2)
 {
     rect(x1, y1, x2, y2, COLOR_BLACK);
     fillRect(x1 + 1, y1 + 1, x2 - 1, y2 - 1, COLOR_CYAN);
@@ -131,10 +131,10 @@ void drawMenu()
 
 void drawCell(int cx, int cy)
 {
-    unsigned int x1 = offset_x + cx * CELL_SIZE;
-    unsigned int y1 = offset_y + cy * CELL_SIZE;
-    unsigned int x2 = x1 + CELL_SIZE;
-    unsigned int y2 = y1 + CELL_SIZE;
+    int x1 = offset_x + cx * CELL_SIZE;
+    int y1 = offset_y + cy * CELL_SIZE;
+    int x2 = x1 + CELL_SIZE;
+    int y2 = y1 + CELL_SIZE;
 
     Cell *c = &board[cx][cy];
 
@@ -231,9 +231,6 @@ void generateMines(int safeX, int safeY)
         
         // Не ставим мину в ячейку первого клика
         if (rx == safeX && ry == safeY) continue;
-// Исключаем саму клетку и ВСЕХ 8 её соседей
-        //if (abs(rx - safeX) <= 1 && abs(ry - safeY) <= 1)
-        //    continue;
 
         if (!Cell_isMine(&board[rx][ry]))
         {
@@ -335,7 +332,7 @@ void openCell(int startX, int startY)
 }
 
 // Легковесный обработчик: передает клик в главный цикл
-void OnClickEvent(unsigned x, unsigned y, bool isLeft) 
+void OnClickEvent(int x, int y, bool isLeft) 
 {
     pendingX = x;
     pendingY = y;
@@ -343,17 +340,17 @@ void OnClickEvent(unsigned x, unsigned y, bool isLeft)
     hasPendingClick = true;
 }
 
-void processMenuClick(unsigned x, unsigned y)
+void processMenuClick(int x, int y)
 {
-    unsigned int btnX1 = (SCREEN_W - MENU_BTN_W) / 2;
-    unsigned int btnX2 = btnX1 + MENU_BTN_W;
+    int btnX1 = (SCREEN_W - MENU_BTN_W) / 2;
+    int btnX2 = btnX1 + MENU_BTN_W;
 
     if (x < btnX1 || x > btnX2) return;
 
     for (int i = 0; i < 4; i++)
     {
-        unsigned int btnY1 = (SCREEN_H - (4 * MENU_BTN_STEP)) / 2 + i * MENU_BTN_STEP;
-        unsigned int btnY2 = btnY1 + MENU_BTN_H;
+        int btnY1 = (SCREEN_H - (4 * MENU_BTN_STEP)) / 2 + i * MENU_BTN_STEP;
+        int btnY2 = btnY1 + MENU_BTN_H;
 
         if (y >= btnY1 && y <= btnY2)
         {
@@ -389,7 +386,7 @@ void processMenuClick(unsigned x, unsigned y)
     }
 }
 
-void processClick(unsigned x, unsigned y, bool isRight) 
+void processClick(int x, int y, bool isRight) 
 {
     if (currentState == STATE_MENU)
     {
@@ -424,7 +421,7 @@ void processClick(unsigned x, unsigned y, bool isRight)
             {
                 generateMines(cx, cy);
                 firstClick = false;
-            }
+            } 
 
             openCell(cx, cy);
 
@@ -492,6 +489,8 @@ void main()
             printBottom(1, "ESC(AR2) - back");
 
             drawInitialBoard();
+            hasPendingClick = false;
+
             showMouse();
 
             while (!gameOver && currentState == STATE_GAME)
