@@ -46,7 +46,11 @@ Cell board[MAX_FIELD_W][MAX_FIELD_H];
 bool gameOver = false;
 bool gameWon = false;
 bool firstClick = true;
-GameState currentState = STATE_MENU;
+volatile GameState currentState = STATE_MENU;
+unsigned currentMode = -1;
+
+char* emptystr = "                                 ";
+
 
 // Глобальные переменные для передачи клика из обработчика в main
 volatile bool hasPendingClick = false;
@@ -115,6 +119,7 @@ void drawMenu()
 {
     hideMouse();
     clearScreen();
+    printTop(1, emptystr);
     printTop(1, "MINESWEEPER - MAIN MENU");
     
     drawMenuButton(0, false);
@@ -209,6 +214,7 @@ void checkWinCondition()
     {
         gameWon = true;
         gameOver = true;
+        printTop(1, emptystr);
         printTop(1, "YOU WIN! PRESS ANY KEY");
     }
 }
@@ -280,6 +286,7 @@ void openCell(int startX, int startY)
                 }
             }
         }
+        printTop(1, emptystr);
         printTop(1, "BOOM! PRESS ANY KEY");
         return;
     }
@@ -350,6 +357,7 @@ void processMenuClick(unsigned x, unsigned y)
 
         if (y >= btnY1 && y <= btnY2)
         {
+            currentMode = i;
             hideMouse();
             drawMenuButton(i, true);
             showMouse(); 
@@ -427,6 +435,24 @@ void processClick(unsigned x, unsigned y, bool isRight)
     showMouse();
 }
 
+void OnKeyEvent(bool Up, unsigned char key_code)
+{
+    if(key_code == KEY_AR2 && !Up)
+    {
+        switch(currentState)
+        {
+        case STATE_MENU:
+            currentState = STATE_EXIT;
+            break;
+        case STATE_GAME:
+            currentState = STATE_MENU;
+            break;
+        default:
+            break;
+        }
+    }
+}
+
 void main() 
 {
     if (!initMouse()) return;
@@ -434,12 +460,16 @@ void main()
     if (!initGraph()) return;
 
     setOnClick(OnClickEvent);
+    setOnKeyEvent(OnKeyEvent);
 
     while (currentState != STATE_EXIT)
     {
         if (currentState == STATE_MENU)
         {
             drawMenu();
+
+            printBottom(1, emptystr);
+            printBottom(1, "ESC(AR2) - exit");
 
             while (currentState == STATE_MENU)
             {
@@ -454,8 +484,12 @@ void main()
         {
             hideMouse();
             clearScreen();
-            printTop(1, "                                 ");
-            printTop(1, "MINESWEEPER");
+            printTop(1, emptystr);
+            printTop(1, "MINESWEEPER - ");
+            printTop(15, menuLabels[currentMode]);
+
+            printBottom(1, emptystr);
+            printBottom(1, "ESC(AR2) - back");
 
             drawInitialBoard();
             showMouse();
@@ -477,7 +511,8 @@ void main()
         }
     }
 
-    printTop(1, "                                 ");
+    printTop(1, emptystr);
+    printBottom(1, emptystr);
 
     hideMouse();
     resetScreen();
