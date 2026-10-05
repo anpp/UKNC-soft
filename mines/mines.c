@@ -23,12 +23,13 @@ typedef enum
 {
     STATE_MENU,
     STATE_GAME,
-    STATE_EXIT
+    STATE_EXIT,
+    STATE_INIT
 } GameState;
 
 typedef enum
 {
-    SMILE_LOAD,
+    SMILE_INIT,
     SMILE_NORMAL,
     SMILE_WIN,
     SMILE_DEAD
@@ -110,7 +111,10 @@ void drawSmile(int x, int y, SmileState st)
 
     switch(st)
     {
-    case SMILE_LOAD:
+    case SMILE_INIT:
+        fillCircle(xc - 4, yc - 2, 1, COLOR_BLACK);
+        fillCircle(xc + 4, yc - 2, 1, COLOR_BLACK);
+        fillRect(xc - 3, yc + 5, xc + 3, yc + 5, COLOR_BLACK);
         break;
     case SMILE_DEAD:
         putChar('*', xc - 8, yc - 6, COLOR_BLACK, 0);
@@ -243,12 +247,13 @@ void drawCell(int cx, int cy)
 
 void drawInitialBoard()
 {
+    currentState = STATE_INIT;
     printTop(1, emptystr);
     printTop(1, "MINESWEEPER - ");
     printTop(15, menuLabels[currentMode]);
 
     printBottom(1, emptystr);
-    printBottom(1, "ESC(AR2) - back");
+    printBottom(1, "LOADING...");
 
     gameOver = false;
     gameWon = false;
@@ -261,7 +266,7 @@ void drawInitialBoard()
     smileY = offset_y - SMILE_H;
 
     drawButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
-    drawSmile(smileX, smileY, SMILE_LOAD);
+    drawSmile(smileX, smileY, SMILE_INIT);
 
     for (int x = 0; x < field_w; x++)
     {
@@ -274,6 +279,10 @@ void drawInitialBoard()
         drawCell(x, y);
 
     drawSmile(smileX, smileY, SMILE_NORMAL);
+    currentState = STATE_GAME;
+
+    printBottom(1, emptystr);
+    printBottom(1, "ESC(AR2) - back");
 }
 
 void checkWinCondition()
@@ -413,6 +422,7 @@ void openCell(int startX, int startY)
 // Легковесный обработчик: передает клик в главный цикл
 void OnClickEvent(int x, int y, bool isLeft) 
 {
+    if(currentState == STATE_INIT) return;
     pendingX = x;
     pendingY = y;
     pendingLeft = isLeft;
