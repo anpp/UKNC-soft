@@ -106,7 +106,7 @@ void drawSmile(int x, int y, SmileState st)
     int xc = x + (SMILE_W / 2);
     int yc = y + (SMILE_H / 2);
     fillCircle(xc, yc, (SMILE_W / 2) - 6, COLOR_YELLOW);
-    circle(xc, yc, (SMILE_W / 2) - 6, COLOR_BLACK);
+    circle(xc, yc, (SMILE_W / 2) - 6, COLOR_BLUE);
 
     switch(st)
     {
@@ -243,6 +243,13 @@ void drawCell(int cx, int cy)
 
 void drawInitialBoard()
 {
+    printTop(1, emptystr);
+    printTop(1, "MINESWEEPER - ");
+    printTop(15, menuLabels[currentMode]);
+
+    printBottom(1, emptystr);
+    printBottom(1, "ESC(AR2) - back");
+
     gameOver = false;
     gameWon = false;
     firstClick = true;
@@ -470,10 +477,13 @@ void processClick(int x, int y, bool isRight)
     if (x >= smileX && x < (smileX + SMILE_W) && y >= smileY && y < (smileY + SMILE_H))
     {
         hideMouse();
+
         drawPressedButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
         drawSmile(smileX + 2, smileY + 2, SMILE_NORMAL);
         drawButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
         drawSmile(smileX, smileY, SMILE_NORMAL);
+
+        drawInitialBoard();
         showMouse();
         return;
     }
@@ -564,12 +574,6 @@ void main()
         {
             hideMouse();
             clearScreen();
-            printTop(1, emptystr);
-            printTop(1, "MINESWEEPER - ");
-            printTop(15, menuLabels[currentMode]);
-
-            printBottom(1, emptystr);
-            printBottom(1, "ESC(AR2) - back");
 
             drawInitialBoard();
             hasPendingClick = false;
