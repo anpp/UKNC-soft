@@ -7,6 +7,8 @@
 #define SCREEN_W   640
 #define SCREEN_H   264
 
+#define SMILE_W    28
+#define SMILE_H    28
 #define CELL_SIZE  18
 
 #define HEADER_H 30
@@ -23,6 +25,15 @@ typedef enum
     STATE_GAME,
     STATE_EXIT
 } GameState;
+
+typedef enum
+{
+    SMILE_LOAD,
+    SMILE_NORMAL,
+    SMILE_WIN,
+    SMILE_DEAD
+} SmileState;
+
 
 const char *menuLabels[] = {
     "BEGINNER",
@@ -48,6 +59,8 @@ bool gameWon = false;
 bool firstClick = true;
 volatile GameState currentState = STATE_MENU;
 unsigned currentMode = -1;
+
+int smileX, smileY;
 
 char* emptystr = "                                 ";
 
@@ -86,6 +99,55 @@ void drawPressedButton(int x1, int y1, int x2, int y2)
     fillRect(x1 + 1, y2 - 2, x2 - 1, y2 - 1, COLOR_WHITE);
     fillRect(x2 - 2, y1 + 2, x2 - 1, y2 - 1, COLOR_WHITE);
     fillRect(x1 + 1, y1 + 1, x1 + 2, y2 - 1, COLOR_MAGENTA);
+}
+
+void drawSmile(int x, int y, SmileState st)
+{
+    int xc = x + (SMILE_W / 2);
+    int yc = y + (SMILE_H / 2);
+    fillCircle(xc, yc, (SMILE_W / 2) - 6, COLOR_YELLOW);
+    circle(xc, yc, (SMILE_W / 2) - 6, COLOR_BLACK);
+
+    switch(st)
+    {
+    case SMILE_LOAD:
+        break;
+    case SMILE_DEAD:
+        putChar('*', xc - 8, yc - 6, COLOR_BLACK, 0);
+        putChar('*', xc + 0, yc - 6, COLOR_BLACK, 0);
+ 
+        fillRect(xc - 1, yc + 3, xc + 1, yc + 3, COLOR_BLACK);
+        putPixel(xc - 2, yc + 4, COLOR_BLACK);
+        putPixel(xc - 3, yc + 5, COLOR_BLACK);
+        putPixel(xc + 2, yc + 4, COLOR_BLACK);
+        putPixel(xc + 3, yc + 5, COLOR_BLACK);
+        break;
+    case SMILE_NORMAL:
+        fillCircle(xc - 4, yc - 2, 1, COLOR_BLACK);
+        fillCircle(xc + 4, yc - 2, 1, COLOR_BLACK);
+
+        fillRect(xc - 1, yc + 5, xc + 1, yc + 5, COLOR_BLACK);
+        putPixel(xc - 2, yc + 4, COLOR_BLACK);
+        putPixel(xc - 3, yc + 3, COLOR_BLACK);
+        putPixel(xc + 2, yc + 4, COLOR_BLACK);
+        putPixel(xc + 3, yc + 3, COLOR_BLACK);
+        break;
+    case SMILE_WIN:
+        fillCircle(xc - 4, yc - 2, 3, COLOR_BLACK);
+        fillCircle(xc + 4, yc - 2, 3, COLOR_BLACK);
+        fillRect(xc - 2, yc - 4, xc + 2, yc - 3, COLOR_BLACK);
+
+        fillRect(xc - 1, yc + 4, xc + 1, yc + 4, COLOR_BLACK);
+        fillRect(xc - 1, yc + 5, xc + 1, yc + 5, COLOR_BLACK);
+        putPixel(xc - 2, yc + 4, COLOR_BLACK);
+        putPixel(xc - 3, yc + 3, COLOR_BLACK);
+        putPixel(xc + 2, yc + 4, COLOR_BLACK);
+        putPixel(xc + 3, yc + 3, COLOR_BLACK);
+
+        break;
+    default:
+        break;
+    }
 }
 
 void drawMenuButton(int index, bool pressed)
@@ -188,6 +250,12 @@ void drawInitialBoard()
     offset_x = (SCREEN_W / 2) - (field_w * CELL_SIZE / 2);
     offset_y = ((SCREEN_H + 30) / 2) - (field_h * CELL_SIZE / 2); //по вертикале оставляем свободное место наверху
 
+    smileX = (SCREEN_W / 2) - (SMILE_W / 2);
+    smileY = offset_y - SMILE_H;
+
+    drawButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
+    drawSmile(smileX, smileY, SMILE_LOAD);
+
     for (int x = 0; x < field_w; x++)
     {
         for (int y = 0; y < field_h; y++)
@@ -197,6 +265,8 @@ void drawInitialBoard()
     for (int x = 0; x < field_w; x++)
       for (int y = 0; y < field_h; y++)
         drawCell(x, y);
+
+    drawSmile(smileX, smileY, SMILE_NORMAL);
 }
 
 void checkWinCondition()
@@ -215,7 +285,8 @@ void checkWinCondition()
         gameWon = true;
         gameOver = true;
         printTop(1, emptystr);
-        printTop(1, "YOU WIN! PRESS ANY KEY");
+        printTop(1, "YOU WIN!");
+        drawSmile(smileX, smileY, SMILE_WIN);
     }
 }
 
@@ -284,7 +355,8 @@ void openCell(int startX, int startY)
             }
         }
         printTop(1, emptystr);
-        printTop(1, "BOOM! PRESS ANY KEY");
+        printTop(1, "BOOM!");
+        drawSmile(smileX, smileY, SMILE_DEAD);
         return;
     }
 
@@ -395,6 +467,17 @@ void processClick(int x, int y, bool isRight)
         return;
     }
 
+    if (x >= smileX && x < (smileX + SMILE_W) && y >= smileY && y < (smileY + SMILE_H))
+    {
+        hideMouse();
+        drawPressedButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
+        drawSmile(smileX + 2, smileY + 2, SMILE_NORMAL);
+        drawButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
+        drawSmile(smileX, smileY, SMILE_NORMAL);
+        showMouse();
+        return;
+    }
+
     if (gameOver) return;
 
     if (x < offset_x || y < offset_y) return;
@@ -493,19 +576,13 @@ void main()
 
             showMouse();
 
-            while (!gameOver && currentState == STATE_GAME)
+            while (currentState == STATE_GAME)
             {
                 if (hasPendingClick)
                 {
                     hasPendingClick = false;
                     processClick(pendingX, pendingY, !pendingLeft);
                 }
-            }
-
-            if (gameOver)
-            {
-                waitAnyKey();
-                currentState = STATE_MENU;
             }
         }
     }

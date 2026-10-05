@@ -23,7 +23,7 @@ extern void line(int x1, int y1, int x2, int y2, unsigned int color);
 extern void fillRect(int x1, int y1, int x2, int y2, unsigned int color);
 extern void putChar(char ch, int x, int y, unsigned int color, unsigned int bold_value);
 extern void putText(const char *str, int x, int y, unsigned int color);
-extern void circle(int x, int y, int r, unsigned int color);
+extern void circle(int x, int y, unsigned int r, unsigned int color);
 extern void fillCircle(int x, int y, unsigned int r, unsigned int color);
 extern unsigned int getFrameCount();
 
