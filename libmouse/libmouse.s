@@ -30,9 +30,10 @@ WORDS:      .word   pplen
 .endm
 
 CoordMouse:
-MX:  .word   0
-MY:  .word   0
-LMB: .word   0
+MX:   .word   0
+MY:   .word   0
+LMB:  .word   0
+DOWN: .word   0
 
 
 OnClickEvent:  .word   0
@@ -85,12 +86,13 @@ Int460:
     mov  r3, -(sp)
     mov  r4, -(sp)    
     mov  r5, -(sp)
-    
+
+    mov     DOWN,-(sp)    
     mov     LMB, -(sp)
     mov     MY,  -(sp)
     mov     MX,  -(sp)
     jsr     pc, @OnClickEvent
-    add     $6, sp
+    add     $8, sp
 
     mov  (sp)+, r5
     mov  (sp)+, r4
@@ -466,20 +468,42 @@ go:
     rol r2
     sub r1, MouseY      /; Y is inverted
     
-/; Проверка на отжатие ЛКМ (1 -> 0)
-    bit     $1, r3              /; Проверяем старое состояние (LMB)
-    beq     112f                /; Если старая была 0
-    bit     $1, r2              /; Проверяем новое состояние (LMB)
-    bne     112f                /; Если новая 1 - проверка правой кнопки
+/; r2 = новые кнопки, r3 = старые
+    mov     r2, r0
+    xor     r3, r0              /; r0 = маска изменившихся кнопок
+    beq     112f                /; ни одна кнопка не изменилась 
+
+    /; --- Проверка ЛКМ ---
+    bit     $1, r0              /; Изменялась ли ЛКМ?
+    beq     112f                /; Нет -> переход к проверке ПКМ
     mov     $1, label_mouse_button
+    bit     $1, r2              /; Смотрим НОВОЕ состояние ЛКМ
+    beq     lmb_up              /; 0 = Отжатие (было 1 -> стало 0)
+lmb_down:
+    /; === НАЖАТИЕ ЛКМ (0 -> 1) ===
+    mov     $1, label_mouse_down
     br      sent_coord
+
+lmb_up:
+    /; === ОТЖАТИЕ ЛКМ (1 -> 0) ===
+    mov     $0, label_mouse_down
+    br      sent_coord
+
 112:
-/; Проверка на отжатие ПКМ (1 -> 0)
-    bit     $2, r3
-    beq     111f
-    bit     $2, r2
-    bne     111f
+    /; --- Проверка ПКМ ---
+    bit     $2, r0              /; Изменялась ли ПКМ?
+    beq     111f                /; Нет -> дальше
     mov     $0, label_mouse_button
+    bit     $2, r2              /; Смотрим НОВОЕ состояние ПКМ
+    beq     rmb_up              /; 0 = Отжатие (было 1 -> стало 0)
+rmb_down:
+    /; === НАЖАТИЕ ПКМ (0 -> 1) ===
+    mov     $1, label_mouse_down
+    br      sent_coord
+
+rmb_up:
+    /; === ОТЖАТИЕ ПКМ (1 -> 0) ===
+    mov     $0, label_mouse_down
 
 sent_coord:
     mov $CoordMouse, @r4
@@ -491,10 +515,14 @@ sent_coord:
     inc @r4
 label_mouse_button = . + 2
     mov $1, @r5
+    inc @r4
+label_mouse_down = . + 2
+    mov $1, @r5
 
     mov     $0376, -(sp)
     jsr pc, PullCPU
     add $2, sp
+
 111:
 
     mov     r2, MouseRL

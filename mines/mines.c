@@ -24,7 +24,8 @@ typedef enum
     STATE_MENU,
     STATE_GAME,
     STATE_EXIT,
-    STATE_INIT
+    STATE_INIT,
+    STATE_MOUSEDOWN
 } GameState;
 
 typedef enum
@@ -49,17 +50,24 @@ typedef struct
     unsigned char y;
 } Point;
 
+Point currentCell;
+bool  hasCurrentCell = false;
+
 int field_w = 9;
 int field_h = 9;
 int total_mines = 10;
 
 Point queue[MAX_FIELD_W * MAX_FIELD_H];
+
 Cell board[MAX_FIELD_W][MAX_FIELD_H];
+Cell board_copy[MAX_FIELD_W][MAX_FIELD_H];
+
 bool gameOver = false;
 bool gameWon = false;
 bool firstClick = true;
 volatile GameState currentState = STATE_MENU;
-unsigned currentMode = -1;
+char currentMode = -1;
+bool initBySmile = false;
 
 int smileX, smileY;
 
@@ -71,8 +79,10 @@ volatile bool hasPendingClick = false;
 volatile int pendingX = 0;
 volatile int pendingY = 0;
 volatile bool pendingLeft = true;
+volatile bool pendingDown;
 
 int offset_x, offset_y; 
+
 
 void drawFlag(int x, int y)
 {
@@ -195,6 +205,18 @@ void drawMenu()
     showMouse();
 }
 
+void drawPressedCell(int cx, int cy)
+{
+    int x1 = offset_x + cx * CELL_SIZE;
+    int y1 = offset_y + cy * CELL_SIZE;
+    int x2 = x1 + CELL_SIZE;
+    int y2 = y1 + CELL_SIZE;
+
+    Cell *c = &board[cx][cy];
+    drawPressedButton(x1, y1, x2, y2);
+}
+
+
 void drawCell(int cx, int cy)
 {
     int x1 = offset_x + cx * CELL_SIZE;
@@ -203,7 +225,7 @@ void drawCell(int cx, int cy)
     int y2 = y1 + CELL_SIZE;
 
     Cell *c = &board[cx][cy];
-
+    
     if(!Cell_isOpen(c))
     {
         drawButton(x1, y1, x2, y2);
@@ -268,15 +290,24 @@ void drawInitialBoard()
     drawButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
     drawSmile(smileX, smileY, SMILE_INIT);
 
+    //копия поля
     for (int x = 0; x < field_w; x++)
-    {
+        for (int y = 0; y < field_h; y++)
+            board_copy[x][y] = board[x][y];
+    
+    //сброс игрового поля
+    for (int x = 0; x < field_w; x++)
         for (int y = 0; y < field_h; y++)
             Cell_init(&board[x][y]);
-    }
 
+    //отрисовка 
     for (int x = 0; x < field_w; x++)
-      for (int y = 0; y < field_h; y++)
-        drawCell(x, y);
+        for (int y = 0; y < field_h; y++)
+        {
+            if (initBySmile && !(Cell_isOpen(&board_copy[x][y]) || Cell_isFlagged(&board_copy[x][y])))
+                continue;
+            drawCell(x, y);
+        }
 
     drawSmile(smileX, smileY, SMILE_NORMAL);
     currentState = STATE_GAME;
@@ -420,13 +451,14 @@ void openCell(int startX, int startY)
 }
 
 // Легковесный обработчик: передает клик в главный цикл
-void OnClickEvent(int x, int y, bool isLeft) 
+void OnMouseEvent(int x, int y, bool isLeft, bool down) 
 {
     if(currentState == STATE_INIT) return;
     pendingX = x;
     pendingY = y;
     pendingLeft = isLeft;
     hasPendingClick = true;
+    pendingDown = down;
 }
 
 void processMenuClick(int x, int y)
@@ -465,7 +497,7 @@ void processMenuClick(int x, int y)
             {
                 field_w = 35;
                 field_h = 13;
-                total_mines = 93;
+                total_mines = 90;
                 currentState = STATE_GAME;
             }
             else if (i == 3)
@@ -475,17 +507,35 @@ void processMenuClick(int x, int y)
     }
 }
 
-void processClick(int x, int y, bool isRight) 
+void releaseCurrentCell()
+{
+    if(hasCurrentCell)
+    {
+        hideMouse();
+        drawCell(currentCell.x, currentCell.y);
+        showMouse();
+        hasCurrentCell = false;
+    }
+}
+
+
+void processClick(int x, int y, bool isRight, bool isDown) 
 {
     if (currentState == STATE_MENU)
     {
         if (!isRight)
-            processMenuClick(x, y);
+            {
+                if(!isDown) return;
+                processMenuClick(x, y);
+            }
         return;
     }
 
     if (x >= smileX && x < (smileX + SMILE_W) && y >= smileY && y < (smileY + SMILE_H))
     {
+        releaseCurrentCell();
+
+        if(!isDown || isRight) return;
         hideMouse();
 
         drawPressedButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
@@ -493,6 +543,7 @@ void processClick(int x, int y, bool isRight)
         drawButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
         drawSmile(smileX, smileY, SMILE_NORMAL);
 
+        initBySmile = true;
         drawInitialBoard();
         showMouse();
         return;
@@ -500,15 +551,25 @@ void processClick(int x, int y, bool isRight)
 
     if (gameOver) return;
 
-    if (x < offset_x || y < offset_y) return;
+    if (x < offset_x || y < offset_y) 
+    {
+        releaseCurrentCell();
+        return;
+    }
+
     int cx = (x - offset_x) / CELL_SIZE;
     int cy = (y - offset_y) / CELL_SIZE;
 
-    if (cx < 0 || cx >= field_w || cy < 0 || cy >= field_h) return;
+    if (cx < 0 || cx >= field_w || cy < 0 || cy >= field_h)
+    {
+        releaseCurrentCell();
+        return;
+    }
+
 
     hideMouse();
 
-    if (isRight) 
+    if (isRight && !isDown) 
     { 
         if(!Cell_isOpen(&board[cx][cy])) 
         {
@@ -518,8 +579,27 @@ void processClick(int x, int y, bool isRight)
     }
     else 
     {
-        if(!Cell_isFlagged(&board[cx][cy])) 
-        {               
+        if(!Cell_isFlagged(&board[cx][cy]) && !isRight) 
+        { 
+            if(isDown && !Cell_isOpen(&board[cx][cy]))
+            {
+                currentCell.x = cx;
+                currentCell.y = cy;
+                drawPressedCell(cx, cy);
+                hasCurrentCell = true;
+                showMouse();
+                return;
+            }
+            else
+            {
+                if(currentCell.x != cx || currentCell.y != cy)
+                {
+                    releaseCurrentCell();
+                    showMouse();
+                    return;
+                }
+            }
+              
             if (firstClick)
             {
                 generateMines(cx, cy);
@@ -559,7 +639,7 @@ void main()
     if (!initKeyb()) return;
     if (!initGraph()) return;
 
-    setOnClick(OnClickEvent);
+    setOnClick(OnMouseEvent);
     setOnKeyEvent(OnKeyEvent);
 
     while (currentState != STATE_EXIT)
@@ -576,7 +656,7 @@ void main()
                 if (hasPendingClick)
                 {
                     hasPendingClick = false;
-                    processClick(pendingX, pendingY, !pendingLeft);
+                    processClick(pendingX, pendingY, !pendingLeft, pendingDown);
                 }
             }
         }
@@ -585,6 +665,7 @@ void main()
             hideMouse();
             clearScreen();
 
+            initBySmile = false;
             drawInitialBoard();
             hasPendingClick = false;
 
@@ -595,7 +676,7 @@ void main()
                 if (hasPendingClick)
                 {
                     hasPendingClick = false;
-                    processClick(pendingX, pendingY, !pendingLeft);
+                    processClick(pendingX, pendingY, !pendingLeft, pendingDown);
                 }
             }
         }
