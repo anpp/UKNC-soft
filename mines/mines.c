@@ -569,7 +569,7 @@ void processClick(int x, int y, bool isRight, bool isDown)
 
     hideMouse();
 
-    if (isRight && !isDown) 
+    if (isRight && isDown) 
     { 
         if(!Cell_isOpen(&board[cx][cy])) 
         {
