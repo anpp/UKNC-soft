@@ -146,6 +146,12 @@ void drawSmile(int x, int y, SmileState st)
         putPixel(xc + 2, yc + 4, COLOR_BLACK);
         putPixel(xc + 3, yc + 3, COLOR_BLACK);
         break;
+    case SMILE_SCARED:
+        fillCircle(xc - 4, yc - 2, 1, COLOR_BLACK);
+        fillCircle(xc + 4, yc - 2, 1, COLOR_BLACK);
+
+        circle(xc, yc + 3, 3, COLOR_BLACK);
+        break;
     case SMILE_WIN:
         fillCircle(xc - 4, yc - 2, 3, COLOR_BLACK);
         fillCircle(xc + 4, yc - 2, 3, COLOR_BLACK);
@@ -406,6 +412,8 @@ void openCell(int startX, int startY)
         drawSmile(smileX, smileY, SMILE_DEAD);
         return;
     }
+    else
+        drawSmile(smileX, smileY, SMILE_NORMAL);
 
     int head = 0;
     int tail = 0;
@@ -513,6 +521,7 @@ void releaseCurrentCell()
     {
         hideMouse();
         drawCell(currentCell.x, currentCell.y);
+        drawSmile(smileX, smileY, SMILE_NORMAL);
         showMouse();
         hasCurrentCell = false;
     }
@@ -590,6 +599,7 @@ void processClick(int x, int y, bool isRight, bool isDown)
             {
                 currentCell.x = cx;
                 currentCell.y = cy;
+                drawSmile(smileX, smileY, SMILE_SCARED);
                 drawPressedCell(cx, cy);
                 hasCurrentCell = true;
             }
