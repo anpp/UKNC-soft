@@ -25,7 +25,6 @@ typedef enum
     STATE_GAME,
     STATE_EXIT,
     STATE_INIT,
-    STATE_MOUSEDOWN
 } GameState;
 
 typedef enum
@@ -33,7 +32,8 @@ typedef enum
     SMILE_INIT,
     SMILE_NORMAL,
     SMILE_WIN,
-    SMILE_DEAD
+    SMILE_DEAD,
+    SMILE_SCARED
 } SmileState;
 
 
@@ -566,6 +566,11 @@ void processClick(int x, int y, bool isRight, bool isDown)
         return;
     }
 
+    if((currentCell.x != cx || currentCell.y != cy) && !isDown)
+    {
+        releaseCurrentCell();
+        return;
+    }
 
     hideMouse();
 
@@ -579,37 +584,29 @@ void processClick(int x, int y, bool isRight, bool isDown)
     }
     else 
     {
-        if(!Cell_isFlagged(&board[cx][cy]) && !isRight) 
+        if(!Cell_isFlagged(&board[cx][cy]) && !Cell_isOpen(&board[cx][cy]) && !isRight) 
         { 
-            if(isDown && !Cell_isOpen(&board[cx][cy]))
+            if(isDown)
             {
                 currentCell.x = cx;
                 currentCell.y = cy;
                 drawPressedCell(cx, cy);
                 hasCurrentCell = true;
-                showMouse();
-                return;
             }
             else
+            if(hasCurrentCell)
             {
-                if(currentCell.x != cx || currentCell.y != cy)
+                if (firstClick)
                 {
-                    releaseCurrentCell();
-                    showMouse();
-                    return;
-                }
+                    generateMines(cx, cy);
+                    firstClick = false;
+                } 
+
+                openCell(cx, cy);
+
+                if (!gameOver)
+                    checkWinCondition();
             }
-              
-            if (firstClick)
-            {
-                generateMines(cx, cy);
-                firstClick = false;
-            } 
-
-            openCell(cx, cy);
-
-            if (!gameOver)
-                checkWinCondition();
         }
     }
     showMouse();
