@@ -3,6 +3,7 @@
 #include "../libmouse/libmouse.h"
 #include "../common/random.h"
 #include "cell.h"
+#include "segments7digit.h"
 
 #define SCREEN_W   640
 #define SCREEN_H   264
@@ -56,6 +57,7 @@ bool  hasCurrentCell = false;
 int field_w = 9;
 int field_h = 9;
 int total_mines = 10;
+int flags = 0;
 
 Point queue[MAX_FIELD_W * MAX_FIELD_H];
 
@@ -286,6 +288,7 @@ void drawInitialBoard()
     gameOver = false;
     gameWon = false;
     firstClick = true;
+    flags = 0;
 
     offset_x = (SCREEN_W / 2) - (field_w * CELL_SIZE / 2);
     offset_y = ((SCREEN_H + 30) / 2) - (field_h * CELL_SIZE / 2); //по вертикале оставляем свободное место наверху
@@ -295,6 +298,8 @@ void drawInitialBoard()
 
     drawButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
     drawSmile(smileX, smileY, SMILE_INIT);
+
+    drawNumberDisplay(offset_x, offset_y - 30, total_mines);
 
     //копия поля
     for (int x = 0; x < field_w; x++)
@@ -587,8 +592,13 @@ void processClick(int x, int y, bool isRight, bool isDown)
     { 
         if(!Cell_isOpen(&board[cx][cy])) 
         {
-            Cell_toggleFlag(&board[cx][cy]);
-            drawCell(cx, cy);
+            if((Cell_isFlagged(&board[cx][cy]) || flags < total_mines))
+            {
+                Cell_toggleFlag(&board[cx][cy]);
+                drawCell(cx, cy);
+                flags += Cell_isFlagged(&board[cx][cy]) ? 1 : -1;
+                drawNumberDisplay(offset_x, offset_y - 30, total_mines - flags);
+            }
         }
     }
     else 
