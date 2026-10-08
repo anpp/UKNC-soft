@@ -1,7 +1,7 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
 .globl _putChar, _putText, _circle, _fillCircle
-.globl _runPPU, _getFrameCount
+.globl _runPPU, _getFrameCount, _setOnFrame
 
 base_addr = .
 
@@ -88,6 +88,8 @@ running_proc:   .word 0   /;слово флагов для запуска под
 .
 0100000 - завершение главного цикла ПП
 */
+.even
+OnFrameEvent:  .word   0
 
 finished:                 .word 0
 
@@ -179,6 +181,7 @@ _finishGraph:
     mtps    $0340
     mov     FrameIntOld, @$0100
     mov     FramePSWOld, @$0102
+    clr     OnFrameEvent
     mtps    SavePS
 
     bis $0100000, running_proc  /флаг завершения для ПП
@@ -525,11 +528,23 @@ _getFrameCount:
     mov  FrameCount, r0
     rts  pc
 
+/;Аргумент - адрес функции
+_setOnFrame:
+    mov  2(sp), OnFrameEvent
+    rts  pc
+
 
 /=============================================================================
 FrameInt:
     mfps    -(sp)
+    mov     r0, -(sp)
     inc     FrameCount
+
+    tst  OnFrameEvent
+    beq  1f
+    jsr  pc, @OnFrameEvent
+1:
+    mov     (sp)+, r0
     mtps    (sp)+    
     jmp @FrameIntOld
 /=============================================================================

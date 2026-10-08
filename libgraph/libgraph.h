@@ -26,7 +26,7 @@ extern void putText(const char *str, int x, int y, unsigned int color);
 extern void circle(int x, int y, unsigned int r, unsigned int color);
 extern void fillCircle(int x, int y, unsigned int r, unsigned int color);
 extern unsigned int getFrameCount();
-
+extern void setOnFrame(void *addr_func);
 
 void rect(int x1, int y1, int x2, int y2, unsigned int color)
 {

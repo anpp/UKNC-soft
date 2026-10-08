@@ -58,6 +58,8 @@ int field_w = 9;
 int field_h = 9;
 int total_mines = 10;
 int flags = 0;
+int innercellcolor = COLOR_WHITE;
+int seconds = 0;
 
 Point queue[MAX_FIELD_W * MAX_FIELD_H];
 
@@ -84,6 +86,14 @@ volatile bool pendingLeft = true;
 volatile bool pendingDown;
 
 int offset_x, offset_y; 
+
+
+volatile unsigned int frameCounter = 0;
+
+void OnFrameEvent()
+{
+    frameCounter++;
+}
 
 
 void drawFlag(int x, int y)
@@ -242,7 +252,7 @@ void drawCell(int cx, int cy)
     } 
     else
     {
-        fillRect(x1, y1, x2, y2, COLOR_WHITE);
+        fillRect(x1, y1, x2, y2, innercellcolor);
         rect(x1, y1, x2, y2, COLOR_BLACK);
 
         if (Cell_isMine(c))
@@ -282,6 +292,8 @@ void drawInitialBoard()
     printTop(1, "MINESWEEPER - ");
     printTop(15, menuLabels[currentMode]);
 
+    setOnFrame(nullptr);
+
     printBottom(1, emptystr);
     printBottom(1, "LOADING...");
 
@@ -289,6 +301,7 @@ void drawInitialBoard()
     gameWon = false;
     firstClick = true;
     flags = 0;
+    seconds = 0;
 
     offset_x = (SCREEN_W / 2) - (field_w * CELL_SIZE / 2);
     offset_y = ((SCREEN_H + 30) / 2) - (field_h * CELL_SIZE / 2); //по вертикале оставляем свободное место наверху
@@ -299,7 +312,8 @@ void drawInitialBoard()
     drawButton(smileX, smileY, smileX + SMILE_W, smileY + SMILE_H);
     drawSmile(smileX, smileY, SMILE_INIT);
 
-    drawNumberDisplay(offset_x, offset_y - 30, total_mines);
+    drawNumberDisplay(offset_x, offset_y - TOTALHEIGHT, total_mines);
+    drawNumberDisplay(offset_x + (field_w * CELL_SIZE) - TOTALWIDTH, offset_y - TOTALHEIGHT, seconds);
 
     //копия поля
     for (int x = 0; x < field_w; x++)
@@ -342,6 +356,7 @@ void checkWinCondition()
     {
         gameWon = true;
         gameOver = true;
+        setOnFrame(nullptr);
         printTop(1, emptystr);
         printTop(1, "YOU WIN!");
         drawSmile(smileX, smileY, SMILE_WIN);
@@ -399,7 +414,9 @@ void openCell(int startX, int startY)
     if (Cell_isMine(&board[startX][startY]))
     {
         Cell_setOpen(&board[startX][startY], true);
+        innercellcolor = COLOR_RED;
         drawCell(startX, startY);
+        innercellcolor = COLOR_WHITE;
         gameOver = true;
         for (int i = 0; i < field_w; i++)
         {
@@ -412,6 +429,7 @@ void openCell(int startX, int startY)
                 }
             }
         }
+        setOnFrame(nullptr);
         printTop(1, emptystr);
         printTop(1, "BOOM!");
         drawSmile(smileX, smileY, SMILE_DEAD);
@@ -597,7 +615,7 @@ void processClick(int x, int y, bool isRight, bool isDown)
                 Cell_toggleFlag(&board[cx][cy]);
                 drawCell(cx, cy);
                 flags += Cell_isFlagged(&board[cx][cy]) ? 1 : -1;
-                drawNumberDisplay(offset_x, offset_y - 30, total_mines - flags);
+                drawNumberDisplay(offset_x, offset_y - TOTALHEIGHT, total_mines - flags);
             }
         }
     }
@@ -616,10 +634,12 @@ void processClick(int x, int y, bool isRight, bool isDown)
             else
             if(hasCurrentCell)
             {
+                hasCurrentCell = false;
                 if (firstClick)
                 {
                     generateMines(cx, cy);
                     firstClick = false;
+                    setOnFrame(OnFrameEvent);
                 } 
 
                 openCell(cx, cy);
@@ -663,6 +683,7 @@ void main()
     {
         if (currentState == STATE_MENU)
         {
+            setOnFrame(nullptr);
             drawMenu();
 
             printBottom(1, emptystr);
@@ -690,7 +711,16 @@ void main()
 
             while (currentState == STATE_GAME)
             {
-                if (hasPendingClick)
+                if (frameCounter >= 50)
+                {
+                    frameCounter -= 50;
+                    seconds++;
+        
+                    if (seconds > 999) seconds = 999;
+
+                    drawNumberDisplay(offset_x + (field_w * CELL_SIZE) - TOTALWIDTH, offset_y - TOTALHEIGHT, seconds);
+                }
+                if(hasPendingClick)
                 {
                     hasPendingClick = false;
                     processClick(pendingX, pendingY, !pendingLeft, pendingDown);

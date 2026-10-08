@@ -1,5 +1,11 @@
 #include "../libgraph/libgraph.h"
 
+#define DIGITWIDTH 13
+#define DIGITPADDING  3
+#define TOTALWIDTH ((DIGITWIDTH * 3) + (DIGITPADDING * 2) + 4)
+#define TOTALHEIGHT (23 + 4)
+
+
 // Маска активных сегментов для цифр 0..9 (бит 0 = 'a', бит 1 = 'b', ..., бит 6 = 'g')
 const unsigned char segmentMap[10] = {
     0b00111111, // 0: a,b,c,d,e,f
@@ -13,6 +19,7 @@ const unsigned char segmentMap[10] = {
     0b01111111, // 8: все сегменты
     0b01101111  // 9: a,b,c,d,f,g
 };
+
 
 // Рисование одного сегмента (горизонтального или вертикального)
 void drawSegment(int x, int y, int w, int h, bool active)
@@ -68,19 +75,15 @@ void drawNumberDisplay(int x, int y, int number)
     int d2 = (number / 10) % 10;  // Десятки
     int d3 = number % 10;         // Единицы
 
-    int digitWidth = 13;
-    int digitPadding = 3;
-    int totalWidth = (digitWidth * 3) + (digitPadding * 2) + 4;
-    int totalHeight = 23 + 4;
 
     // задний фон и фаску рамки
-    //drawDigitalPanel(x, y, x + totalWidth, y + totalHeight);
+    //drawDigitalPanel(x, y, x + TOTALWIDTH, y + TOTALHEIGHT);
 
     int startX = x + 3;
     int startY = y + 3;
 
     draw7SegDigit(startX, startY, d1);
-    draw7SegDigit(startX + digitWidth + digitPadding, startY, d2);
-    draw7SegDigit(startX + (digitWidth + digitPadding) * 2, startY, d3);
+    draw7SegDigit(startX + DIGITWIDTH + DIGITPADDING, startY, d2);
+    draw7SegDigit(startX + (DIGITWIDTH + DIGITPADDING) * 2, startY, d3);
 }
 
