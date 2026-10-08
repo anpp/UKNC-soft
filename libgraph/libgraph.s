@@ -591,6 +591,8 @@ begin:
     mov $OffPPU, @r4
     mov offsetVPPU, @r5
     
+    mov $81, @$023156        /;скрыть текстовый курсор
+
     jsr  pc, MainPPU
     rts  pc
 
