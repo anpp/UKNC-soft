@@ -95,6 +95,16 @@ void OnFrameEvent()
     frameCounter++;
 }
 
+void stopTimer()
+{
+    setOnFrame(nullptr);
+    frameCounter = 0;
+}
+
+void startTimer()
+{
+    setOnFrame(OnFrameEvent);
+}
 
 void drawFlag(int x, int y)
 {
@@ -292,7 +302,7 @@ void drawInitialBoard()
     printTop(1, "MINESWEEPER - ");
     printTop(15, menuLabels[currentMode]);
 
-    setOnFrame(nullptr);
+    stopTimer();
 
     printBottom(1, emptystr);
     printBottom(1, "LOADING...");
@@ -339,6 +349,7 @@ void drawInitialBoard()
 
     printBottom(1, emptystr);
     printBottom(1, "ESC(AR2) - back");
+    printBottom(18, "SPACE - palette");
 }
 
 void checkWinCondition()
@@ -356,7 +367,7 @@ void checkWinCondition()
     {
         gameWon = true;
         gameOver = true;
-        setOnFrame(nullptr);
+        stopTimer();
         printTop(1, emptystr);
         printTop(1, "YOU WIN!");
         drawSmile(smileX, smileY, SMILE_WIN);
@@ -429,7 +440,7 @@ void openCell(int startX, int startY)
                 }
             }
         }
-        setOnFrame(nullptr);
+        stopTimer();
         printTop(1, emptystr);
         printTop(1, "BOOM!");
         drawSmile(smileX, smileY, SMILE_DEAD);
@@ -639,7 +650,7 @@ void processClick(int x, int y, bool isRight, bool isDown)
                 {
                     generateMines(cx, cy);
                     firstClick = false;
-                    setOnFrame(OnFrameEvent);
+                    startTimer();
                 } 
 
                 openCell(cx, cy);
@@ -652,6 +663,7 @@ void processClick(int x, int y, bool isRight, bool isDown)
     showMouse();
 }
 
+volatile long unsigned int palette = 0;
 void OnKeyEvent(bool Up, unsigned char key_code)
 {
     if(key_code == KEY_AR2 && !Up)
@@ -668,6 +680,13 @@ void OnKeyEvent(bool Up, unsigned char key_code)
             break;
         }
     }
+    if(key_code == KEY_SPACE && !Up)
+    {
+        if(palette == 0)
+            palette = setPalette(0115230, 0177174);
+        else
+            palette = setPalette((palette >> 16) & 65535, palette & 65535);
+    }
 }
 
 void main() 
@@ -683,11 +702,12 @@ void main()
     {
         if (currentState == STATE_MENU)
         {
-            setOnFrame(nullptr);
+            stopTimer();
             drawMenu();
 
             printBottom(1, emptystr);
             printBottom(1, "ESC(AR2) - exit");
+            printBottom(18, "SPACE - palette");
 
             while (currentState == STATE_MENU)
             {

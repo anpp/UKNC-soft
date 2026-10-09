@@ -1,7 +1,7 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
 .globl _putChar, _putText, _circle, _fillCircle
-.globl _runPPU, _getFrameCount, _setOnFrame
+.globl _runPPU, _getFrameCount, _setOnFrame, _setPalette
 
 base_addr = .
 
@@ -67,6 +67,9 @@ FrameCount:  .word 0
 FrameIntOld: .word 0
 FramePSWOld: .word 0
 
+rp0CPU:  .word 0
+rp2CPU:  .word 0
+
 CharAddresses:  .fill 80, 2, 0  /; Буфер для адресов символов для PutTextPPU
 
 running_proc:   .word 0   /;слово флагов для запуска подпрограмм в ПП
@@ -83,6 +86,7 @@ running_proc:   .word 0   /;слово флагов для запуска под
 01000 - SetTextColorPPU
 02000 - PutTextPPU
 04000 - FillCirclePPU
+010000 - SetPalettePPU
 .
 .
 .
@@ -550,6 +554,20 @@ FrameInt:
 /=============================================================================
 
 
+_setPalette:
+    mov     2(sp), rp0CPU
+    mov     4(sp), rp2CPU
+
+    bis     $010000, running_proc
+1:
+    bit     $010000, running_proc
+    bne     1b
+    mov     rp0CPU, r0
+    mov     rp2CPU, r1
+
+    rts     pc
+
+
 
 /=============================================================================================
 pp.beg:
@@ -592,6 +610,12 @@ begin:
     mov offsetVPPU, @r5
     
     mov $81, @$023156        /;скрыть текстовый курсор
+
+/;сохранить регистры управления цветом
+    mov @$02470, rp0
+    mov @$02472, rp2
+    /;mov $0115230, @$02470
+    /;mov $0177174, @$02472
 
     jsr  pc, MainPPU
     rts  pc
@@ -694,7 +718,13 @@ end_fillcircle:
     mov $RunProcPPU, @r4
     bic $04000, @r5         /FillCirclePPU выполнена 
 13:
+    asr (sp)               /Проверка на SetPalettePPU
+    bcc 14f
+    jsr pc, SetPalettePPU
+    mov $RunProcPPU, @r4
+    bic $010000, @r5         /SetPalettePPU выполнена 
 
+14:
     tst (sp)+ 
     jmp MainPPU
 100:    
@@ -839,6 +869,9 @@ FinishGraphPPU:
     mov    mainScreenColor1, @$02470
     mov    mainScreenColor2, @$02472
     mov    modeScreen, @$02462
+
+    mov    rp0, @$02470
+    mov    rp2, @$02472
  
     mov $finished, r0
     clc
@@ -1671,6 +1704,28 @@ HLineDone:
     mov     (sp)+, r3
     rts     pc
 
+//===============================SetPalettePPU=======================================
+SetPalettePPU:
+    mov  $rp0CPU, r0
+    clc
+    ror     r0                 
+    mov     r0, @r4
+    mov     @r5, r0   /;В r0 rp0CPU
+    inc     @r4
+    mov     @r5, r1   /;В r1 rp2CPU
+
+    /;возвращаем текущую палитру в CPU
+    mov     @$02472, @r5
+    dec     @r4
+    mov     @$02470, @r5
+
+    mov     r0, @$02470
+    mov     r1, @$02472
+
+    rts     pc
+
+
+
 
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:   .word 0         /;адрес верхней видеостроки пользовательского экрана
@@ -1691,6 +1746,9 @@ yc:   .word 0
 
 shftmp: .word 0     /;сдвиг в PutTextPPU
 bold:   .word 0     /;величина утолщения символа
+
+rp0:    .word 0     /;сохраненный регистр 02470
+rp2:    .word 0     /;сохраненный регистр 02472
 
 FntTable: .word 0117430
 
