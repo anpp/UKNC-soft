@@ -605,7 +605,7 @@ begin:
     mov $0177010, r4
     mov $0177014, r5
 
-    / рулон в CPU
+    /; рулон в CPU
     mov $OffPPU, @r4
     mov offsetVPPU, @r5
     
@@ -614,8 +614,6 @@ begin:
 /;сохранить регистры управления цветом
     mov @$02470, rp0
     mov @$02472, rp2
-    /;mov $0115230, @$02470
-    /;mov $0177174, @$02472
 
     jsr  pc, MainPPU
     rts  pc

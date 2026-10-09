@@ -445,6 +445,9 @@ notpaint:
     /;bge exit
 
     mov @$0177400, r0
+    cmp $0100601, r0
+    bne go
+    clr r0
     /;  проверки, что координаты и рулон не менялись
     /;bit   #^B1111111011111110, R0
     /;bne   go
@@ -624,7 +627,7 @@ end_parsemouse:
 
 
 Int4:
-    
+    clr r0
     rti
 
 
