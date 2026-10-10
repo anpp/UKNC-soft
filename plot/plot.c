@@ -33,7 +33,7 @@ void cordic_calc(int angle, int *res_cos, int *res_sin)
     *res_sin = y;
 }
 
-float fsin(float x) 
+float fsin1(float x) 
 {
     int k = (int)(x * INV_TWO_PI);
     x -= (float)k * TWO_PI;
@@ -49,9 +49,9 @@ float fsin(float x)
     return r_sin / 16384.0f;
 }
 
-float fcos(float x) 
+float fcos1(float x) 
 {
-    return fsin(x + (PI / 2.0f));
+    return fsin1(x + (PI / 2.0f));
 }
 
 
@@ -71,10 +71,10 @@ void main()
 
     for (float x = -(WIDTH / 2); x < (WIDTH / 2); x += stepx)
     {
-        y = a * fsin(x / a);
+        y = a * fsin1(x / a);
         //y = x / 2.0f - a;
         x2 = x + stepx;
-        y2 = a * fsin(x2 / a);
+        y2 = a * fsin1(x2 / a);
 
         int screenX = (int)(centerX + x);
         int screenY = (int)(centerY - y);
@@ -86,6 +86,9 @@ void main()
             //putPixel(screenX, screenY, 7);
     }
     waitAnyKey();
+
+    resetScreen();
+
     finishGraph();    
     finishKeyb();
 }

@@ -229,6 +229,7 @@ void main()
     }
 
     printTop(1, "       ");
+    resetScreen();
     finishGraph();    
     finishKeyb();    
 }
