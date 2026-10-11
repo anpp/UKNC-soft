@@ -125,25 +125,15 @@ pp_mput:
 _initGraph:
     jsr   pc, InitLineTable
 
-    PatchAddressesLabels $PxlAddr,       PixelAddrLabel1
-    PatchAddressesLabels $PxlAddr,       PixelAddrLabel2
-    PatchAddressesLabels $PxlAddr,       PixelAddrLabel3
-    PatchAddressesLabels $PxlAddr,       PixelAddrLabel4
-    PatchAddressesLabels $PxlAddr,       PixelAddrLabel5
-    PatchAddressesLabels $PxlAddr,       PixelAddrLabel6
-    PatchAddressesLabels $PxClr,         PixelColorLabel1 
-    PatchAddressesLabels $PxClr,         PixelColorLabel2 
-    PatchAddressesLabels $PxClr,         PixelColorLabel3
-    PatchAddressesLabels $PxShift,       PixelShiftLabel1
-    PatchAddressesLabels $PxShift,       PixelShiftLabel2
-    PatchAddressesLabels $received_color PixelRecColorLabel1
-    PatchAddressesLabels $offsetV,       OffsetVLabel1
+    PatchAddressesLabels $PxlAddr,       PixelAddrLabel
+    PatchAddressesLabels $PxShift,       PixelShiftLabel
+    PatchAddressesLabels $PxClr,         PixelColorLabel 
+    PatchAddressesLabels $received_color PixelRecColorLabel
+    PatchAddressesLabels $offsetV,       OffsetVLabel
     PatchAddressesLabels $running_proc,  RunProcLabel
-    PatchAddressesLabels $LineColor,     LineColorLabel1
-    PatchAddressesLabels $LineColor,     LineColorLabel2
-    PatchAddressesLabels $char,          CharLabel1
-    PatchAddressesLabels $PixelX,        PixelXLabel1
-    PatchAddressesLabels $PixelX,        PixelXLabel2
+    PatchAddressesLabels $LineColor,     LineColorLabel
+    PatchAddressesLabels $char,          CharLabel
+    PatchAddressesLabels $PixelX,        PixelXLabel
     PatchAddressesLabels $CharAddresses, CharAddressesLabel
     PatchAddressesLabels $boldvalue,     boldvalueLabel
 
@@ -604,6 +594,16 @@ begin:
 
 RunProcLabel = . + 2
     mov  $0, RunProcPPU
+PixelAddrLabel = . + 2
+    mov  $0, PixelAddr
+PixelColorLabel = . + 2
+    mov  $0, PixelColor
+LineColorLabel = . + 2
+    mov  $0, LineColorPPU
+PixelXLabel = . + 2
+    mov  $0, PixelXPPU
+PixelShiftLabel = . + 2
+    mov  $0, PixelShift
 
     mov  @$02476, r0
     mov  @r0, offsetVPPU
@@ -618,7 +618,7 @@ RunProcLabel = . + 2
     mov $0177014, r5
 
     /; рулон в CPU
-OffsetVLabel1 = . + 2
+OffsetVLabel = . + 2
     mov $0, @r4
     mov offsetVPPU, @r5
     
@@ -783,8 +783,7 @@ FillScreenPPU:
 
 
 PutPixelPPU:
-PixelAddrLabel1 = . + 2    
-    mov $0, @r4
+    mov PixelAddr, @r4
     mov @r5, r0          /;В r0 готовый адрес из ЦП
 
     inc @r4
@@ -801,11 +800,10 @@ PixelAddrLabel1 = . + 2
 
 
 GetPixelPPU:
-PixelAddrLabel2 = . + 2
-    mov $0, @r4
+    mov PixelAddr, @r4
     mov @r5, r0          /;В r0 готовый адрес из ЦП
 
-PixelShiftLabel1 = . + 2
+PixelShiftLabel = . + 2
     mov $0, @r4
     mov @r5, r2          /;в r2 число сдвигов вправо для @$0177024
 
@@ -819,7 +817,7 @@ PixelShiftLabel1 = . + 2
     bic $0b1111111111111000, r1
 
     /; цвет в CPU
-PixelRecColorLabel1 = . + 2
+PixelRecColorLabel = . + 2
     mov $0, @r4
     mov r1, @r5
 
@@ -914,8 +912,7 @@ FinishGraphPPU:
 
 LinePPU:
     /;цвет
-LineColorLabel1 = . + 2
-    mov $0, @r4
+    mov LineColorPPU, @r4
     mov @r5, @$0177016        
 
     mov     $0177024, r2
@@ -930,8 +927,7 @@ LineColorLabel1 = . + 2
     mov     @r5, y1
 
     /; адрес и маска для первого пикселя
-PixelAddrLabel3 = . + 2
-    mov     $0, @r4
+    mov     PixelAddr, @r4
     mov     @r5, r3          /;r3 - адрес текущего пикселя
     inc     (r4)
     mov     @r5, r1          /;r1 - маска пикселя в октете
@@ -1075,8 +1071,7 @@ LineExit:
 
 FillRectPPU:
     /; Цвет (устанавливается один раз перед циклами)
-LineColorLabel2 = . + 2
-    mov $0, @r4
+    mov LineColorPPU, @r4
 
     mov     @r5, @$0177016
 
@@ -1090,8 +1085,7 @@ LineColorLabel2 = . + 2
     mov     @r5, r1               /; r1 = y1
 
     /; Адрес первого пикселя от ЦП
-PixelAddrLabel4 = . + 2
-    mov     $0, @r4
+    mov     PixelAddr, @r4
     mov     @r5, r3               /; r3 = адрес текущего пикселя (VRAM)
 
     mov     r5, -(sp)             /; сохраняем рабочий регистр r5
@@ -1220,8 +1214,7 @@ FillRectExit:
 
 /;=========================SetTextColorPPU==============================================================
 SetTextColorPPU:
-PixelColorLabel1 = . + 2
-    mov   $0,  @r4
+    mov   PixelColor,  @r4
     mov   @r5, @$0177016
     jmp   end_settextcolor
 
@@ -1229,15 +1222,14 @@ PixelColorLabel1 = . + 2
 PutCharPPU:  
     mov   r5, -(sp)
 
-PixelAddrLabel5 = . + 2
-    mov   $0, @r4
+    mov   PixelAddr, @r4
     mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
 
 boldvalueLabel = . + 2
     mov   $0, @r4
     mov   @r5, bold
 
-CharLabel1 = . + 2
+CharLabel = . + 2
     mov   $0, @r4
     mov   @r5, r1          /; адрес char'а
 
@@ -1291,12 +1283,10 @@ CharLabel1 = . + 2
 PutTextPPU:  
     mov   r5, -(sp)
 
-PixelAddrLabel6 = . + 2
-    mov   $0, @r4
+    mov   PixelAddr, @r4
     mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
 
-PixelShiftLabel2 = . + 2
-    mov   $0, @r4  /;shift
+    mov   PixelShift, @r4  /;shift
     mov   @r5, shftmp       /; shftmp = величина сдвига (0..7)
 
     mov   $0177024, r5
@@ -1348,12 +1338,10 @@ CharAddressesLabel = . + 2
 CirclePPU:
     mov   r5, -(sp)
 
-PixelColorLabel2 = . + 2
-    mov   $0 , @r4
+    mov   PixelColor , @r4
     mov   @r5, @$0177016
 
-PixelXLabel1 = . + 2
-    mov   $0, @r4
+    mov   PixelXPPU, @r4
     mov   @r5, xc
     inc   (r4)             /;y
     mov   @r5, yc
@@ -1521,12 +1509,10 @@ FillCircle:
     mov     r4, -(sp)
     mov     r5, -(sp)
 
-PixelColorLabel3 = . + 2
-    mov   $0 , @r4
+    mov   PixelColor , @r4
     mov   @r5, @$0177016
 
-PixelXLabel2 = . + 2
-    mov   $0, @r4
+    mov   PixelXPPU, @r4
     mov   @r5, xc
     inc   (r4)             /;y
     mov   @r5, yc
@@ -1778,6 +1764,11 @@ yc:   .word 0
 shftmp:     .word 0     /;сдвиг в PutTextPPU
 bold:       .word 0     /;величина утолщения символа
 RunProcPPU: .word 0     /;битовая карта подпрограмм
+PixelAddr:  .word 0
+PixelColor: .word 0
+LineColorPPU:  .word 0
+PixelXPPU:     .word 0
+PixelShift:    .word 0
 
 rp0:    .word 0     /;сохраненный регистр 02470
 rp2:    .word 0     /;сохраненный регистр 02472
