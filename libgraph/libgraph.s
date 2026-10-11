@@ -3,31 +3,12 @@
 .globl _putChar, _putText, _circle, _fillCircle
 .globl _runPPU, _getFrameCount, _setOnFrame, _setPalette
 
-base_addr = .
-
-entry = 01000
-crt0size = 016
-
-offset_size = base_addr - (entry + crt0size)
 
 rsk2 = 0176674
 rdk2 = rsk2+2
 
 pplen = (pp.end - pp.beg) >> 1
 
-PxlPPU = (Pxl - offset_size) >> 1
-PxlColorPPU = (PxClr - offset_size) >> 1
-PxlAddress = (PxlAddr - offset_size) >> 1
-PxShiftPPU = (PxShift - offset_size) >> 1
-RecColor = (received_color - offset_size) >> 1
-OffPPU = (offsetV - offset_size) >> 1
-RunProcPPU = (running_proc - offset_size) >> 1
-LineColorPPU = (LineColor - offset_size) >> 1
-CharPPU = (char - offset_size) >> 1
-XPPU = (PixelX - offset_size) >> 1
-RadiusPPU = (Radius - offset_size) >> 1
-CharAddressesPPU = (CharAddresses - offset_size) >> 1
-boldvaluePPU = (boldvalue - offset_size) >> 1
 
 mp:
             .byte   0
@@ -134,9 +115,37 @@ pp_mput:
 /=============================================================================
 
 
+.macro PatchAddressesLabels AddrLabel, LabelPPU
+    mov   \AddrLabel, r0
+    clc
+    ror   r0
+    mov   r0, \LabelPPU
+.endm
 
 _initGraph:
     jsr   pc, InitLineTable
+
+    PatchAddressesLabels $PxlAddr,       PixelAddrLabel1
+    PatchAddressesLabels $PxlAddr,       PixelAddrLabel2
+    PatchAddressesLabels $PxlAddr,       PixelAddrLabel3
+    PatchAddressesLabels $PxlAddr,       PixelAddrLabel4
+    PatchAddressesLabels $PxlAddr,       PixelAddrLabel5
+    PatchAddressesLabels $PxlAddr,       PixelAddrLabel6
+    PatchAddressesLabels $PxClr,         PixelColorLabel1 
+    PatchAddressesLabels $PxClr,         PixelColorLabel2 
+    PatchAddressesLabels $PxClr,         PixelColorLabel3
+    PatchAddressesLabels $PxShift,       PixelShiftLabel1
+    PatchAddressesLabels $PxShift,       PixelShiftLabel2
+    PatchAddressesLabels $received_color PixelRecColorLabel1
+    PatchAddressesLabels $offsetV,       OffsetVLabel1
+    PatchAddressesLabels $running_proc,  RunProcLabel
+    PatchAddressesLabels $LineColor,     LineColorLabel1
+    PatchAddressesLabels $LineColor,     LineColorLabel2
+    PatchAddressesLabels $char,          CharLabel1
+    PatchAddressesLabels $PixelX,        PixelXLabel1
+    PatchAddressesLabels $PixelX,        PixelXLabel2
+    PatchAddressesLabels $CharAddresses, CharAddressesLabel
+    PatchAddressesLabels $boldvalue,     boldvalueLabel
 
     mput  mp
     bne 1f
@@ -593,6 +602,9 @@ begin:
     mov  TRightMaskTable, table_rightmask3
     mov  TRightMaskTable, table_rightmask4
 
+RunProcLabel = . + 2
+    mov  $0, RunProcPPU
+
     mov  @$02476, r0
     mov  @r0, offsetVPPU
 
@@ -600,13 +612,14 @@ begin:
     mov  @$02472, mainScreenColor2
 
     mov  @$02462, modeScreen
-    mov  $0, @$02462            /;640 x 288
+    mov  $7, @$02462            /;640 x 288 яркость
 
     mov $0177010, r4
     mov $0177014, r5
 
     /; рулон в CPU
-    mov $OffPPU, @r4
+OffsetVLabel1 = . + 2
+    mov $0, @r4
     mov offsetVPPU, @r5
     
     mov $81, @$023156        /;скрыть текстовый курсор
@@ -621,7 +634,7 @@ begin:
 
     /Основной цикл
 MainPPU:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     mov @r5, -(sp)       /;вершина стека - битовая карта процессов
 
     bmi 100f              /BitsProcPPU
@@ -630,14 +643,14 @@ MainPPU:
     bcc 2f
     jmp PutPixelPPU
 end_putpixel:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $01, @r5          /PutPixel выполнена
 2:
     asr (sp)              /Проверка на GetPixel
     bcc 3f
     jmp GetPixelPPU
 end_getpixel:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $02, @r5          /GetPixel выполнена
 
 3: 
@@ -645,7 +658,7 @@ end_getpixel:
     bcc 4f
     jsr pc, ClearScreenPPU
 
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $04, @r5           /ClearScreen выполнена
                          
 4:
@@ -653,7 +666,7 @@ end_getpixel:
     bcc 5f
     jsr pc, PrintTopBottomPPU
 
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $010, @r5
                          /PrintTopBottom выполнена
 5:
@@ -661,7 +674,7 @@ end_getpixel:
     bcc 6f
     jsr pc, InvertScreenPPU
 
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $020, @r5         /InvertScreen выполнена
 
 6:
@@ -669,7 +682,7 @@ end_getpixel:
     bcc 7f
     jmp LinePPU
 end_line:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $040, @r5         /LinePPU выполнена
 
 7:
@@ -677,7 +690,7 @@ end_line:
     bcc 8f
     jmp FillRectPPU
 end_fillrect:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $0100, @r5         /FillRectPPU выполнена
 
 8:
@@ -685,41 +698,41 @@ end_fillrect:
     bcc 9f
     jmp PutCharPPU
 end_putchar:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $0200, @r5         /PutCharPPU выполнена
 9:
     asr (sp)               /Проверка на CirclePPU
     bcc 10f
     jmp CirclePPU
 end_circle:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $0400, @r5         /CirclePPU выполнена
 10:
     asr (sp)               /Проверка на SetTextColorPPU
     bcc 11f
     jmp SetTextColorPPU
 end_settextcolor:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $01000, @r5         /SetTextColorPPU выполнена 
 11:
     asr (sp)               /Проверка на PutTextPPU
     bcc 12f
     jmp PutTextPPU
 end_puttext:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $02000, @r5         /PutTextPPU выполнена 
 12:
     asr (sp)               /Проверка на FillCirclePPU
     bcc 13f
     jmp FillCirclePPU
 end_fillcircle:
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $04000, @r5         /FillCirclePPU выполнена 
 13:
     asr (sp)               /Проверка на SetPalettePPU
     bcc 14f
     jsr pc, SetPalettePPU
-    mov $RunProcPPU, @r4
+    mov RunProcPPU, @r4
     bic $010000, @r5         /SetPalettePPU выполнена 
 
 14:
@@ -769,8 +782,9 @@ FillScreenPPU:
     rts  pc
 
 
-PutPixelPPU:    
-    mov $PxlAddress, @r4
+PutPixelPPU:
+PixelAddrLabel1 = . + 2    
+    mov $0, @r4
     mov @r5, r0          /;В r0 готовый адрес из ЦП
 
     inc @r4
@@ -787,10 +801,12 @@ PutPixelPPU:
 
 
 GetPixelPPU:
-    mov $PxlAddress, @r4
+PixelAddrLabel2 = . + 2
+    mov $0, @r4
     mov @r5, r0          /;В r0 готовый адрес из ЦП
 
-    mov $PxShiftPPU, @r4
+PixelShiftLabel1 = . + 2
+    mov $0, @r4
     mov @r5, r2          /;в r2 число сдвигов вправо для @$0177024
 
     mov r0, @r4
@@ -803,7 +819,8 @@ GetPixelPPU:
     bic $0b1111111111111000, r1
 
     /; цвет в CPU
-    mov $RecColor, @r4
+PixelRecColorLabel1 = . + 2
+    mov $0, @r4
     mov r1, @r5
 
     jmp end_getpixel
@@ -897,7 +914,8 @@ FinishGraphPPU:
 
 LinePPU:
     /;цвет
-    mov $LineColorPPU, @r4
+LineColorLabel1 = . + 2
+    mov $0, @r4
     mov @r5, @$0177016        
 
     mov     $0177024, r2
@@ -912,7 +930,8 @@ LinePPU:
     mov     @r5, y1
 
     /; адрес и маска для первого пикселя
-    mov     $PxlAddress, @r4
+PixelAddrLabel3 = . + 2
+    mov     $0, @r4
     mov     @r5, r3          /;r3 - адрес текущего пикселя
     inc     (r4)
     mov     @r5, r1          /;r1 - маска пикселя в октете
@@ -1056,7 +1075,9 @@ LineExit:
 
 FillRectPPU:
     /; Цвет (устанавливается один раз перед циклами)
-    mov     $LineColorPPU, @r4
+LineColorLabel2 = . + 2
+    mov $0, @r4
+
     mov     @r5, @$0177016
 
     inc     (r4)
@@ -1069,7 +1090,8 @@ FillRectPPU:
     mov     @r5, r1               /; r1 = y1
 
     /; Адрес первого пикселя от ЦП
-    mov     $PxlAddress, @r4
+PixelAddrLabel4 = . + 2
+    mov     $0, @r4
     mov     @r5, r3               /; r3 = адрес текущего пикселя (VRAM)
 
     mov     r5, -(sp)             /; сохраняем рабочий регистр r5
@@ -1198,7 +1220,8 @@ FillRectExit:
 
 /;=========================SetTextColorPPU==============================================================
 SetTextColorPPU:
-    mov   $PxlColorPPU, @r4
+PixelColorLabel1 = . + 2
+    mov   $0,  @r4
     mov   @r5, @$0177016
     jmp   end_settextcolor
 
@@ -1206,13 +1229,16 @@ SetTextColorPPU:
 PutCharPPU:  
     mov   r5, -(sp)
 
-    mov   $PxlAddress, @r4
+PixelAddrLabel5 = . + 2
+    mov   $0, @r4
     mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
 
-    mov   $boldvaluePPU, @r4
+boldvalueLabel = . + 2
+    mov   $0, @r4
     mov   @r5, bold
 
-    mov   $CharPPU, @r4
+CharLabel1 = . + 2
+    mov   $0, @r4
     mov   @r5, r1          /; адрес char'а
 
     dec   @r4              /;shift
@@ -1265,15 +1291,18 @@ PutCharPPU:
 PutTextPPU:  
     mov   r5, -(sp)
 
-    mov   $PxlAddress, @r4
+PixelAddrLabel6 = . + 2
+    mov   $0, @r4
     mov   @r5, r0          /; r0 = базовый байтовый адрес VRAM
 
-    mov   $PxShiftPPU, @r4  /;shift
+PixelShiftLabel2 = . + 2
+    mov   $0, @r4  /;shift
     mov   @r5, shftmp       /; shftmp = величина сдвига (0..7)
 
     mov   $0177024, r5
 
-    mov   $CharAddressesPPU, -(sp)
+CharAddressesLabel = . + 2
+    mov   $0, -(sp)
 11: 
     mov   (sp), @r4   
     mov   @$0177014, r1
@@ -1319,10 +1348,12 @@ PutTextPPU:
 CirclePPU:
     mov   r5, -(sp)
 
-    mov   $PxlColorPPU, @r4
+PixelColorLabel2 = . + 2
+    mov   $0 , @r4
     mov   @r5, @$0177016
 
-    mov   $XPPU, @r4
+PixelXLabel1 = . + 2
+    mov   $0, @r4
     mov   @r5, xc
     inc   (r4)             /;y
     mov   @r5, yc
@@ -1490,10 +1521,12 @@ FillCircle:
     mov     r4, -(sp)
     mov     r5, -(sp)
 
-    mov   $PxlColorPPU, @r4
+PixelColorLabel3 = . + 2
+    mov   $0 , @r4
     mov   @r5, @$0177016
 
-    mov   $XPPU, @r4
+PixelXLabel2 = . + 2
+    mov   $0, @r4
     mov   @r5, xc
     inc   (r4)             /;y
     mov   @r5, yc
@@ -1742,8 +1775,9 @@ y1:   .word 0
 xc:   .word 0
 yc:   .word 0
 
-shftmp: .word 0     /;сдвиг в PutTextPPU
-bold:   .word 0     /;величина утолщения символа
+shftmp:     .word 0     /;сдвиг в PutTextPPU
+bold:       .word 0     /;величина утолщения символа
+RunProcPPU: .word 0     /;битовая карта подпрограмм
 
 rp0:    .word 0     /;сохраненный регистр 02470
 rp2:    .word 0     /;сохраненный регистр 02472

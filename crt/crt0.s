@@ -6,11 +6,11 @@
 
 start:
 _start:
-        mov     @$042, sp
+        /;mov     @$042, sp
+        mov     $01000, sp
         jsr     pc, _main
         emt     0350
 
 ___main:
         rts     pc
 
-_crt0size: .word . - _start

@@ -72,13 +72,13 @@ line(500, 250, 200, 40, 4);
     rect(50, 60, 400, 120, 1);
     fillRect(51, 61, 399, 119, 6);
 
-    putChar('A', 55, 220, 4);
-    putChar('A', 56, 228, 5);
-    putChar('A', 57, 236, 4);
+    putChar('A', 55, 220, 4, 0);
+    putChar('A', 56, 228, 5, 0);
+    putChar('A', 57, 236, 4, 0);
 
     putText("Text!", 58, 200, 7);
 
-    putText1("Text!\nbla bla bla", 100, 150, 5);
+    putText1("Text!\nbla bla bla", 100, 150, 5, 0);
 
     button(60, 68, 92, 83);
 
