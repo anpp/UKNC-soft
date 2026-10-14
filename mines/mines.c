@@ -2,6 +2,7 @@
 #include "../libkeyb/libkeyb.h"
 #include "../libmouse/libmouse.h"
 #include "../common/random.h"
+#include "../common/lfsr.h"
 #include "cell.h"
 #include "segments7digit.h"
 
@@ -15,6 +16,8 @@
 #define HEADER_H 30
 #define MAX_FIELD_W  (SCREEN_W / CELL_SIZE)
 #define MAX_FIELD_H  ((SCREEN_H - HEADER_H) / CELL_SIZE)
+
+#define MAX_CELLS  (MAX_FIELD_W * MAX_FIELD_H)
 
 #define MENU_BTN_W 160
 #define MENU_BTN_H 30
@@ -295,6 +298,8 @@ void drawCell(int cx, int cy)
     }
 }
 
+unsigned int cells_to_draw[MAX_CELLS];
+
 void drawInitialBoard()
 {
     currentState = STATE_INIT;
@@ -336,13 +341,40 @@ void drawInitialBoard()
             Cell_init(&board[x][y]);
 
     //отрисовка 
+    int count = 0;
+
+    // индексы только тех ячеек, которые нужно нарисовать
     for (int x = 0; x < field_w; x++)
+    {
         for (int y = 0; y < field_h; y++)
         {
             if (initBySmile && !(Cell_isOpen(&board_copy[x][y]) || Cell_isFlagged(&board_copy[x][y])))
                 continue;
+            cells_to_draw[count++] = (y * field_w) + x;
+        }
+    }
+
+    if (count > 0)
+    {
+        for (int i = count - 1; i > 0; i--)
+        {
+            int j = lfsr() % (i + 1);
+
+            // swap
+            unsigned int temp = cells_to_draw[i];
+            cells_to_draw[i] = cells_to_draw[j];
+            cells_to_draw[j] = temp;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            unsigned int idx = cells_to_draw[i];
+            int x = idx % field_w;
+            int y = idx / field_w;
+
             drawCell(x, y);
         }
+    }
 
     drawSmile(smileX, smileY, SMILE_NORMAL);
     currentState = STATE_GAME;

@@ -6,6 +6,13 @@
 ~/data/develop/UKNC/GCC-PDP11/bin/pdp11-aout-objcopy -O binary ./mines.bin ./mines.sav
 python3 ~/data/develop/UKNC/GCC-PDP11/bin/bin2sav.py ./mines.sav
 
+
+~/data/develop/UKNC/GCC-PDP11/bin/pdp11-aout-gcc -m40 -mint16 -nostdlib \
+    -Wl,-Map=mines.map \
+    -Wl,-T ~/data/develop/UKNC/GCC-PDP11/bin/no_header.ld \
+     ./mines.bin ./../crt/crt0.o ./../libgraph/libgraph.o ./../libmouse/libmouse.o ./../libkeyb/libkeyb.o ./../pdp11-soft-float/pdp11-fis.o ./mines.o
+    -o mines.sav
+
 cp -f ./mines.sav ../../../../dsk/mines.sav
 
 cd ../../../../dsk

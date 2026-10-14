@@ -1502,19 +1502,18 @@ L_149:
 	.section	.text.processMenuClick.part.0,"ax",@progbits
 	.even
 _processMenuClick.part.0:
-	cmp	02(sp),$077
+	cmp	r0,$077
 	ble	L_159
-	cmp	02(sp),$0136
+	cmp	r0,$0136
 	ble	L_161
-	cmp	02(sp),$0141
+	cmp	r0,$0141
 	ble	L_159
-	cmp	02(sp),$0200
+	cmp	r0,$0200
 	ble	L_162
-	cmp	02(sp),$0203
+	cmp	r0,$0203
 	ble	L_159
-	cmp	02(sp),$0242
+	cmp	r0,$0242
 	ble	L_163
-	mov	02(sp),r0
 	add	$-0246,r0
 	cmp	r0,$036
 	bhi	L_165
@@ -1728,7 +1727,7 @@ L_169:
 	bhi	L_174
 	bic	$0177400,r0
 	asl	r0
-	mov	_CSWTCH.180(r0),r2
+	mov	_CSWTCH.186(r0),r2
 L_174:
 	mov	$02,-(sp)
 	mov	r2,-(sp)
@@ -1794,7 +1793,7 @@ _drawInitialBoard:
 	mov	r3,-(sp)
 	mov	r4,-(sp)
 	mov	r5,-(sp)
-	add	$-010,sp
+	add	$-014,sp
 	mov	$03,_currentState
 	mov	_emptystr,-(sp)
 	mov	$01,-(sp)
@@ -1876,141 +1875,227 @@ _drawInitialBoard:
 	add	$-061,r0
 	mov	r0,-(sp)
 	jsr	pc,(r2)
-	mov	_field_w,r4
+	mov	_field_w,016(sp)
 	add	$014,sp
-	tst	r4
-	bgt	L_212
+	tst	02(sp)
+	bgt	L_235
 	jmp	L_183
-L_212:
-	mov	_field_h,r2
-	mov	$_board_copy,r5
-	mov	r5,r1
-	mov	$_board,r3
-	mov	r4,r0
-	asl	r0
-	add	r4,r0
-	asl	r0
-	asl	r0
-	add	r4,r0
-	mov	r0,(sp)
-	add	r5,r0
-	tst	r2
-	ble	L_186
-	mov	$_board,04(sp)
-	sub	r5,r0
-	add	$-015,r0
-	mov	r0,r4
-	ash	$06,r4	
-	sub	r0,r4
-	ash	$06,r4	
-	add	r0,r4
-	mov	r4,r0
-	asl	r0
-	asl	r0
-	add	r0,r4
-	inc	r4
-	mov	r2,02(sp)
-	mov	r3,06(sp)
-	mov	r1,r3
-	mov	r4,r2
+L_235:
+	mov	_field_h,r5
+	mov	$_board_copy,r3
 	mov	$_board,r4
-L_184:
-	mov	02(sp),-(sp)
-	mov	r4,-(sp)
-	mov	r3,-(sp)
-	jsr	pc,_memcpy
-	add	$015,r3
-	add	$015,r4
-	add	$06,sp
-	sob	r2,L_184
-	mov	02(sp),r2
-	mov	06(sp),r3
-L_185:
-	mov	(sp),r1
-	add	$_board,r1
-	mov	r1,(sp)
-	tst	r2
-	ble	L_190
-L_188:
-	mov	r2,-(sp)
-	clr	-(sp)
-	mov	r3,-(sp)
-	jsr	pc,_memset
-	mov	$015,r0
+	mov	02(sp),r0
+	asl	r0
+	add	02(sp),r0
+	asl	r0
+	asl	r0
+	add	02(sp),r0
+	mov	r0,04(sp)
 	add	r3,r0
-	add	$06,sp
-	cmp	r0,(sp)
-	beq	L_187
-	mov	r2,-(sp)
-	clr	-(sp)
-	mov	r0,-(sp)
-	jsr	pc,_memset
-	add	$032,r3
-	add	$06,sp
-	cmp	(sp),r3
-	bne	L_188
-L_187:
-	clr	r4
-L_189:
-	clr	r3
-	tst	r2
-	ble	L_194
-	mov	r4,r2
-	asl	r2
-	add	r4,r2
-L_193:
-	tstb	_initBySmile
-	beq	L_191
+	tst	r5
+	ble	L_188
+	sub	$_board_copy+015,r0
+	mov	r0,r2
+	ash	$06,r2	
+	sub	r0,r2
+	ash	$06,r2	
+	add	r0,r2
 	mov	r2,r0
 	asl	r0
 	asl	r0
-	add	r4,r0
-	add	r5,r0
-	add	r3,r0
-	movb	(r0),r1
-	clc
-	rorb	r1
-	bit	r1,$01
-	bne	L_191
-	movb	(r0),r0
-	clc
-	rorb	r0
-	asrb	r0
-	bit	r0,$01
-	beq	L_192
-L_191:
+	add	r0,r2
+	inc	r2
+	mov	r4,06(sp)
+	mov	r2,r4
+	mov	$_board,r2
+L_184:
+	mov	r5,-(sp)
+	mov	r2,-(sp)
 	mov	r3,-(sp)
+	jsr	pc,_memcpy
+	add	$015,r3
+	add	$015,r2
+	add	$06,sp
+	sob	r4,L_184
+	mov	06(sp),r4
+L_187:
+	mov	04(sp),r2
+	add	$_board,r2
+	tst	r5
+	ble	L_186
+L_185:
+	mov	r5,-(sp)
+	clr	-(sp)
 	mov	r4,-(sp)
-	jsr	pc,_drawCell
-	add	$04,sp
-L_192:
-	inc	r3
-	cmp	_field_h,r3
-	bgt	L_193
-L_194:
-	inc	r4
-	cmp	_field_w,r4
-	ble	L_183
-	mov	_field_h,r2
-	br	L_189
-L_186:
-	mov	$015,r4
-	add	r1,r4
-	cmp	r0,r4
-	beq	L_185
-	add	$032,r1
-	cmp	r0,r1
-	bne	L_186
-	br	L_185
-L_190:
+	jsr	pc,_memset
 	mov	$015,r0
-	add	r3,r0
+	add	r4,r0
+	add	$06,sp
+	cmp	r2,r0
+	beq	L_189
+	mov	r5,-(sp)
+	clr	-(sp)
+	mov	r0,-(sp)
+	jsr	pc,_memset
+	add	$032,r4
+	add	$06,sp
+	cmp	r2,r4
+	bne	L_185
+L_189:
+	tst	r5
+	bgt	L_236
+	jmp	L_183
+L_236:
+	movb	_initBySmile,013(sp)
+	clr	06(sp)
+	clr	r1
+	mov	02(sp),010(sp)
+L_196:
+	mov	06(sp),r0
+	tstb	013(sp)
+	beq	L_231
+	clr	r2
+	mov	06(sp),r3
+	mul	$015,r3
+	add	$_board_copy,r3
+	mov	r3,04(sp)
+L_190:
+	mov	04(sp),r3
+	add	r2,r3
+	movb	(r3),r4
+	clc
+	rorb	r4
+	bit	r4,$01
+	beq	L_232
+L_193:
+	mov	r1,r3
+	asl	r3
+	mov	r0,_cells_to_draw(r3)
+	inc	r2
+	cmp	r5,r2
+	bne	L_237
+	jmp	L_204
+L_237:
+	add	02(sp),r0
+	inc	r1
+	br	L_190
+L_186:
+	mov	$015,r0
+	add	r4,r0
+	cmp	r0,r2
+	beq	L_189
+	add	$032,r4
+	cmp	r2,r4
+	bne	L_186
+	br	L_189
+L_188:
+	mov	$015,r1
+	add	r3,r1
 	cmp	r1,r0
 	beq	L_187
 	add	$032,r3
-	cmp	r1,r3
-	bne	L_190
+	cmp	r0,r3
+	bne	L_188
 	br	L_187
+L_232:
+	movb	(r3),r3
+	clc
+	rorb	r3
+	asrb	r3
+	bit	r3,$01
+	bne	L_193
+	inc	r2
+	cmp	r5,r2
+	beq	L_191
+	add	02(sp),r0
+	br	L_190
+L_231:
+	mov	r1,r2
+	clr	r3
+L_192:
+	mov	r2,r1
+	inc	r1
+	mov	r2,r4
+	asl	r4
+	mov	r0,_cells_to_draw(r4)
+	mov	r3,r4
+	inc	r4
+	cmp	r4,r5
+	beq	L_191
+	add	02(sp),r0
+	add	$02,r2
+	asl	r1
+	mov	r0,_cells_to_draw(r1)
+	add	$02,r3
+	add	02(sp),r0
+	cmp	r5,r3
+	bne	L_192
+	mov	r2,r1
+L_191:
+	inc	06(sp)
+	dec	010(sp)
+	beq	L_238
+	jmp	L_196
+L_238:
+L_234:
+	tst	r1
+	beq	L_183
+	mov	r1,r2
+	dec	r2
+	cmp	r1,$01
+	beq	L_233
+	asl	r1
+	mov	r1,06(sp)
+	mov	r1,r3
+	add	$_cells_to_draw-02,r3
+	mov	$___umodhi3,04(sp)
+	mov	r2,r5
+L_199:
+	jsr	pc,_lfsr
+	mov	r2,r1
+	inc	r1
+	mov	r1,-(sp)
+	mov	r0,-(sp)
+	jsr	pc,@010(sp)
+	add	$04,sp
+	mov	(r3),r1
+	asl	r0
+	mov	_cells_to_draw(r0),(r3)
+	mov	r1,_cells_to_draw(r0)
+	dec	r2
+	add	$-02,r3
+	sob	r5,L_199
+	mov	_field_w,02(sp)
+L_198:
+	mov	$___udivhi3,r5
+	mov	06(sp),r2
+	add	$-02,r2
+	clc
+	ror	r2
+	inc	r2
+	mov	$_cells_to_draw,r1
+	mov	02(sp),r4
+L_200:
+	mov	(r1)+,r3
+	mov	r4,-(sp)
+	mov	r3,-(sp)
+	mov	r1,04(sp)
+	jsr	pc,(r5)
+	add	$04,sp
+	mov	r0,-(sp)
+	mov	r4,-(sp)
+	mov	r3,-(sp)
+	jsr	pc,@012(sp)
+	add	$04,sp
+	mov	r0,-(sp)
+	mov	$_drawCell,r0
+	jsr	pc,(r0)
+	add	$04,sp
+	mov	(sp),r1
+	dec	r2
+	beq	L_239
+	jmp	L_218
+L_239:
 L_183:
 	mov	$01,-(sp)
 	mov	_smileY,-(sp)
@@ -2030,12 +2115,28 @@ L_183:
 	mov	$022,-(sp)
 	mov	$_printBottom,r1
 	jsr	pc,(r1)
-	add	$032,sp
+	add	$036,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r4
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
+L_204:
+	inc	r1
+	inc	06(sp)
+	dec	010(sp)
+	beq	L_240
+	jmp	L_196
+L_240:
+	br	L_234
+L_218:
+	mov	_field_w,r4
+	br	L_200
+L_233:
+	asl	r1
+	mov	r1,06(sp)
+	mov	$___umodhi3,04(sp)
+	br	L_198
 	.section	.rodata
 LC_6:
 	.byte 0131,0117,0125,040,0127,0111,0116,041,0
@@ -2049,43 +2150,43 @@ _checkWinCondition:
 	mov	r5,-(sp)
 	add	$-04,sp
 	tst	_field_w
-	ble	L_220
+	ble	L_248
 	mov	_field_h,02(sp)
 	tst	02(sp)
-	ble	L_220
+	ble	L_248
 	clr	(sp)
 	clr	r4
 	mov	_field_w,r5
-L_217:
+L_245:
 	clr	r1
 	mov	(sp),r3
 	mul	$015,r3
 	add	$_board,r3
 	mov	02(sp),r0
-L_216:
+L_244:
 	mov	r3,r2
 	add	r1,r2
 	movb	(r2),r2
 	clc
 	rorb	r2
 	bit	r2,$01
-	bne	L_215
+	bne	L_243
 	inc	r4
-L_215:
+L_243:
 	inc	r1
-	sob	r0,L_216
+	sob	r0,L_244
 	inc	(sp)
-	sob	r5,L_217
-L_214:
+	sob	r5,L_245
+L_242:
 	cmp	_total_mines,r4
-	beq	L_223
+	beq	L_251
 	add	$04,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r4
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
-L_223:
+L_251:
 	movb	$01,_gameWon
 	movb	$01,_gameOver
 	clr	-(sp)
@@ -2109,9 +2210,9 @@ L_223:
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
-L_220:
+L_248:
 	clr	r4
-	br	L_214
+	br	L_242
 	.section	.text.generateMines,"ax",@progbits
 	.even
 	.globl	_generateMines
@@ -2125,20 +2226,20 @@ _generateMines:
 	mov	r0,r3
 	clr	r2
 	tst	r2
-	bne	L_264
+	bne	L_292
 	tst	r3
 	cln
-L_264:
-	bne	L_225
+L_292:
+	bne	L_253
 	mov	$-066452,r2
 	mov	$-071536,r3
-L_225:
+L_253:
 	mov	r2,_g_seed
 	mov	r3,_g_seed+02
 	mov	_total_mines,r5
 	mov	_field_w,020(sp)
 	tst	r5
-	ble	L_232
+	ble	L_260
 	mov	020(sp),r1
 	dec	r1
 	mov	r1,04(sp)
@@ -2146,8 +2247,8 @@ L_225:
 	dec	r1
 	mov	r1,02(sp)
 	clr	r3
-	br	L_231
-L_229:
+	br	L_259
+L_257:
 	mov	r4,r1
 	asl	r1
 	add	r4,r1
@@ -2158,13 +2259,13 @@ L_229:
 	add	r0,r1
 	movb	(r1),r0
 	bit	r0,$01
-	bne	L_230
+	bne	L_258
 	bisb	$01,(r1)
 	inc	r3
-L_230:
+L_258:
 	cmp	r3,r5
-	bge	L_232
-L_231:
+	bge	L_260
+L_259:
 	mov	04(sp),-(sp)
 	clr	-(sp)
 	jsr	pc,_random_range
@@ -2174,28 +2275,28 @@ L_231:
 	jsr	pc,_random_range
 	add	$010,sp
 	cmp	r4,036(sp)
-	bne	L_229
+	bne	L_257
 	cmp	r0,040(sp)
-	bne	L_229
+	bne	L_257
 	cmp	r3,r5
-	blt	L_231
-L_232:
+	blt	L_259
+L_260:
 	tst	020(sp)
-	ble	L_224
+	ble	L_252
 	mov	_field_h,012(sp)
 	mov	020(sp),r1
 	add	$02,r1
 	tst	012(sp)
-	bgt	L_265
-	jmp	L_248
-L_265:
+	bgt	L_293
+	jmp	L_276
+L_293:
 	mov	$02,04(sp)
 	clr	r0
 	mov	012(sp),r1
 	add	$02,r1
 	mov	r1,022(sp)
 	mov	020(sp),016(sp)
-L_246:
+L_274:
 	mov	$02,r2
 	mov	$015,r1
 	mul	r0,r1
@@ -2205,7 +2306,7 @@ L_246:
 	mov	022(sp),r5
 	sub	r2,r5
 	mov	020(sp),r4
-L_244:
+L_272:
 	mov	$-02,r0
 	add	r2,r0
 	mov	r0,(sp)
@@ -2213,27 +2314,27 @@ L_244:
 	add	(sp),r0
 	movb	(r0),r0
 	bit	r0,$01
-	beq	L_262
-L_234:
+	beq	L_290
+L_262:
 	inc	r2
-	sob	r5,L_244
+	sob	r5,L_272
 	dec	016(sp)
-	beq	L_266
-	jmp	L_256
-L_266:
-L_224:
+	beq	L_294
+	jmp	L_284
+L_294:
+L_252:
 	add	$024,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r4
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
-L_256:
+L_284:
 	mov	04(sp),r0
 	dec	r0
 	inc	04(sp)
-	br	L_246
-L_262:
+	br	L_274
+L_290:
 	mov	04(sp),r1
 	add	$-03,r1
 	clr	02(sp)
@@ -2241,23 +2342,23 @@ L_262:
 	add	r2,r0
 	mov	r0,06(sp)
 	mov	r5,014(sp)
-L_235:
+L_263:
 	mov	06(sp),r0
 	cmp	r1,$-01
-	beq	L_238
-L_243:
+	beq	L_266
+L_271:
 	mov	r2,r3
 	sub	r0,r3
-L_236:
+L_264:
 	cmp	r1,r4
-	blt	L_239
+	blt	L_267
 	inc	r0
-	sob	r3,L_236
-L_237:
+	sob	r3,L_264
+L_265:
 	inc	r1
 	cmp	r1,04(sp)
-	bne	L_235
-L_242:
+	bne	L_263
+L_270:
 	mov	014(sp),r5
 	mov	010(sp),r1
 	add	(sp),r1
@@ -2270,37 +2371,37 @@ L_242:
 	bicb	$0170,r3
 	bisb	r0,r3
 	movb	r3,(r1)
-	br	L_234
-L_238:
+	br	L_262
+L_266:
 	mov	r0,r3
 	inc	r3
 	cmp	r3,r2
-	beq	L_237
+	beq	L_265
 	add	$02,r0
 	cmp	r2,r0
-	bne	L_238
+	bne	L_266
 	inc	r1
 	cmp	r1,04(sp)
-	bne	L_235
-	br	L_242
-L_239:
+	bne	L_263
+	br	L_270
+L_267:
 	mov	r0,r5
 	cmp	r0,$-01
-	beq	L_249
+	beq	L_277
 	cmp	012(sp),r0
-	bgt	L_240
-L_260:
+	bgt	L_268
+L_288:
 	inc	r0
 	cmp	r2,r0
-	bne	L_243
+	bne	L_271
 	inc	r1
 	cmp	r1,04(sp)
-	bne	L_235
-	br	L_242
-L_249:
+	bne	L_263
+	br	L_270
+L_277:
 	clr	r5
 	clr	r0
-L_240:
+L_268:
 	mov	r1,r3
 	asl	r3
 	add	r1,r3
@@ -2312,22 +2413,22 @@ L_240:
 	movb	(r3),r3
 	bicb	$-02,r3
 	add	r3,02(sp)
-	br	L_260
-L_248:
+	br	L_288
+L_276:
 	mov	$02,r0
 	mov	r0,r2
 	inc	r2
 	cmp	r2,r1
-	beq	L_224
-L_263:
+	beq	L_252
+L_291:
 	cmp	020(sp),r0
-	beq	L_224
+	beq	L_252
 	add	$02,r0
 	mov	r0,r2
 	inc	r2
 	cmp	r2,r1
-	bne	L_263
-	br	L_224
+	bne	L_291
+	br	L_252
 	.section	.rodata
 LC_7:
 	.byte 0102,0117,0117,0115,041,0
@@ -2343,17 +2444,17 @@ _openCell:
 	mov	040(sp),r2
 	mov	042(sp),r0
 	bis	r2,r0
-	bge	L_370
-	jmp	L_267
-L_370:
+	bge	L_398
+	jmp	L_295
+L_398:
 	cmp	_field_w,r2
-	bgt	L_371
-	jmp	L_267
-L_371:
+	bgt	L_399
+	jmp	L_295
+L_399:
 	cmp	_field_h,042(sp)
-	bgt	L_372
-	jmp	L_267
-L_372:
+	bgt	L_400
+	jmp	L_295
+L_400:
 	mov	r2,r3
 	asl	r3
 	add	r2,r3
@@ -2366,22 +2467,22 @@ L_372:
 	clc
 	rorb	r0
 	bit	r0,$01
-	beq	L_373
-	jmp	L_267
-L_373:
+	beq	L_401
+	jmp	L_295
+L_401:
 	movb	(r3),r0
 	clc
 	rorb	r0
 	asrb	r0
 	bit	r0,$01
-	beq	L_374
-	jmp	L_267
-L_374:
+	beq	L_402
+	jmp	L_295
+L_402:
 	movb	(r3),r0
 	bit	r0,$01
-	beq	L_375
-	jmp	L_366
-L_375:
+	beq	L_403
+	jmp	L_394
+L_403:
 	mov	$01,-(sp)
 	mov	_smileY,-(sp)
 	mov	_smileX,-(sp)
@@ -2401,14 +2502,14 @@ L_375:
 	add	$012,sp
 	mov	$01,012(sp)
 	clr	06(sp)
-	br	L_293
-L_276:
+	br	L_321
+L_304:
 	add	$02,r3
 	cmp	06(sp),012(sp)
-	blt	L_376
-	jmp	L_267
-L_376:
-L_293:
+	blt	L_404
+	jmp	L_295
+L_404:
+L_321:
 	inc	06(sp)
 	clr	r4
 	bisb	(r3),r4
@@ -2429,52 +2530,52 @@ L_293:
 	asrb	r0
 	asrb	r0
 	bit	r0,$017
-	bne	L_276
+	bne	L_304
 	mov	r4,r1
 	dec	r1
 	mov	$-01,r5
 	mov	r4,014(sp)
 	mov	r3,020(sp)
-L_277:
+L_305:
 	mov	014(sp),r3
 	tst	r5
-	beq	L_291
+	beq	L_319
 	mov	r1,r3
-L_291:
+L_319:
 	mov	010(sp),r4
 	dec	r4
 	mov	$-01,r2
 	tst	r5
-	beq	L_358
+	beq	L_386
 	cmp	r3,$-01
-	bne	L_377
-	jmp	L_367
-L_377:
-L_358:
+	bne	L_405
+	jmp	L_395
+L_405:
+L_386:
 	mov	r1,(sp)
-L_332:
+L_360:
 	cmp	_field_w,r3
-	bgt	L_368
-L_289:
+	bgt	L_396
+L_317:
 	inc	r2
 	cmp	r2,$02
-	beq	L_356
-L_359:
+	beq	L_384
+L_387:
 	inc	r4
 	tst	r5
-	bne	L_332
-L_281:
+	bne	L_360
+L_309:
 	tst	r2
-	bne	L_332
+	bne	L_360
 	inc	r4
 	mov	$01,r2
 	cmp	_field_w,r3
-	ble	L_289
-L_368:
+	ble	L_317
+L_396:
 	cmp	r4,$-01
-	beq	L_286
+	beq	L_314
 	cmp	_field_h,r4
-	ble	L_289
+	ble	L_317
 	mov	r3,r0
 	asl	r0
 	add	r3,r0
@@ -2488,13 +2589,13 @@ L_368:
 	clc
 	rorb	r1
 	bit	r1,$01
-	bne	L_289
+	bne	L_317
 	movb	(r0),r1
 	clc
 	rorb	r1
 	asrb	r1
 	bit	r1,$01
-	bne	L_289
+	bne	L_317
 	bisb	$02,(r0)
 	mov	r4,-(sp)
 	mov	r3,-(sp)
@@ -2515,21 +2616,21 @@ L_368:
 	inc	r2
 	add	$04,sp
 	cmp	r2,$02
-	bne	L_359
-L_356:
+	bne	L_387
+L_384:
 	mov	(sp),r1
-L_279:
+L_307:
 	inc	r5
 	inc	r1
 	cmp	r5,$02
-	bne	L_277
+	bne	L_305
 	mov	020(sp),r3
-	jmp	L_276
-L_274:
+	jmp	L_304
+L_302:
 	inc	r5
 	cmp	r5,_field_w
-	blt	L_270
-L_271:
+	blt	L_298
+L_299:
 	clr	-(sp)
 	jsr	pc,_setOnFrame
 	clr	_frameCounter
@@ -2545,32 +2646,32 @@ L_271:
 	mov	_smileX,-(sp)
 	jsr	pc,_drawSmile
 	add	$020,sp
-L_267:
+L_295:
 	add	$026,sp
 	mov	(sp)+,r5
 	mov	(sp)+,r4
 	mov	(sp)+,r3
 	mov	(sp)+,r2
 	rts	pc
-L_367:
+L_395:
 	cmp	r2,$01
-	beq	L_279
-L_369:
+	beq	L_307
+L_397:
 	mov	$01,r2
 	cmp	r2,$01
-	bne	L_369
-	br	L_279
-L_286:
+	bne	L_397
+	br	L_307
+L_314:
 	inc	r2
 	cmp	r2,$02
-	beq	L_356
+	beq	L_384
 	clr	r4
 	tst	r5
-	beq	L_378
-	jmp	L_332
-L_378:
-	jmp	L_281
-L_366:
+	beq	L_406
+	jmp	L_360
+L_406:
+	jmp	L_309
+L_394:
 	bisb	$02,(r3)
 	mov	$02,_innercellcolor
 	mov	042(sp),-(sp)
@@ -2581,37 +2682,37 @@ L_366:
 	movb	$01,_gameOver
 	add	$04,sp
 	tst	_field_w
-	ble	L_271
+	ble	L_299
 	clr	r5
 	mov	022(sp),r4
-L_270:
+L_298:
 	tst	_field_h
-	ble	L_274
+	ble	L_302
 	clr	r2
 	mov	$015,r3
 	mul	r5,r3
 	add	$_board,r3
-	br	L_273
-L_272:
+	br	L_301
+L_300:
 	inc	r2
 	cmp	r2,_field_h
-	bge	L_274
-L_273:
+	bge	L_302
+L_301:
 	mov	r3,r0
 	add	r2,r0
 	movb	(r0),r1
 	bit	r1,$01
-	beq	L_272
+	beq	L_300
 	clc
 	rorb	r1
 	bit	r1,$01
-	bne	L_272
+	bne	L_300
 	bisb	$02,(r0)
 	mov	r2,-(sp)
 	mov	r5,-(sp)
 	jsr	pc,(r4)
 	add	$04,sp
-	br	L_272
+	br	L_300
 	.section	.text.processMenuClick,"ax",@progbits
 	.even
 	.globl	_processMenuClick
@@ -2619,20 +2720,19 @@ _processMenuClick:
 	mov	02(sp),r0
 	add	$-0360,r0
 	cmp	r0,$0240
-	bhi	L_379
-	mov	04(sp),-(sp)
+	bhi	L_407
+	mov	04(sp),r0
 	jsr	pc,_processMenuClick.part.0
-	add	$02,sp
-L_379:
+L_407:
 	rts	pc
 	.section	.text.releaseCurrentCell,"ax",@progbits
 	.even
 	.globl	_releaseCurrentCell
 _releaseCurrentCell:
 	tstb	_hasCurrentCell
-	bne	L_383
+	bne	L_411
 	rts	pc
-L_383:
+L_411:
 	jsr	pc,_hideMouse
 	clr	r0
 	bisb	_currentCell+01,r0
@@ -2657,40 +2757,39 @@ _processClick:
 	add	$-014,sp
 	mov	_currentState,r0
 	tst	r0
-	bne	L_385
+	bne	L_413
 	tstb	024(sp)
-	bne	L_384
+	bne	L_412
 	tstb	026(sp)
-	beq	L_384
+	beq	L_412
 	mov	020(sp),r0
 	add	$-0360,r0
 	cmp	r0,$0240
-	bhi	L_384
-	mov	022(sp),-(sp)
+	bhi	L_412
+	mov	022(sp),r0
 	jsr	pc,_processMenuClick.part.0
-	add	$02,sp
-L_384:
+L_412:
 	add	$014,sp
 	mov	(sp)+,r2
 	rts	pc
-L_385:
+L_413:
 	cmp	020(sp),_smileX
-	blt	L_422
-	jmp	L_418
-L_422:
-L_389:
+	blt	L_450
+	jmp	L_446
+L_450:
+L_417:
 	tstb	_gameOver
-	bne	L_384
+	bne	L_412
 	mov	_offset_x,r0
 	cmp	020(sp),r0
-	bge	L_423
-	jmp	L_391
-L_423:
+	bge	L_451
+	jmp	L_419
+L_451:
 	mov	_offset_y,r1
 	cmp	022(sp),r1
-	bge	L_424
-	jmp	L_391
-L_424:
+	bge	L_452
+	jmp	L_419
+L_452:
 	mov	$022,-(sp)
 	mov	022(sp),r2
 	sub	r0,r2
@@ -2701,9 +2800,9 @@ L_424:
 	mov	r0,04(sp)
 	mov	(sp),r1
 	cmp	r0,_field_w
-	blt	L_425
-	jmp	L_391
-L_425:
+	blt	L_453
+	jmp	L_419
+L_453:
 	mov	$022,-(sp)
 	mov	024(sp),r0
 	sub	r1,r0
@@ -2711,28 +2810,28 @@ L_425:
 	jsr	pc,___udivhi3
 	add	$04,sp
 	cmp	r0,_field_h
-	blt	L_426
-	jmp	L_391
-L_426:
+	blt	L_454
+	jmp	L_419
+L_454:
 	clr	r1
 	bisb	_currentCell,r1
 	cmp	04(sp),r1
-	bne	L_427
-	jmp	L_419
-L_427:
-L_393:
+	bne	L_455
+	jmp	L_447
+L_455:
+L_421:
 	tstb	026(sp)
-	bne	L_428
-	jmp	L_391
-L_428:
+	bne	L_456
+	jmp	L_419
+L_456:
 	mov	r0,(sp)
 	jsr	pc,_hideMouse
 	mov	(sp),r0
 	tstb	024(sp)
-	bne	L_429
-	jmp	L_395
-L_429:
-L_399:
+	bne	L_457
+	jmp	L_423
+L_457:
+L_427:
 	mov	04(sp),r2
 	asl	r2
 	add	04(sp),r2
@@ -2747,16 +2846,16 @@ L_399:
 	clc
 	rorb	r1
 	bit	r1,$01
-	bne	L_400
+	bne	L_428
 	movb	@010(sp),r1
 	clc
 	rorb	r1
 	asrb	r1
 	bit	r1,$01
-	bne	L_401
+	bne	L_429
 	cmp	_flags,_total_mines
-	bge	L_400
-L_401:
+	bge	L_428
+L_429:
 	mov	06(sp),r2
 	add	$_board,r2
 	add	r0,r2
@@ -2777,11 +2876,11 @@ L_401:
 	asrb	r0
 	add	$04,sp
 	bit	r0,$01
-	bne	L_430
-	jmp	L_406
-L_430:
+	bne	L_458
+	jmp	L_434
+L_458:
 	mov	$01,r0
-L_402:
+L_430:
 	add	_flags,r0
 	mov	r0,_flags
 	mov	_total_mines,r2
@@ -2793,39 +2892,39 @@ L_402:
 	mov	_offset_x,-(sp)
 	jsr	pc,_drawNumberDisplay
 	add	$06,sp
-L_400:
+L_428:
 	jsr	pc,_showMouse
-	jmp	L_384
-L_418:
+	jmp	L_412
+L_446:
 	mov	_smileX,r0
 	add	$033,r0
 	cmp	020(sp),r0
-	ble	L_431
-	jmp	L_389
-L_431:
+	ble	L_459
+	jmp	L_417
+L_459:
 	cmp	022(sp),_smileY
-	bge	L_432
-	jmp	L_389
-L_432:
+	bge	L_460
+	jmp	L_417
+L_460:
 	mov	_smileY,r0
 	add	$033,r0
 	cmp	022(sp),r0
-	ble	L_433
-	jmp	L_389
-L_433:
+	ble	L_461
+	jmp	L_417
+L_461:
 	tstb	_hasCurrentCell
-	beq	L_434
-	jmp	L_420
-L_434:
-L_390:
+	beq	L_462
+	jmp	L_448
+L_462:
+L_418:
 	tstb	026(sp)
-	bne	L_435
-	jmp	L_384
-L_435:
+	bne	L_463
+	jmp	L_412
+L_463:
 	tstb	024(sp)
-	beq	L_436
-	jmp	L_384
-L_436:
+	beq	L_464
+	jmp	L_412
+L_464:
 	jsr	pc,_hideMouse
 	mov	_smileY,r2
 	add	$034,r2
@@ -2864,12 +2963,12 @@ L_436:
 	jsr	pc,_drawInitialBoard
 	jsr	pc,_showMouse
 	add	$034,sp
-	jmp	L_384
-L_391:
+	jmp	L_412
+L_419:
 	tstb	_hasCurrentCell
-	bne	L_437
-	jmp	L_384
-L_437:
+	bne	L_465
+	jmp	L_412
+L_465:
 	jsr	pc,_hideMouse
 	clr	r0
 	bisb	_currentCell+01,r0
@@ -2885,27 +2984,27 @@ L_437:
 	jsr	pc,_showMouse
 	clrb	_hasCurrentCell
 	add	$012,sp
-	jmp	L_384
-L_419:
+	jmp	L_412
+L_447:
 	clr	r1
 	bisb	_currentCell+01,r1
 	cmp	r0,r1
-	beq	L_438
-	jmp	L_393
-L_438:
+	beq	L_466
+	jmp	L_421
+L_466:
 	mov	r0,(sp)
 	jsr	pc,_hideMouse
 	mov	(sp),r0
 	tstb	024(sp)
-	bne	L_439
-	jmp	L_398
-L_439:
+	bne	L_467
+	jmp	L_426
+L_467:
 	tstb	026(sp)
-	bne	L_440
-	jmp	L_400
-L_440:
-	jmp	L_399
-L_395:
+	bne	L_468
+	jmp	L_428
+L_468:
+	jmp	L_427
+L_423:
 	mov	04(sp),r1
 	asl	r1
 	add	04(sp),r1
@@ -2920,17 +3019,17 @@ L_395:
 	rorb	r2
 	asrb	r2
 	bit	r2,$01
-	beq	L_441
-	jmp	L_400
-L_441:
+	beq	L_469
+	jmp	L_428
+L_469:
 	movb	(r1),r2
 	clc
 	rorb	r2
 	bit	r2,$01
-	beq	L_442
-	jmp	L_400
-L_442:
-L_404:
+	beq	L_470
+	jmp	L_428
+L_470:
+L_432:
 	mov	r0,r1
 	ash	$010,r1	
 	mov	r1,06(sp)
@@ -2971,8 +3070,8 @@ L_404:
 	jsr	pc,_drawPressedButton
 	movb	$01,_hasCurrentCell
 	add	$016,sp
-	jmp	L_400
-L_420:
+	jmp	L_428
+L_448:
 	jsr	pc,_hideMouse
 	clr	r0
 	bisb	_currentCell+01,r0
@@ -2988,8 +3087,8 @@ L_420:
 	jsr	pc,_showMouse
 	clrb	_hasCurrentCell
 	add	$012,sp
-	jmp	L_390
-L_398:
+	jmp	L_418
+L_426:
 	mov	04(sp),r1
 	asl	r1
 	add	04(sp),r1
@@ -3004,40 +3103,40 @@ L_398:
 	rorb	r2
 	asrb	r2
 	bit	r2,$01
-	beq	L_443
-	jmp	L_400
-L_443:
+	beq	L_471
+	jmp	L_428
+L_471:
 	movb	(r1),r2
 	clc
 	rorb	r2
 	bit	r2,$01
-	beq	L_444
-	jmp	L_400
-L_444:
+	beq	L_472
+	jmp	L_428
+L_472:
 	tstb	026(sp)
-	bne	L_404
+	bne	L_432
 	tstb	_hasCurrentCell
-	bne	L_445
-	jmp	L_400
-L_445:
+	bne	L_473
+	jmp	L_428
+L_473:
 	clrb	_hasCurrentCell
 	tstb	_firstClick
-	bne	L_421
-L_405:
+	bne	L_449
+L_433:
 	mov	r0,-(sp)
 	mov	06(sp),-(sp)
 	jsr	pc,_openCell
 	add	$04,sp
 	tstb	_gameOver
-	beq	L_446
-	jmp	L_400
-L_446:
+	beq	L_474
+	jmp	L_428
+L_474:
 	jsr	pc,_checkWinCondition
-	jmp	L_400
-L_406:
+	jmp	L_428
+L_434:
 	mov	$-01,r0
-	jmp	L_402
-L_421:
+	jmp	L_430
+L_449:
 	mov	r0,-(sp)
 	mov	06(sp),-(sp)
 	mov	r0,04(sp)
@@ -3047,7 +3146,7 @@ L_421:
 	jsr	pc,_setOnFrame
 	add	$06,sp
 	mov	(sp),r0
-	br	L_405
+	br	L_433
 	.section	.rodata
 LC_8:
 	.byte 0105,0123,0103,050,0101,0122,062,051,040,055,040,0145,0170,0151,0164,0
@@ -3060,18 +3159,18 @@ _main:
 	jsr	pc,___main
 	jsr	pc,_initMouse
 	tstb	r0
-	bne	L_476
-L_447:
+	bne	L_504
+L_475:
 	add	$010,sp
 	mov	(sp)+,r2
 	rts	pc
-L_476:
+L_504:
 	jsr	pc,_initKeyb
 	tstb	r0
-	beq	L_447
+	beq	L_475
 	jsr	pc,_initGraph
 	tstb	r0
-	beq	L_447
+	beq	L_475
 	mov	$_OnMouseEvent,-(sp)
 	jsr	pc,_setOnClick
 	mov	$_OnKeyEvent,-(sp)
@@ -3081,20 +3180,20 @@ L_476:
 	mov	$_printBottom,02(sp)
 	mov	$_hideMouse,06(sp)
 	cmp	r0,$02
-	bne	L_451
-	br	L_456
-L_452:
+	bne	L_479
+	br	L_484
+L_480:
 	mov	_currentState,r0
 	cmp	r0,$01
-	beq	L_477
-L_457:
+	beq	L_505
+L_485:
 	mov	_currentState,r0
 	cmp	r0,$02
-	beq	L_456
-L_451:
+	beq	L_484
+L_479:
 	mov	_currentState,r0
 	tst	r0
-	bne	L_452
+	bne	L_480
 	clr	-(sp)
 	jsr	pc,_setOnFrame
 	clr	_frameCounter
@@ -3109,13 +3208,13 @@ L_451:
 	mov	$022,-(sp)
 	jsr	pc,@020(sp)
 	add	$016,sp
-L_454:
+L_482:
 	mov	_currentState,r0
 	tst	r0
-	bne	L_457
+	bne	L_485
 	movb	_hasPendingClick,r0
 	tstb	r0
-	beq	L_454
+	beq	L_482
 	clrb	_hasPendingClick
 	movb	_pendingDown,01(sp)
 	movb	_pendingLeft,r0
@@ -3129,8 +3228,8 @@ L_454:
 	mov	r1,-(sp)
 	jsr	pc,_processClick
 	add	$010,sp
-	br	L_454
-L_456:
+	br	L_482
+L_484:
 	mov	_emptystr,-(sp)
 	mov	$01,-(sp)
 	jsr	pc,_printTop
@@ -3143,21 +3242,21 @@ L_456:
 	jsr	pc,_finishMouse
 	jsr	pc,_finishKeyb
 	add	$010,sp
-	jmp	L_447
-L_477:
+	jmp	L_475
+L_505:
 	jsr	pc,@06(sp)
 	jsr	pc,_clearScreen
 	clrb	_initBySmile
 	jsr	pc,_drawInitialBoard
 	clrb	_hasPendingClick
 	jsr	pc,_showMouse
-L_461:
+L_489:
 	mov	_currentState,r0
 	cmp	r0,$01
-	bne	L_457
+	bne	L_485
 	mov	_frameCounter,r0
 	cmp	r0,$061
-	blos	L_459
+	blos	L_487
 	mov	_frameCounter,r0
 	add	$-062,r0
 	mov	r0,_frameCounter
@@ -3165,10 +3264,10 @@ L_461:
 	inc	r0
 	mov	r0,r1
 	cmp	r0,$01747
-	ble	L_460
+	ble	L_488
 	mov	$01747,r1
 	mov	r1,r0
-L_460:
+L_488:
 	mov	r1,_seconds
 	mov	r0,-(sp)
 	mov	_offset_y,r1
@@ -3182,10 +3281,10 @@ L_460:
 	mov	r0,-(sp)
 	jsr	pc,_drawNumberDisplay
 	add	$06,sp
-L_459:
+L_487:
 	movb	_hasPendingClick,r0
 	tstb	r0
-	beq	L_461
+	beq	L_489
 	clrb	_hasPendingClick
 	movb	_pendingDown,01(sp)
 	movb	_pendingLeft,r0
@@ -3199,10 +3298,10 @@ L_459:
 	mov	r1,-(sp)
 	jsr	pc,_processClick
 	add	$010,sp
-	br	L_461
-	.section	.rodata.CSWTCH.180,"a"
+	br	L_489
+	.section	.rodata.CSWTCH.186,"a"
 	.even
-_CSWTCH.180:
+_CSWTCH.186:
 	.word	01
 	.word	04
 	.word	02
@@ -3211,6 +3310,11 @@ _CSWTCH.180:
 	.even
 _palette:
 	.=.+ 04
+	.globl	_cells_to_draw
+	.section	.bss.cells_to_draw,"aw",@nobits
+	.even
+_cells_to_draw:
+	.=.+ 01616
 	.globl	_frameCounter
 	.section	.bss.frameCounter,"aw",@nobits
 	.even
