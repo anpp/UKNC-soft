@@ -308,10 +308,10 @@ PullCPU:
     .rept 9
     
     mov  @r5, (r1)+
-    mov  @r3, (r1)+
+    movb  @r3, (r1)+
     inc  @r4
+    movb  @r3, (r1)+
     mov  @r5, (r1)+
-    mov  @r3, (r1)+
 
     add   r2, @r4          /; Смещение на строку вниз (+79 байт)
     cmp   @r4, 2(sp)
@@ -338,10 +338,10 @@ PullCPU:
 
     .rept 9
     mov  (r1)+, @r5
-    mov  (r1)+, @r3
+    movb  (r1)+, @r3
     inc  @r4
+    movb  (r1)+, @r3
     mov  (r1)+, @r5
-    mov  (r1)+, @r3
 
     add   r2, @r4          /; Смещение на строку вниз (+79 байт)
     cmp   @r4, @sp
@@ -787,7 +787,7 @@ MouseSpr:
 
 .even
 
-Bkgr: .fill 38, 2, 0
+Bkgr: .fill 27, 2, 0
 
 
 finished:  .word 0   /;флаг завершения, устанавливается из CPU вызовом MouseFinish
