@@ -57,6 +57,8 @@ float fcos1(float x)
 
 void main()
 {
+    resetScreen();
+
     initKeyb();
     initGraph();
     clearScreen();
@@ -87,8 +89,8 @@ void main()
     }
     waitAnyKey();
 
-    resetScreen();
-
     finishGraph();    
     finishKeyb();
+
+    resetScreen();
 }

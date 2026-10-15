@@ -239,10 +239,6 @@ CalcAddress:
 
     add r1, r0
     add offsetV, r0
-    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 1f
-    sub $054540, r0 /; 154540 - 100000 = 54540
-1:
     mov  r0,  PxlAddr
 
     /;вычисление маски пикселя (будет использовано в ПП)
@@ -608,9 +604,6 @@ PixelShiftLabel = . + 2
     mov  @$02476, r0
     mov  @r0, offsetVPPU
 
-    mov  @$02470, mainScreenColor1
-    mov  @$02472, mainScreenColor2
-
     mov  @$02462, modeScreen
     mov  $7, @$02462            /;640 x 288 яркость
 
@@ -803,8 +796,7 @@ GetPixelPPU:
     mov PixelAddr, @r4
     mov @r5, r0          /;В r0 готовый адрес из ЦП
 
-PixelShiftLabel = . + 2
-    mov $0, @r4
+    mov PixelShift, @r4
     mov @r5, r2          /;в r2 число сдвигов вправо для @$0177024
 
     mov r0, @r4
@@ -879,8 +871,6 @@ addr_for_emt:  .word 0
 
 
 FinishGraphPPU:
-    mov    mainScreenColor1, @$02470
-    mov    mainScreenColor2, @$02472
     mov    modeScreen, @$02462
 
     mov    rp0, @$02470
@@ -898,18 +888,6 @@ FinishGraphPPU:
 
 
 /;=========================LinePPU==============================================================
-.macro CorrectAddressLineUpDown
-    cmp     r3, $0100000
-    blo     1000f                      /; < 0100000 -> Underflow
-    cmp     r3, $0154540
-    blt     2000f                      /; [0100000..0154540) -> Норма
-    sub     $054540, r3           /; Overflow (>= 0154540)
-    br      2000f
-1000:
-    add     $054540, r3           /; Underflow (< 0100000)
-2000:
-.endm
-
 LinePPU:
     /;цвет
     mov LineColorPPU, @r4
@@ -988,7 +966,6 @@ DrawXMajor:
     /; err >= 0 – увеличиваем адрес по Y (сама координата не нужна) и корректируем err
 stepay1:
     add     $80, r3
-    CorrectAddressLineUpDown
 
     add     r14, r11         /; err += 2*(dy - dx)
     br      12f
@@ -1050,7 +1027,6 @@ DrawYMajor:
     /; Теперь увеличиваем адрес по Y (ведущая координата), сама координата не нужна
 stepay2:
     add     $80, r3
-    CorrectAddressLineUpDown
     sob     r5, 20b /; если счётчик > 0 – продолжаем
 
 LineExit:
@@ -1060,15 +1036,6 @@ LineExit:
 
 
 /;=========================FillRectPPU==============================================================
-
-.macro CorrectAddressFillRect
-    cmp     r3, $0154540
-    blt     2000f                      /; [0100000..0154540) -> Норма
-    sub     $054540, r3           /; Overflow (>= 0154540)
-2000:
-.endm
-
-
 FillRectPPU:
     /; Цвет (устанавливается один раз перед циклами)
     mov LineColorPPU, @r4
@@ -1132,7 +1099,6 @@ table_rightmask1 = . + 2
 1:  mov     r3, @r4               /; Засылаем адрес VRAM
     movb    r2, @r5               /; Пишем маску
     add     (sp), r3
-    CorrectAddressFillRect
     sob     r1, 1b                /; Счетчик высоты в r1
 
     tst     (sp)+
@@ -1156,7 +1122,6 @@ table_leftmask2 = . + 2
 1:  mov     r3, @r4
     movb    r2, @$0177024
     add     (sp), r3
-    CorrectAddressFillRect
     sob     r5, 1b
 
     tst     (sp)+
@@ -1179,7 +1144,6 @@ DrawMiddle:
 3:  mov     r3, @r4
     movb    r2, @r1      /; сплошная заливка октета
     add     2(sp), r3
-    CorrectAddressFillRect
     sob     r5, 3b
 
     mov     4(sp), r3              /; восстанавливаем верх колонки
@@ -1203,7 +1167,6 @@ table_rightmask2 = . + 2
 4:  mov     r3, @r4
     movb    r2, @r5
     add     $80, r3
-    CorrectAddressFillRect
     sob     r1, 4b                /; используем r1 (dy) в последнем цикле
 
 FillRectExit:
@@ -1268,10 +1231,6 @@ CharLabel = . + 2
 
     /; --- Переход на следующую строку ---
     add   $80, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   10f
-    sub   $054540, r0
-10:
     sob   r2, 1b
 
     tst   (sp)+
@@ -1316,10 +1275,6 @@ CharAddressesLabel = . + 2
 
     /; --- Переход на следующую строку ---
     add   $80, r0          /; Смещение на строку вниз (+80 байт)
-    cmp   r0, $0154540
-    blt   10f
-    sub   $054540, r0
-10:
     sob   r2, 1b
     
     mov   (sp)+, r0
@@ -1477,10 +1432,6 @@ table_80mul1 = . + 2
 
     add r1, r0
     add offsetVPPU, r0
-    cmp r0, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 1f
-    sub $054540, r0 /; 154540 - 100000 = 54540
-1:
     mov  r0,  @r4
 
     /;вычисление маски пикселя
@@ -1662,10 +1613,6 @@ table_80mul2 = . + 2
 
     add r4, r3
     add offsetVPPU, r3
-    cmp r3, $0154540 /; список 220 видеострок для области отображения меню УСТАНОВКА
-    blt 2f
-    sub $054540, r3 /; 154540 - 100000 = 54540
-2:
     /; r3 = адрес байта левого края в VRAM
     mov     r3, @$0177010
     sub     r4, r5            /; r5 = длина отрезка в байтах (0 = 1 байт)
@@ -1746,9 +1693,9 @@ SetPalettePPU:
 
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:   .word 0         /;адрес верхней видеостроки пользовательского экрана
-mainScreenColor1: .word 0         /;регистр управления цветом для экрана пользователя 02470
-mainScreenColor2: .word 0         /;регистр управления цветом для экрана пользователя 02472
 modeScreen:       .word 0         /;видережим
+rp0:    .word 0     /;сохраненный регистр 02470
+rp2:    .word 0     /;сохраненный регистр 02472
 
 r12: .word 0
 r11: .word 0
@@ -1769,9 +1716,6 @@ PixelColor: .word 0
 LineColorPPU:  .word 0
 PixelXPPU:     .word 0
 PixelShift:    .word 0
-
-rp0:    .word 0     /;сохраненный регистр 02470
-rp2:    .word 0     /;сохраненный регистр 02472
 
 FntTable: .word 0117430
 

@@ -5,9 +5,8 @@
     -ffunction-sections -fdata-sections -Wl,--gc-sections \
     -c plot.c -o plot.o
 
-~/data/develop/UKNC/GCC-UKNC-RT11/gcc/bin/pdp11-uknc-rt11-gcc -nostartfiles \
+~/data/develop/UKNC/GCC-UKNC-RT11/gcc/bin/pdp11-uknc-rt11-gcc \
     -Wl,-Map=plot.map \
-    ./../crt/crt0.o \
     ./../libgraph/libgraph.o \
     ./../libkeyb/libkeyb.o \
     ./plot.o \

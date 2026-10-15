@@ -6,7 +6,7 @@
     -c turmit.c -o turmit.o
 
 ~/data/develop/UKNC/GCC-UKNC-RT11/gcc/bin/pdp11-uknc-rt11-gcc \
-    -Wl,-Map=plot.map \
+    -Wl,-Map=turmit.map \
     ./../libgraph/libgraph.o \
     ./../libkeyb/libkeyb.o \
     ./turmit.o \

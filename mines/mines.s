@@ -3168,6 +3168,7 @@ L_504:
 	jsr	pc,_initKeyb
 	tstb	r0
 	beq	L_475
+	jsr	pc,_resetScreen
 	jsr	pc,_initGraph
 	tstb	r0
 	beq	L_475
@@ -3237,10 +3238,10 @@ L_484:
 	mov	$01,-(sp)
 	jsr	pc,@012(sp)
 	jsr	pc,@016(sp)
-	jsr	pc,_resetScreen
 	jsr	pc,_finishGraph
 	jsr	pc,_finishMouse
 	jsr	pc,_finishKeyb
+	jsr	pc,_resetScreen
 	add	$010,sp
 	jmp	L_475
 L_505:

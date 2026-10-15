@@ -725,6 +725,8 @@ void main()
 {
     if (!initMouse()) return;
     if (!initKeyb()) return;
+    resetScreen();
+    //for(volatile unsigned tmp = 65535; tmp > 0; tmp--); //задержка
     if (!initGraph()) return;
 
     setOnClick(OnMouseEvent);
@@ -785,9 +787,10 @@ void main()
     printBottom(1, emptystr);
 
     hideMouse();
-    resetScreen();
 
     finishGraph();
     finishMouse();
     finishKeyb();
+
+    resetScreen();
 }

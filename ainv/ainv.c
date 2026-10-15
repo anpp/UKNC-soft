@@ -231,6 +231,7 @@ static int ctype = ASCII;
 void main()
 {
     initKeyb();
+    resetScreen();
     initGraph();
     clearScreen();
 
@@ -271,5 +272,7 @@ void main()
     printTop(1, "              ");
 
     finishGraph();    
-    finishKeyb();    
+    finishKeyb();
+
+    resetScreen();    
 }
