@@ -16,6 +16,7 @@
     ./../libmouse/libmouse.o \
     ./../libgraph/libgraph.o \
     ./../common/lfsr.o \
+    ./../libppu/libppu.o \
     ./mines.o \
     -o mines.sav
 

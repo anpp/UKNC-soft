@@ -1,7 +1,7 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
 .globl _putChar, _putText, _circle, _fillCircle
-.globl _runPPU, _getFrameCount, _setOnFrame, _setPalette, _pauseGraph
+.globl _getFrameCount, _setOnFrame, _setPalette, _pauseGraph, _copySprite, _drawSprite
 
 
 rsk2 = 0176674
@@ -19,19 +19,19 @@ addrCP:     .word   pplen
 WORDS:      .word   pplen
 .even
 
-Pxl:      /;(порядок не менять)
+Pxl:      //(порядок не менять)
 PxlAddr: .word 0
 PxlMask: .word 0
 PxClr:   .word 0
 PxShift: .word 0
-char:    .word 0    /;адрес char для putCharPPU
+char:    .word 0    //адрес char для putCharPPU
 PixelX:  .word -1
 PixelY:  .word -1
 Radius:  .word 0
 boldvalue: .word 0
 
 received_color: .word   -1
-offsetV:    .word   0   /;адрес верхней видеостроки пользовательского экрана
+offsetV:    .word   0   //адрес верхней видеостроки пользовательского экрана
 
 SavePS:      .word 0
 FrameCount:  .word 0
@@ -42,9 +42,9 @@ paused:      .word 0
 rp0CPU:  .word 0
 rp2CPU:  .word 0
 
-CharAddresses:  .fill 80, 2, 0  /; Буфер для адресов символов для PutTextPPU
+CharAddresses:  .fill 80, 2, 0  // Буфер для адресов символов для PutTextPPU
 
-running_proc:   .word 0   /;слово флагов для запуска подпрограмм в ПП
+running_proc:   .word 0   //слово флагов для запуска подпрограмм в ПП
 /*
 01  - PutPixelPPU
 02  - GetPixelPPU
@@ -59,6 +59,7 @@ running_proc:   .word 0   /;слово флагов для запуска под
 02000 - PutTextPPU
 04000 - FillCirclePPU
 010000 - SetPalettePPU
+020000 - DrawSpritePPU
 .
 .
 .
@@ -69,11 +70,14 @@ OnFrameEvent:  .word   0
 
 finished:                 .word 0
 
-/параметры для вывода строки в служебные экраны (порядок не менять)
-top_or_bottom:            .word 0  /0 - top, 1 - bottom
-position_service_string:  .word 0  / позиция вывода
-addr_buffer_string:       .word 0  / адрес строки
+//параметры для вывода строки в служебные экраны (порядок не менять)
+top_or_bottom:            .word 0  //0 - top, 1 - bottom
+position_service_string:  .word 0  // позиция вывода
+addr_buffer_string:       .word 0  // адрес строки
 
+addr_from:   .word 0
+addr_to:     .word 0
+addr_spr:    .word 0
 
 .macro  mput  adrmp
     jsr r2, pp_mput
@@ -81,29 +85,29 @@ addr_buffer_string:       .word 0  / адрес строки
 .endm
 
 
-/Подпрограмма перемещения в К2 адреса МП
-/=============================================================================
+//Подпрограмма перемещения в К2 адреса МП
+//=============================================================================
 pp_mput: 
-    jsr pc, 5f      /Подождем готовности К2
+    jsr pc, 5f      //Подождем готовности К2
 1:
-    jsr pc, 4f      /Вытолкнем в К2 первые 2 байта адреса
-    cmp     r2, $2f /Байты завершения переданы ?
-    beq     3f      /..да - перейдем к проверке ответа
-    clrb    @-(r2)  /Очистим байт ответа
-    jsr     r2, 1b  /Передадим 2 байта завершения 0377
-    .word   -1      /Байты завершения
+    jsr pc, 4f      //Вытолкнем в К2 первые 2 байта адреса
+    cmp     r2, $2f //Байты завершения переданы ?
+    beq     3f      //..да - перейдем к проверке ответа
+    clrb    @-(r2)  //Очистим байт ответа
+    jsr     r2, 1b  //Передадим 2 байта завершения 0377
+    .word   -1      //Байты завершения
 2:
-    tstb    @(r2)+  /Проверим ответ
+    tstb    @(r2)+  //Проверим ответ
 3:
-    rts     r2          /Выйдем в основную программу (или на 2b)
+    rts     r2          //Выйдем в основную программу (или на 2b)
 4:
-    mov     pc, -(sp)   /Обеспечим повторный вход
-    movb    (r2)+, @$rdk2   /Передача байта в К2
+    mov     pc, -(sp)   //Обеспечим повторный вход
+    movb    (r2)+, @$rdk2   //Передача байта в К2
 5:
-    tstb    @$rsk2  /Ожидание готовности К2
+    tstb    @$rsk2  //Ожидание готовности К2
     bpl     5b
     rts pc 
-/=============================================================================
+//=============================================================================
 
 
 .macro PatchAddressesLabels AddrLabel, LabelPPU
@@ -225,6 +229,21 @@ _pauseGraph:
     rts   pc
 
 
+_copySprite:
+    mov   2(sp), addr_from
+    mov   4(sp), addr_to
+    //запустить copySpritePPU
+    mov   addrPP, -(sp)
+    mov   @sp, r1
+    add   $(copySpritePPU - pp.beg), r1
+    movb  $030, command
+    mov   r1, addrPP
+    mput  mp
+    mov   (sp)+, addrPP
+
+    rts   pc
+
+
 _clearScreen:
     bis $04, running_proc
 1:
@@ -243,14 +262,14 @@ _invertScreen:
 
 /Вычисление адрес вы ВОЗУ для ПП по координатам в PixelX, PixelY, результат в PxlAddr
 CalcAddress:
-    /;сохранение координат (может прочитать ПП)
+    //сохранение координат (может прочитать ПП)
     mov  r0, PixelX
     mov  r1, PixelY
 
-    asl     r1                      /; r1 = Y * 2 (индекс слова в таблице)
-    mov     LineTable(r1), r1       /; r1 = r1 * 80
+    asl     r1                      // r1 = Y * 2 (индекс слова в таблице)
+    mov     LineTable(r1), r1       // r1 = r1 * 80
 
-    /деление координаты x на 8
+    //деление координаты x на 8
     asr r0
     asr r0
     asr r0
@@ -259,10 +278,10 @@ CalcAddress:
     add offsetV, r0
     mov  r0,  PxlAddr
 
-    /;вычисление маски пикселя (будет использовано в ПП)
+    //вычисление маски пикселя (будет использовано в ПП)
     mov PixelX, r0
-    bic $0b1111111111111000, r0 ;/ В r0 номер точки в октете
-    /; Подготовка маски для вывода пикселя
+    bic $0b1111111111111000, r0 // В r0 номер точки в октете
+    // Подготовка маски для вывода пикселя
     movb  MaskTable(r0), PxlMask
 
     rts  pc
@@ -430,21 +449,21 @@ _putText:
     mov     6(sp), r1 
     mov     4(sp), r0
 
-    setTextColor /;макрос
+    setTextColor //макрос
 
     jsr  pc, CalcAddress    
 
     mov PixelX, r0
-    bic $0b1111111111111000, r0  /; В r0 номер точки в октете
-    mov r0, PxShift              /;номер точки в октете для PutTextPPU
+    bic $0b1111111111111000, r0  // В r0 номер точки в октете
+    mov r0, PxShift              //номер точки в октете для PutTextPPU
     
-    mov   2(sp), r0              /;r0 - адрес первого символа строки
+    mov   2(sp), r0              //r0 - адрес первого символа строки
 
     mov  r2, -(sp)
     mov  r3, -(sp)
     mov  r4, -(sp)
 
-    /;переменные в регистрах для скорости
+    //переменные в регистрах для скорости
     mov   FntTable, r3
     mov   $CharAddresses, r4
 1:
@@ -453,14 +472,14 @@ _putText:
     beq  3f
 
     mul11
-    add   r3, r1     /; r1 = адрес символа в ПЗУ
+    add   r3, r1     // r1 = адрес символа в ПЗУ
     mov r1, (r4)+
 
     br   1b
 3:
-    clr (r4)        /;последний адрес - 0 - признак конца
+    clr (r4)        //последний адрес - 0 - признак конца
 
-/; запуск PutTextPPU
+// запуск PutTextPPU
     bis $02000, running_proc
 1000:
     bit $02000, running_proc
@@ -517,30 +536,6 @@ _printBottom:
     rts  pc
 
 
-_runPPU:
-    mov   4(sp), r0
-    clc
-    ror   r0
-    movb  $01, command  //выделение памяти
-    mov   r0, WORDS     //кол-во слов
-    mov   r0, addrCP    //кол-во слов
-    mput  mp
-    bne   1f
-
-    movb  $020, command  //копирование
-    mov   2(sp), addrCP
-    mput  mp
-    bne   1f
-
-    movb  $030, command  //запуск
-    mput  mp
-
-    movb  $2, command   //освобождение
-    mput  mp
-1:
-
-    rts   pc
-
 _getFrameCount:
     mov  FrameCount, r0
     rts  pc
@@ -568,18 +563,31 @@ FrameInt:
 
 
 _setPalette:
-    mov     2(sp), rp0CPU
-    mov     4(sp), rp2CPU
+    mov   2(sp), rp0CPU
+    mov   4(sp), rp2CPU
 
-    bis     $010000, running_proc
+    bis   $010000, running_proc
 1:
-    bit     $010000, running_proc
-    bne     1b
-    mov     rp0CPU, r0
-    mov     rp2CPU, r1
+    bit   $010000, running_proc
+    bne   1b
+    mov   rp0CPU, r0
+    mov   rp2CPU, r1
 
-    rts     pc
+    rts   pc
 
+_drawSprite:
+    mov   2(sp), r0
+    mov   4(sp), r1   
+    jsr   pc, CalcAddress
+
+    mov   6(sp), addr_spr
+
+    bis   $020000, running_proc
+1:
+    bit   $020000, running_proc
+    bne   1b
+
+    rts   pc
 
 
 /=============================================================================================
@@ -640,6 +648,37 @@ OffsetVLabel = . + 2
     mov @$02472, rp2
 
     jsr  pc, MainPPU
+    rts  pc
+
+
+    //копирования спрайта из видеопамяти
+copySpritePPU:
+    mov  $0177010, r4
+    mov  $0177014, r5
+
+    mov  $addr_to, r0
+    clc
+    ror  r0
+    mov  r0, @r4
+    mov  @r5, r1          //r1 - адрес памяти для спрайта
+    dec  @r4              
+    mov  @r5, @r4         //указатель на адрес в ВОЗУ
+    
+    mov  $0177012, r3     // r3 = План 0
+
+    mov  $16, r2
+1:
+    mov  @r5, (r1)+ 
+    mov  @r3, (r1)+
+
+    inc  @r4
+
+    mov  @r5, (r1)+
+    mov  @r3, (r1)+
+
+    add  $79, @r4
+    sob  r2, 1b
+
     rts  pc
 
 
@@ -748,8 +787,14 @@ end_fillcircle:
     jsr pc, SetPalettePPU
     mov RunProcPPU, @r4
     bic $010000, @r5         //SetPalettePPU выполнена 
-
 14:
+    asr (sp)               //Проверка на DrawSpritePPU
+    bcc 15f
+    jsr pc, DrawSpritePPU
+    mov RunProcPPU, @r4
+    bic $020000, @r5        //DrawSpritePPU выполнена 
+
+15:
     tst (sp)+ 
     jmp MainPPU
 100:    
@@ -758,6 +803,9 @@ end_fillcircle:
     mov RunProcPPU, @r4
     bic $0100000, @r5         //MainPPU выполнена 
     rts  pc
+
+
+
 
 ClearScreenPPU:
     mov  $0177020, r1
@@ -801,15 +849,15 @@ FillScreenPPU:
 
 PutPixelPPU:
     mov PixelAddr, @r4
-    mov @r5, r0          /;В r0 готовый адрес из ЦП
+    mov @r5, r0          //В r0 готовый адрес из ЦП
 
     inc @r4
-    mov @r5, r1          /;в r1 маска пикселя
+    mov @r5, r1          //в r1 маска пикселя
 
     inc @r4    /; color
     mov @r5, @$0177016  
 
-    /; Запись пикселя (r0 - адрес, r1 - маска пикселя в октете)
+    // Запись пикселя (r0 - адрес, r1 - маска пикселя в октете)
     mov r0, @r4
     movb r1, @$0177024
 
@@ -1712,8 +1760,33 @@ SetPalettePPU:
 
     rts     pc
 
+//===============================DrawSpritePPU=======================================
+DrawSpritePPU:
+    mov PixelAddr, @r4
+    mov @r5, r0          //В r0 готовый адрес из ЦП
 
+    mov  $addr_spr, r1
+    clc
+    ror  r1
+    mov  r1, @r4
+    mov  @r5, r1          //r1 - адрес памяти для спрайта
 
+    mov  $0177012, r3
+    mov  $16, r2
+    mov  r0, @r4
+1:
+    mov  (r1)+, @r5
+    mov  (r1)+, @r3
+
+    inc  @r4       
+
+    mov  (r1)+, @r5
+    mov  (r1)+, @r3
+
+    add  $79, @r4
+    sob  r2, 1b
+
+    rts  pc
 
 //====================ДАННЫЕ ПП======================================================
 offsetVPPU:   .word 0         /;адрес верхней видеостроки пользовательского экрана

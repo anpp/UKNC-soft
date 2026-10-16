@@ -1,6 +1,7 @@
 #include "../libgraph/libgraph.h"
 #include "../libkeyb/libkeyb.h"
 #include "../libmouse/libmouse.h"
+#include "../libppu/libppu.h"
 #include "../common/random.h"
 #include "../common/lfsr.h"
 #include "cell.h"
@@ -53,6 +54,8 @@ typedef struct
     unsigned char x;
     unsigned char y;
 } Point;
+
+unsigned int cell_sprite_addr = 0;
 
 Point currentCell;
 bool  hasCurrentCell = false;
@@ -373,7 +376,8 @@ void drawInitialBoard()
             int x = idx % field_w;
             int y = idx / field_w;
 
-            drawCell(x, y);
+            //drawCell(x, y);
+            drawSprite(offset_x + x * CELL_SIZE, offset_y + y * CELL_SIZE, cell_sprite_addr);
         }
     }
 
@@ -722,6 +726,17 @@ void OnKeyEvent(bool Up, unsigned char key_code)
     }
 }
 
+
+void initCellSprite(void)
+{
+    drawButton(0, 0, CELL_SIZE, CELL_SIZE);
+
+    pauseGraph(true);
+    cell_sprite_addr = getmemPPU(128);
+    copySprite(0100000, cell_sprite_addr);
+    pauseGraph(false);
+}
+
 void main() 
 {
     resetScreen();
@@ -736,6 +751,7 @@ void main()
     
     //незаметное "мгновенное" заполнение черным
     unsigned long tmpPalette = setPalette(0, 0);
+    initCellSprite();
     clearScreen();
     setPalette((tmpPalette >> 16) & 65535, tmpPalette & 65535);
 

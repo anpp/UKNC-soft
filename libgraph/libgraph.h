@@ -29,6 +29,8 @@ extern unsigned int getFrameCount();
 extern void setOnFrame(void *addr_func);
 extern long unsigned int setPalette(unsigned int r1, unsigned int r2);
 extern void pauseGraph(unsigned Pause);
+extern void copySprite(unsigned addr_from, unsigned addr_to);
+extern void drawSprite(int x, int y, unsigned addr);
 
 void rect(int x1, int y1, int x2, int y2, unsigned int color)
 {
