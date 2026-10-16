@@ -1,7 +1,7 @@
 .text
 .globl _initGraph, _finishGraph, _clearScreen, _putPixel, _getPixel, _printTop, _printBottom, _invertScreen, _line, _fillRect
 .globl _putChar, _putText, _circle, _fillCircle
-.globl _runPPU, _getFrameCount, _setOnFrame, _setPalette
+.globl _runPPU, _getFrameCount, _setOnFrame, _setPalette, _pauseGraph
 
 
 rsk2 = 0176674
@@ -47,6 +47,7 @@ SavePS:      .word 0
 FrameCount:  .word 0
 FrameIntOld: .word 0
 FramePSWOld: .word 0
+paused:      .word 0
 
 rp0CPU:  .word 0
 rp2CPU:  .word 0
@@ -179,7 +180,7 @@ InitLineTable:
 
 _finishGraph:
 
-    /;восстановление кадрового
+    //восстановление кадрового
     mfps    SavePS
     mtps    $0340
     mov     FrameIntOld, @$0100
@@ -187,23 +188,48 @@ _finishGraph:
     clr     OnFrameEvent
     mtps    SavePS
 
-    bis $0100000, running_proc  /флаг завершения для ПП
+    bis $0100000, running_proc  //флаг завершения главного цикла для ПП
 
-    / запуск подпрограммы в ПП FinishGraphPPU
+    // запуск подпрограммы в ПП FinishGraphPPU
     mov  addrPP, r0
     add  $(FinishGraphPPU - pp.beg), r0
     movb  $030, command1
     mov   r0, addrPP1
     mput  mp1
 
-    /дождаться завершения
+    //дождаться завершения
 1:
     tst   finished
     beq   1b
 
-    /освободить память
+    //освободить память
     movb  $2, command
     mput  mp
+    rts   pc
+
+_pauseGraph:
+    mov   2(sp), r0         //параметр - true - pause, false - start
+    cmp   paused, r0
+    beq   3f                //состояние не поменялось
+    tst   r0
+    beq   2f
+
+    bis   $0100000, running_proc  //флаг завершения главного цикла для ПП
+4:    
+    bit $0100000, running_proc
+    bne 4b
+
+    br    3f    
+2:
+    //запустить главный цикл
+    mov  addrPP, r1
+    add  $(MainPPU - pp.beg), r1
+    movb  $030, command1
+    mov   r1, addrPP1
+    mput  mp1
+
+3:
+    mov   r0, paused         //новое состояние
     rts   pc
 
 
@@ -605,19 +631,19 @@ PixelShiftLabel = . + 2
     mov  @r0, offsetVPPU
 
     mov  @$02462, modeScreen
-    mov  $7, @$02462            /;640 x 288 яркость
+    mov  $7, @$02462            //640 x 288 яркость
 
     mov $0177010, r4
     mov $0177014, r5
 
-    /; рулон в CPU
+    // рулон в CPU
 OffsetVLabel = . + 2
     mov $0, @r4
     mov offsetVPPU, @r5
     
-    mov $81, @$023156        /;скрыть текстовый курсор
+    mov $81, @$023156        //скрыть текстовый курсор
 
-/;сохранить регистры управления цветом
+//сохранить регистры управления цветом
     mov @$02470, rp0
     mov @$02472, rp2
 
@@ -625,114 +651,120 @@ OffsetVLabel = . + 2
     rts  pc
 
 
-    /Основной цикл
+    //Основной цикл
 MainPPU:
-    mov RunProcPPU, @r4
-    mov @r5, -(sp)       /;вершина стека - битовая карта процессов
+    mov $0177010, r4
+    mov $0177014, r5
 
-    bmi 100f              /BitsProcPPU
+    mov RunProcPPU, @r4
+    mov @r5, -(sp)       //вершина стека - битовая карта процессов
+
+    bmi 100f              //BitsProcPPU
      
-    asr (sp)              /Проверка на PutPixel
+    asr (sp)              //Проверка на PutPixel
     bcc 2f
     jmp PutPixelPPU
 end_putpixel:
     mov RunProcPPU, @r4
-    bic $01, @r5          /PutPixel выполнена
+    bic $01, @r5          //PutPixel выполнена
 2:
-    asr (sp)              /Проверка на GetPixel
+    asr (sp)              //Проверка на GetPixel
     bcc 3f
     jmp GetPixelPPU
 end_getpixel:
     mov RunProcPPU, @r4
-    bic $02, @r5          /GetPixel выполнена
+    bic $02, @r5          //GetPixel выполнена
 
 3: 
-    asr (sp)             /Проверка на ClearScreen
+    asr (sp)             //Проверка на ClearScreen
     bcc 4f
     jsr pc, ClearScreenPPU
 
     mov RunProcPPU, @r4
-    bic $04, @r5           /ClearScreen выполнена
+    bic $04, @r5           //ClearScreen выполнена
                          
 4:
-    asr (sp)              /Проверка на PrintTopBottom
+    asr (sp)              //Проверка на PrintTopBottom
     bcc 5f
     jsr pc, PrintTopBottomPPU
 
     mov RunProcPPU, @r4
     bic $010, @r5
-                         /PrintTopBottom выполнена
+                         //PrintTopBottom выполнена
 5:
-    asr (sp)             /Проверка на InvertScreen
+    asr (sp)             //Проверка на InvertScreen
     bcc 6f
     jsr pc, InvertScreenPPU
 
     mov RunProcPPU, @r4
-    bic $020, @r5         /InvertScreen выполнена
+    bic $020, @r5         //InvertScreen выполнена
 
 6:
-    asr (sp)             /Проверка на LinePPU
+    asr (sp)             //Проверка на LinePPU
     bcc 7f
     jmp LinePPU
 end_line:
     mov RunProcPPU, @r4
-    bic $040, @r5         /LinePPU выполнена
+    bic $040, @r5         //LinePPU выполнена
 
 7:
-    asr (sp)              /Проверка на FillRectPPU
+    asr (sp)              //Проверка на FillRectPPU
     bcc 8f
     jmp FillRectPPU
 end_fillrect:
     mov RunProcPPU, @r4
-    bic $0100, @r5         /FillRectPPU выполнена
+    bic $0100, @r5         //FillRectPPU выполнена
 
 8:
-    asr (sp)               /Проверка на PutCharPPU
+    asr (sp)               //Проверка на PutCharPPU
     bcc 9f
     jmp PutCharPPU
 end_putchar:
     mov RunProcPPU, @r4
-    bic $0200, @r5         /PutCharPPU выполнена
+    bic $0200, @r5         //PutCharPPU выполнена
 9:
-    asr (sp)               /Проверка на CirclePPU
+    asr (sp)               //Проверка на CirclePPU
     bcc 10f
     jmp CirclePPU
 end_circle:
     mov RunProcPPU, @r4
-    bic $0400, @r5         /CirclePPU выполнена
+    bic $0400, @r5         //CirclePPU выполнена
 10:
-    asr (sp)               /Проверка на SetTextColorPPU
+    asr (sp)               //Проверка на SetTextColorPPU
     bcc 11f
     jmp SetTextColorPPU
 end_settextcolor:
     mov RunProcPPU, @r4
-    bic $01000, @r5         /SetTextColorPPU выполнена 
+    bic $01000, @r5         //SetTextColorPPU выполнена 
 11:
-    asr (sp)               /Проверка на PutTextPPU
+    asr (sp)               //Проверка на PutTextPPU
     bcc 12f
     jmp PutTextPPU
 end_puttext:
     mov RunProcPPU, @r4
-    bic $02000, @r5         /PutTextPPU выполнена 
+    bic $02000, @r5         //PutTextPPU выполнена 
 12:
-    asr (sp)               /Проверка на FillCirclePPU
+    asr (sp)               //Проверка на FillCirclePPU
     bcc 13f
     jmp FillCirclePPU
 end_fillcircle:
     mov RunProcPPU, @r4
-    bic $04000, @r5         /FillCirclePPU выполнена 
+    bic $04000, @r5         //FillCirclePPU выполнена 
 13:
-    asr (sp)               /Проверка на SetPalettePPU
+    asr (sp)               //Проверка на SetPalettePPU
     bcc 14f
     jsr pc, SetPalettePPU
     mov RunProcPPU, @r4
-    bic $010000, @r5         /SetPalettePPU выполнена 
+    bic $010000, @r5         //SetPalettePPU выполнена 
 
 14:
     tst (sp)+ 
     jmp MainPPU
 100:    
     tst (sp)+ 
+
+    mov RunProcPPU, @r4
+    bic $0100000, @r5         //MainPPU выполнена 
     rts  pc
 
 ClearScreenPPU:

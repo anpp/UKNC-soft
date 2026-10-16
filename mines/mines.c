@@ -11,7 +11,7 @@
 
 #define SMILE_W    28
 #define SMILE_H    28
-#define CELL_SIZE  18
+#define CELL_SIZE  16
 
 #define HEADER_H 30
 #define MAX_FIELD_W  (SCREEN_W / CELL_SIZE)
@@ -56,6 +56,7 @@ typedef struct
 
 Point currentCell;
 bool  hasCurrentCell = false;
+bool  needClear = false;
 
 int field_w = 9;
 int field_h = 9;
@@ -225,7 +226,7 @@ void drawMenuButton(int index, bool pressed)
 void drawMenu()
 {
     hideMouse();
-    clearScreen();
+    if (needClear) clearScreen();
     printTop(1, emptystr);
     printTop(1, "MINESWEEPER - MAIN MENU");
     
@@ -261,7 +262,7 @@ void drawCell(int cx, int cy)
     {
         drawButton(x1, y1, x2, y2);
         if (Cell_isFlagged(c))
-            drawFlag(x1 + 9, y1 + 5);
+            drawFlag(x1 + 8, y1 + 4);
     } 
     else
     {
@@ -293,7 +294,7 @@ void drawCell(int cx, int cy)
             default:
               color = COLOR_BLACK;
             }
-            putChar(digit, x1 + 6, y1 + 4, color, 2);
+            putChar(digit, x1 + 5, y1 + 4, color, 2);
         }
     }
 }
@@ -318,7 +319,7 @@ void drawInitialBoard()
     flags = 0;
     seconds = 0;
 
-    offset_x = (SCREEN_W / 2) - (field_w * CELL_SIZE / 2);
+    offset_x = ((SCREEN_W / 2) - (field_w * CELL_SIZE / 2)) & 0177770;
     offset_y = ((SCREEN_H + 30) / 2) - (field_h * CELL_SIZE / 2); //по вертикале оставляем свободное место наверху
 
     smileX = (SCREEN_W / 2) - (SMILE_W / 2);
@@ -570,7 +571,7 @@ void processMenuClick(int x, int y)
             else if (i == 2)
             {
                 field_w = 35;
-                field_h = 13;
+                field_h = 14;
                 total_mines = 90;
                 currentState = STATE_GAME;
             }
@@ -723,14 +724,20 @@ void OnKeyEvent(bool Up, unsigned char key_code)
 
 void main() 
 {
+    resetScreen();
+
     if (!initMouse()) return;
     if (!initKeyb()) return;
-    resetScreen();
     //for(volatile unsigned tmp = 65535; tmp > 0; tmp--); //задержка
     if (!initGraph()) return;
 
     setOnClick(OnMouseEvent);
     setOnKeyEvent(OnKeyEvent);
+    
+    //незаметное "мгновенное" заполнение черным
+    unsigned long tmpPalette = setPalette(0, 0);
+    clearScreen();
+    setPalette((tmpPalette >> 16) & 65535, tmpPalette & 65535);
 
     while (currentState != STATE_EXIT)
     {
@@ -738,6 +745,7 @@ void main()
         {
             stopTimer();
             drawMenu();
+            needClear = true;
 
             printBottom(1, emptystr);
             printBottom(1, "ESC(AR2) - exit");
