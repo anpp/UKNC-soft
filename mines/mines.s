@@ -1618,10 +1618,10 @@ _drawPressedCell:
 	mov	06(sp),r1
 	ash	$04,r1	
 	add	_offset_y,r1
-	mov	$020,r2
+	mov	$017,r2
 	add	r1,r2
 	mov	r2,-(sp)
-	mov	$020,r2
+	mov	$017,r2
 	add	r0,r2
 	mov	r2,-(sp)
 	mov	r1,-(sp)
@@ -1645,9 +1645,9 @@ _drawCell:
 	mov	016(sp),r4
 	ash	$04,r4	
 	add	_offset_y,r4
-	mov	$020,r0
+	mov	$017,r0
 	add	r3,r0
-	mov	$020,r5
+	mov	$017,r5
 	add	r4,r5
 	mov	014(sp),r2
 	asl	r2
@@ -1719,7 +1719,7 @@ L_171:
 L_176:
 	mov	$02,-(sp)
 	mov	r2,-(sp)
-	add	$04,r4
+	add	$03,r4
 	mov	r4,-(sp)
 	add	$05,r3
 	mov	r3,-(sp)
@@ -3057,10 +3057,10 @@ L_438:
 	mov	010(sp),r1
 	ash	$04,r1	
 	add	_offset_y,r1
-	mov	$020,r3
+	mov	$017,r3
 	add	r1,r3
 	mov	r3,-(sp)
-	mov	$020,r2
+	mov	$017,r2
 	add	r0,r2
 	mov	r2,-(sp)
 	mov	r1,-(sp)
@@ -3152,8 +3152,8 @@ L_455:
 	.globl	_initCellSprite
 _initCellSprite:
 	mov	r2,-(sp)
-	mov	$020,-(sp)
-	mov	$020,-(sp)
+	mov	$017,-(sp)
+	mov	$017,-(sp)
 	clr	-(sp)
 	clr	-(sp)
 	jsr	pc,_drawButton

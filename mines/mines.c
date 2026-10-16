@@ -244,8 +244,8 @@ void drawPressedCell(int cx, int cy)
 {
     int x1 = offset_x + cx * CELL_SIZE;
     int y1 = offset_y + cy * CELL_SIZE;
-    int x2 = x1 + CELL_SIZE;
-    int y2 = y1 + CELL_SIZE;
+    int x2 = x1 + CELL_SIZE - 1;
+    int y2 = y1 + CELL_SIZE - 1;
 
     Cell *c = &board[cx][cy];
     drawPressedButton(x1, y1, x2, y2);
@@ -256,8 +256,8 @@ void drawCell(int cx, int cy)
 {
     int x1 = offset_x + cx * CELL_SIZE;
     int y1 = offset_y + cy * CELL_SIZE;
-    int x2 = x1 + CELL_SIZE;
-    int y2 = y1 + CELL_SIZE;
+    int x2 = x1 + CELL_SIZE - 1;
+    int y2 = y1 + CELL_SIZE - 1;
 
     Cell *c = &board[cx][cy];
     
@@ -297,7 +297,7 @@ void drawCell(int cx, int cy)
             default:
               color = COLOR_BLACK;
             }
-            putChar(digit, x1 + 5, y1 + 4, color, 2);
+            putChar(digit, x1 + 5, y1 + 3, color, 2);
         }
     }
 }
@@ -729,7 +729,7 @@ void OnKeyEvent(bool Up, unsigned char key_code)
 
 void initCellSprite(void)
 {
-    drawButton(0, 0, CELL_SIZE, CELL_SIZE);
+    drawButton(0, 0, CELL_SIZE - 1, CELL_SIZE - 1);
 
     pauseGraph(true);
     cell_sprite_addr = getmemPPU(128);
