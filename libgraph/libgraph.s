@@ -15,18 +15,8 @@ mp:
 command:    .byte   01
             .word   032
 addrPP:     .word   0
-WORD3:      .word   pplen
+addrCP:     .word   pplen
 WORDS:      .word   pplen
-.even
-
-/;структура для отправки данных во время работы (координат и тп)
-mp1:
-             .byte   0
-command1:    .byte   020
-             .word   032
-addrPP1:     .word   0
-addrCP1:     .word   0
-WORDS1:      .word   0
 .even
 
 Pxl:      /;(порядок не менять)
@@ -142,7 +132,7 @@ _initGraph:
     bne 1f
 
     movb  $020, command
-    mov $pp.beg, WORD3
+    mov $pp.beg, addrCP
     mput    mp
     bne 1f
 
@@ -179,7 +169,6 @@ InitLineTable:
 
 
 _finishGraph:
-
     //восстановление кадрового
     mfps    SavePS
     mtps    $0340
@@ -191,12 +180,13 @@ _finishGraph:
     bis $0100000, running_proc  //флаг завершения главного цикла для ПП
 
     // запуск подпрограммы в ПП FinishGraphPPU
-    mov  addrPP, r0
-    add  $(FinishGraphPPU - pp.beg), r0
-    movb  $030, command1
-    mov   r0, addrPP1
-    mput  mp1
-
+    mov   addrPP, -(sp)
+    mov   @sp, r0
+    add   $(FinishGraphPPU - pp.beg), r0
+    movb  $030, command
+    mov   r0, addrPP
+    mput  mp
+    mov   (sp)+, addrPP
     //дождаться завершения
 1:
     tst   finished
@@ -222,11 +212,13 @@ _pauseGraph:
     br    3f    
 2:
     //запустить главный цикл
-    mov  addrPP, r1
-    add  $(MainPPU - pp.beg), r1
-    movb  $030, command1
-    mov   r1, addrPP1
-    mput  mp1
+    mov   addrPP, -(sp)
+    mov   @sp, r1
+    add   $(MainPPU - pp.beg), r1
+    movb  $030, command
+    mov   r1, addrPP
+    mput  mp
+    mov   (sp)+, addrPP
 
 3:
     mov   r0, paused         //новое состояние
@@ -526,28 +518,28 @@ _printBottom:
 
 
 _runPPU:
-    mov  4(sp), r0
+    mov   4(sp), r0
     clc
-    ror  r0
-    movb  $01, command1  /выделение памяти
-    mov  r0, WORDS1  /кол-во слов
-    mov  r0, addrCP1 /кол-во слов
-    mput  mp1
-    bne 1f
+    ror   r0
+    movb  $01, command  //выделение памяти
+    mov   r0, WORDS     //кол-во слов
+    mov   r0, addrCP    //кол-во слов
+    mput  mp
+    bne   1f
 
-    movb  $020, command1  /копирование
-    mov   2(sp), addrCP1
-    mput  mp1
-    bne 1f
+    movb  $020, command  //копирование
+    mov   2(sp), addrCP
+    mput  mp
+    bne   1f
 
-    movb  $030, command1 /запуск
-    mput  mp1
+    movb  $030, command  //запуск
+    mput  mp
 
-    movb  $2, command1  /освобождение
-    mput  mp1
+    movb  $2, command   //освобождение
+    mput  mp
 1:
 
-    rts  pc
+    rts   pc
 
 _getFrameCount:
     mov  FrameCount, r0
